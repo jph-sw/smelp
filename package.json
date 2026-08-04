@@ -1,0 +1,12 @@
+{
+  "name": "smerp",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "clean": "rm -rf node_modules bun.lockb",
+    "dev": "bun --watch ./apps/api/src/index.ts"
+  }
+}
