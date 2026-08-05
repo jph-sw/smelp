@@ -3,7 +3,9 @@
 */
 
 import { DB, Utils, type tables } from "@smelp/db";
-import { SQL } from "bun";
+import type { SQL } from "bun";
+
+const DUMMY_PASSWORD_HASH = Bun.password.hashSync(crypto.randomUUID(), { algorithm: "argon2id" })
 
 export class Auth {
   authSessionExpiresInSeconds = 60 * 60 * 24 * 10; // 10 tage
@@ -16,53 +18,45 @@ export class Auth {
   }
 
   async signIn(email: string, password: string) {
-    const passwordHash = await Bun.password.hash(password, { algorithm: "argon2id" })
-    var user: tables["auth_user"] | null = null
-    var account: tables["auth_account"] | null = null
+    let user: tables["auth_user"] | null = null
+    let account: tables["auth_account"] | null = null
 
-    // get user record
     try {
       const users = await this.sql`SELECT * FROM auth_user WHERE email = ${email}` as tables["auth_user"][]
-      user = users[0]!
+      user = users[0] ?? null
     } catch (error) {
-      if (error instanceof SQL.SQLiteError) {
+      if (error instanceof Error) {
         this.utils.logger.fatal(error)
+      }
+      throw error
+    }
+
+    if (user != null) {
+      try {
+        // for now only password is supported
+        const accounts = await this.sql`SELECT * FROM auth_account WHERE userId = ${user.id} AND providerId = 'password'` as tables["auth_account"][]
+        account = accounts[0] ?? null
+      } catch (error) {
+        if (error instanceof Error) {
+          this.utils.logger.fatal(error)
+        }
         throw error
       }
     }
 
-    if (user == null) {
-      throw Error("User not found")
-    }
-
-    // get account record
-    try {
-      // for now only password is supported
-      const accounts = await this.sql`SELECT * FROM auth_account WHERE userId = ${user.id} AND providerId = 'password'`
-      account = accounts[0]
-    } catch (error) {
-      if (error instanceof SQL.SQLiteError) {
-        this.utils.logger.fatal(error)
-        throw error
-      }
-    }
-
-    if (account == null) {
-      throw Error("Account not found")
-    }
-
-    /* password is always there because only password is supported atm */
-    const isMatch = await Bun.password.verify(password, account.password!)
+    /* always run a verify, even when the user/account is unknown, so that
+       response timing and error handling don't reveal whether the email exists */
+    const isMatch = await Bun.password.verify(password, account?.password ?? DUMMY_PASSWORD_HASH)
 
     this.utils.logger.debug(`login: ${isMatch ? "success" : "failed"}`)
 
-    if (isMatch) {
-      const session = await this.createAuthSession(user.id)
-
-      return session
-    } {
+    if (user == null || account == null || !isMatch) {
       return null
     }
+
+    const session = await this.createAuthSession(user.id)
+
+    return session
   }
 
   async signUp(email: string, username: string, password: string) {
@@ -91,20 +85,22 @@ export class Auth {
     try {
       await this.sql`INSERT INTO auth_user ${this.sql(user)}`
     } catch (error) {
-      if (error instanceof SQL.SQLiteError) {
+      if (error instanceof Error) {
         this.utils.logger.fatal(error)
       }
+      throw error
     }
 
     try {
       await this.sql`INSERT INTO auth_account ${this.sql(account)}`
     } catch (error) {
-      if (error instanceof SQL.SQLiteError) {
+      if (error instanceof Error) {
         this.utils.logger.fatal(error)
       }
+      throw error
     }
 
-    // TODO: Create Session and return
+    return this.createAuthSession(userId)
   }
 
   async createAuthSession(userId: string): Promise<AuthSessionAndAuthSessionToken> {
@@ -130,9 +126,10 @@ export class Auth {
     try {
       await this.sql`INSERT INTO auth_session ${this.sql(authSession)}`
     } catch (error) {
-      if (error instanceof SQL.SQLiteError) {
+      if (error instanceof Error) {
         this.utils.logger.fatal(error)
       }
+      throw error
     }
 
     const authSessionAndAuthSessionToken: AuthSessionAndAuthSessionToken = {
@@ -160,9 +157,10 @@ export class Auth {
       return null;
     }
 
-    const authSession = await this.sql`SELECT * FROM auth_session WHERE id = ${authSessionId}` as tables["auth_session"]
+    const authSessions = await this.sql`SELECT * FROM auth_session WHERE id = ${authSessionId}` as tables["auth_session"][]
+    const authSession = authSessions[0]
 
-    if (authSession === null) {
+    if (authSession == null) {
       return null;
     }
 
