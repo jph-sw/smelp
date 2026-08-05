@@ -1,3 +1,7 @@
+/*
+  this was inspired by https://raw.githubusercontent.com/lucia-auth/lucia
+*/
+
 import { DB, Utils, type tables } from "@smelp/db";
 import { SQL } from "bun";
 
@@ -59,39 +63,31 @@ export class Auth {
 
     let authSessionSecret: Uint8Array;
     try {
-      // Uint8Array.fromBase64() was recently added to JavaScript.
       authSessionSecret = Uint8Array.fromBase64(encodedAuthSessionSecret!);
     } catch {
       return null;
     }
 
-    // Replace this with your own database query.
     const authSession = await this.sql`SELECT * FROM auth_session WHERE id = ${authSessionId}` as tables["auth_session"]
 
-    // If the record doesn't exist in the database, the ID is invalid.
     if (authSession === null) {
       return null;
     }
 
-    // Check for expiration.
     if (new Date(now).getTime() - new Date(authSession.tokenLastVerifiedAt).getTime() >= this.authSessionExpiresInSeconds * 1000) {
       return null;
     }
 
     const authSessionSecretHashBuffer = await crypto.subtle.digest("SHA-256", authSessionSecret as BufferSource);
     const authSessionSecretHash = new Uint8Array(authSessionSecretHashBuffer);
-    // Prevent any possibility of a timing attack by using a constant-time comparison.
     const secretCorrect = this.constantTimeEqual(authSessionSecretHash, authSession.secretHash);
     if (!secretCorrect) {
       return null;
     }
 
-    // If at least an hour past since last token verification, update the token last verified at timestamp.
-    // This pushes back the expiration.
     if (new Date(now).getTime() - new Date(authSession.tokenLastVerifiedAt).getTime() >= 60 * 60 * 1000) {
       authSession.tokenLastVerifiedAt = now;
 
-      // Replace this with your own database query.
       await this.sql`UPDATE auth_session SET tokenLastVerifiedAt = ${now} WHERE id = ${authSession.id}`
     }
 
