@@ -1,5 +1,5 @@
 import { sql, SQL, type BunFile } from "bun";
-import type { auth_session, schema_migrations } from "../types/tables";
+import type { auth_session, auth_user, schema_migrations } from "../types/tables";
 import { createHash } from 'crypto';
 import { readFile } from 'fs/promises';
 import { Logger } from "tslog";
@@ -29,5 +29,6 @@ export class Utils {
 
 export type tables = {
   schema_migrations: schema_migrations,
-  auth_session: auth_session
+  auth_session: auth_session,
+  auth_user: auth_user
 }

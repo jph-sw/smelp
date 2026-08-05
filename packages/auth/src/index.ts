@@ -15,6 +15,10 @@ export class Auth {
     this.utils = new Utils()
   }
 
+  async signIn() { }
+
+  async signUp(user: Partial<tables["auth_user"]>) { }
+
   async createAuthSession(userId: string): Promise<AuthSessionAndAuthSessionToken> {
     const now = Date.now();
 
