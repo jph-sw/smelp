@@ -13,3 +13,12 @@ export type auth_session = {
   tokenLastVerifiedAt: number;
   createdAt: number;
 }
+
+export type auth_user = {
+  id: string,
+  user: string,
+  email: string,
+  image?: string,
+  createdAt: number,
+  updatedAt: number
+}

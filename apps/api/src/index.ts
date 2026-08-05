@@ -1,6 +1,8 @@
 import { Auth } from "@smelp/auth";
 import { Utils } from "@smelp/db";
 import { Migrator } from "@smelp/migrate";
+import { SignInHandler } from "./routes/auth/signin";
+import { SignUpHandler } from "./routes/auth/signup";
 
 const migrator = new Migrator()
 const auth = new Auth()
@@ -13,6 +15,12 @@ await auth.createAuthSession("test_user")
 const server = Bun.serve({
   routes: {
     "/api/status": new Response("OK"),
+    "/api/auth/signin": {
+      POST: SignInHandler,
+    },
+    "/api/auth/signup": {
+      POST: SignUpHandler
+    }
   }
 })
 
