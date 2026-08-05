@@ -2,19 +2,16 @@ import { DB, Utils, type tables } from "@smelp/db"
 import { SQL } from "bun";
 import { readdir, mkdir } from "node:fs/promises";
 import path from "node:path";
-import { Logger } from "tslog";
 
 export class Migrator {
   private sql: SQL;
   private migrations_folder: string;
   private utils: Utils
-  private logger
 
   constructor() {
     this.sql = new DB().sqlite
     this.migrations_folder = "./migrations/"
     this.utils = new Utils()
-    this.logger = new Logger({ minLevel: "INFO" })
   }
 
   async up() {
@@ -29,7 +26,7 @@ export class Migrator {
     // TODO: handle no folder found
     const files = await readdir(this.migrations_folder);
 
-    this.logger.info(`found ${files.length} migration/s`)
+    this.utils.logger.info(`found ${files.length} migration/s`)
 
     if (files.length <= 0) throw Error("No migrations present")
 
@@ -41,11 +38,11 @@ export class Migrator {
       const checksum = await this.utils.checksumFile(file)
 
       if (rows.some(item => item.checksum == checksum)) {
-        this.logger.info(`${file.name} has already been exectuted`)
+        this.utils.logger.info(`${file.name} has already been exectuted`)
         continue
       }
 
-      this.logger.info(`executing ${files[i]!}`)
+      this.utils.logger.info(`executing ${files[i]!}`)
 
       const schemaMigration: tables["schema_migrations"] = {
         id: crypto.randomUUID(),
@@ -59,7 +56,7 @@ export class Migrator {
         await this.sql.file(path.join(this.migrations_folder, files[i]!))
       } catch (error) {
         if (error instanceof SQL.SQLiteError) {
-          this.logger.fatal(error)
+          this.utils.logger.fatal(error)
         }
       }
 
@@ -70,7 +67,7 @@ export class Migrator {
           `.values()
       } catch (error) {
         if (error instanceof SQL.SQLiteError) {
-          this.logger.fatal(error)
+          this.utils.logger.fatal(error)
         }
       }
     }

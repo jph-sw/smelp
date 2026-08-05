@@ -2,10 +2,16 @@
   "name": "@smelp/auth",
   "module": "index.ts",
   "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "devDependencies": {
     "@types/bun": "latest"
   },
   "peerDependencies": {
     "typescript": "^5"
+  },
+  "dependencies": {
+    "@smelp/db": "*"
   }
 }

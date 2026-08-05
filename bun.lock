@@ -8,6 +8,7 @@
     "apps/api": {
       "name": "@smelp/api",
       "dependencies": {
+        "@smelp/auth": "*",
         "@smelp/db": "*",
         "@smelp/migrate": "*",
       },
@@ -18,8 +19,23 @@
         "typescript": "^5",
       },
     },
+    "packages/auth": {
+      "name": "@smelp/auth",
+      "dependencies": {
+        "@smelp/db": "*",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
+      },
+      "peerDependencies": {
+        "typescript": "^5",
+      },
+    },
     "packages/db": {
       "name": "@smelp/db",
+      "dependencies": {
+        "tslog": "^5.1.0",
+      },
       "devDependencies": {
         "@types/bun": "latest",
       },
@@ -43,6 +59,8 @@
   },
   "packages": {
     "@smelp/api": ["@smelp/api@workspace:apps/api"],
+
+    "@smelp/auth": ["@smelp/auth@workspace:packages/auth"],
 
     "@smelp/db": ["@smelp/db@workspace:packages/db"],
 

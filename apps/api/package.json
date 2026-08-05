@@ -9,7 +9,8 @@
   },
   "dependencies": {
     "@smelp/db": "*",
-    "@smelp/migrate": "*"
+    "@smelp/migrate": "*",
+    "@smelp/auth": "*"
   },
   "private": true,
   "scripts": {
