@@ -26,7 +26,7 @@ export class Migrator {
     // TODO: handle no folder found
     const files = await readdir(this.migrations_folder);
 
-    this.utils.logger.info(`found ${files.length} migration/s`)
+    this.utils.logger.debug(`found ${files.length} migration/s`)
 
     if (files.length <= 0) throw Error("No migrations present")
 
@@ -38,11 +38,11 @@ export class Migrator {
       const checksum = await this.utils.checksumFile(file)
 
       if (rows.some(item => item.checksum == checksum)) {
-        this.utils.logger.info(`${file.name} has already been exectuted`)
+        this.utils.logger.debug(`${file.name} has already been exectuted`)
         continue
       }
 
-      this.utils.logger.info(`executing ${files[i]!}`)
+      this.utils.logger.debug(`executing ${files[i]!}`)
 
       const schemaMigration: tables["schema_migrations"] = {
         id: crypto.randomUUID(),

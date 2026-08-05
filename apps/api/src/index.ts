@@ -6,7 +6,7 @@ const migrator = new Migrator()
 const auth = new Auth()
 const utils = new Utils()
 
-migrator.up()
+await migrator.up()
 
 await auth.createAuthSession("test_user")
 
@@ -16,4 +16,4 @@ const server = Bun.serve({
   }
 })
 
-utils.logger.info(`Server running at ${server.url}`)
+utils.logger.info(`𖹭 Server running at ${server.url}`)

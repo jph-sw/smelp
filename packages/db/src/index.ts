@@ -12,7 +12,7 @@ export class Utils {
   public logger
 
   constructor() {
-    this.logger = new Logger({ minLevel: "INFO" })
+    this.logger = new Logger({ minLevel: Bun.env.NODE_ENV === "production" ? "INFO" : "DEBUG" })
   }
 
   async checksumFile(file: Uint8Array<ArrayBuffer>): Promise<string>;
