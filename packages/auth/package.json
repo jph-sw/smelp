@@ -12,6 +12,7 @@
     "typescript": "^5"
   },
   "dependencies": {
-    "@smelp/db": "*"
+    "@smelp/db": "*",
+    "argon2": "^0.45.1"
   }
 }

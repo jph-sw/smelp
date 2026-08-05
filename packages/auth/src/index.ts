@@ -15,9 +15,97 @@ export class Auth {
     this.utils = new Utils()
   }
 
-  async signIn() { }
+  async signIn(email: string, password: string) {
+    const passwordHash = await Bun.password.hash(password, { algorithm: "argon2id" })
+    var user: tables["auth_user"] | null = null
+    var account: tables["auth_account"] | null = null
 
-  async signUp(user: Partial<tables["auth_user"]>) { }
+    // get user record
+    try {
+      const users = await this.sql`SELECT * FROM auth_user WHERE email = ${email}` as tables["auth_user"][]
+      user = users[0]!
+    } catch (error) {
+      if (error instanceof SQL.SQLiteError) {
+        this.utils.logger.fatal(error)
+        throw error
+      }
+    }
+
+    if (user == null) {
+      throw Error("User not found")
+    }
+
+    // get account record
+    try {
+      // for now only password is supported
+      const accounts = await this.sql`SELECT * FROM auth_account WHERE userId = ${user.id} AND providerId = 'password'`
+      account = accounts[0]
+    } catch (error) {
+      if (error instanceof SQL.SQLiteError) {
+        this.utils.logger.fatal(error)
+        throw error
+      }
+    }
+
+    if (account == null) {
+      throw Error("Account not found")
+    }
+
+    /* password is always there because only password is supported atm */
+    const isMatch = await Bun.password.verify(password, account.password!)
+
+    this.utils.logger.debug(`login: ${isMatch ? "success" : "failed"}`)
+
+    if (isMatch) {
+      const session = await this.createAuthSession(user.id)
+
+      return session
+    } {
+      return null
+    }
+  }
+
+  async signUp(email: string, username: string, password: string) {
+    const now = Date.now()
+    const passwordHash = await Bun.password.hash(password, { algorithm: "argon2id" })
+    const userId = this.generateRandomId()
+
+    const user: tables["auth_user"] = {
+      id: userId,
+      name: username,
+      email: email,
+      createdAt: now,
+      updatedAt: now
+    }
+
+    const account: tables["auth_account"] = {
+      id: this.generateRandomId(),
+      userId: userId,
+      accountId: this.generateRandomId(),
+      providerId: "password",
+      password: passwordHash,
+      createdAt: now,
+      updatedAt: now
+    }
+
+    try {
+      await this.sql`INSERT INTO auth_user ${this.sql(user)}`
+    } catch (error) {
+      if (error instanceof SQL.SQLiteError) {
+        this.utils.logger.fatal(error)
+      }
+    }
+
+    try {
+      await this.sql`INSERT INTO auth_account ${this.sql(account)}`
+    } catch (error) {
+      if (error instanceof SQL.SQLiteError) {
+        this.utils.logger.fatal(error)
+      }
+    }
+
+    // TODO: Create Session and return
+  }
 
   async createAuthSession(userId: string): Promise<AuthSessionAndAuthSessionToken> {
     const now = Date.now();

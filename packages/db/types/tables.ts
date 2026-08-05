@@ -16,9 +16,25 @@ export type auth_session = {
 
 export type auth_user = {
   id: string,
-  user: string,
+  name: string,
   email: string,
   image?: string,
+  createdAt: number,
+  updatedAt: number
+}
+
+export type auth_account = {
+  id: string,
+  userId: string,
+  accountId: string,
+  providerId: string,
+  accessToken?: string,
+  refreshToken?: string,
+  accessTokenExpiresAt?: number,
+  refreshTokenExpiresAt?: number,
+  scope?: string,
+  idToken?: string,
+  password?: string,
   createdAt: number,
   updatedAt: number
 }
