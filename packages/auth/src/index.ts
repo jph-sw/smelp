@@ -56,7 +56,7 @@ export class Auth {
 
     const session = await this.createAuthSession(user.id)
 
-    return session
+    return { session, user }
   }
 
   async signUp(email: string, username: string, password: string) {
@@ -100,7 +100,9 @@ export class Auth {
       throw error
     }
 
-    return this.createAuthSession(userId)
+    const session = await this.createAuthSession(userId)
+
+    return { session, user }
   }
 
   async createAuthSession(userId: string): Promise<AuthSessionAndAuthSessionToken> {
