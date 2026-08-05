@@ -1,0 +1,4 @@
+CREATE TABLE IF NOT EXISTS (
+    id TEXT PRIMARY KEY,
+    naemawe
+)

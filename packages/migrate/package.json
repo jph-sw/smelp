@@ -12,6 +12,7 @@
     "typescript": "^5"
   },
   "dependencies": {
-    "@smelp/db": "*"
+    "@smelp/db": "*",
+    "tslog": "^5.1.0"
   }
 }

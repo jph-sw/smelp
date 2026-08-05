@@ -8,6 +8,7 @@ const server = Bun.serve({
   routes: {
     "/api/status": new Response("OK"),
 
-}})
+  }
+})
 
 console.log(`Server running at ${server.url}`);
