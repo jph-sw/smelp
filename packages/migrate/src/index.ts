@@ -1,7 +1,7 @@
-import { DB, Utils, type tables } from "@smelp/db";
-import { SQL } from "bun";
-import { readdir, mkdir } from "node:fs/promises";
+import { readdir } from "node:fs/promises";
 import path from "node:path";
+import { DB, type tables, Utils } from "@smelp/db";
+import { SQL } from "bun";
 
 export class Migrator {
 	private sql: SQL;
@@ -30,30 +30,31 @@ export class Migrator {
 
 		if (files.length <= 0) throw Error("No migrations present");
 
-		for (var i = 0; i < files.length; i++) {
-			const file = Bun.file(path.join(this.migrations_folder, files[i]!));
+		for (let i = 0; i < files.length; i++) {
+			const fileName = files[i] ?? "";
+			const file = Bun.file(path.join(this.migrations_folder, fileName));
 
 			const rows = await this.executed();
 
 			const checksum = await this.utils.checksumFile(file);
 
-			if (rows.some((item) => item.checksum == checksum)) {
+			if (rows.some((item) => item.checksum === checksum)) {
 				this.utils.logger.debug(`${file.name} has already been exectuted`);
 				continue;
 			}
 
-			this.utils.logger.debug(`executing ${files[i]!}`);
+			this.utils.logger.debug(`executing ${fileName}`);
 
 			const schemaMigration: tables["schema_migrations"] = {
 				id: crypto.randomUUID(),
-				name: files[i]!,
+				name: fileName,
 				checksum: checksum,
 				applied_at: Date.now(),
 				execution_ms: 0,
 			};
 
 			try {
-				await this.sql.file(path.join(this.migrations_folder, files[i]!));
+				await this.sql.file(path.join(this.migrations_folder, fileName));
 			} catch (error) {
 				if (error instanceof SQL.SQLiteError) {
 					this.utils.logger.fatal(error);

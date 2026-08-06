@@ -1,13 +1,12 @@
-import { sql, SQL, type BunFile } from "bun";
+import { createHash } from "node:crypto";
+import { type BunFile, SQL } from "bun";
+import { Logger } from "tslog";
 import type {
 	auth_account,
 	auth_session,
 	auth_user,
 	schema_migrations,
 } from "../types/tables";
-import { createHash } from "crypto";
-import { readFile } from "fs/promises";
-import { Logger } from "tslog";
 
 export class DB {
 	public sqlite = new SQL("sqlite://database.sqlite");

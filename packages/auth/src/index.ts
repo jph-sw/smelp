@@ -2,7 +2,7 @@
   this was inspired by https://raw.githubusercontent.com/lucia-auth/lucia
 */
 
-import { DB, Utils, type tables } from "@smelp/db";
+import { DB, type tables, Utils } from "@smelp/db";
 import type { SQL } from "bun";
 
 const DUMMY_PASSWORD_HASH = Bun.password.hashSync(crypto.randomUUID(), {
@@ -126,7 +126,7 @@ export class Auth {
 
 		const secretHashBuffer = await crypto.subtle.digest("SHA-256", secret);
 		const secretHash = new Uint8Array(secretHashBuffer);
-		const token = id + "." + secret.toBase64();
+		const token = `${id}.${secret.toBase64()}`;
 
 		const authSession: tables["auth_session"] = {
 			id,
@@ -167,7 +167,7 @@ export class Auth {
 
 		let authSessionSecret: Uint8Array;
 		try {
-			authSessionSecret = Uint8Array.fromBase64(encodedAuthSessionSecret!);
+			authSessionSecret = Uint8Array.fromBase64(encodedAuthSessionSecret ?? "");
 		} catch {
 			return null;
 		}
@@ -224,6 +224,7 @@ export class Auth {
 
 		let id = "";
 		for (let i = 0; i < bytes.length; i++) {
+			// biome-ignore lint/style/noNonNullAssertion: <TODO>
 			id += alphabet[bytes[i]! >> 3];
 		}
 		return id;
@@ -235,6 +236,7 @@ export class Auth {
 		}
 		let c = 0;
 		for (let i = 0; i < a.byteLength; i++) {
+			// biome-ignore lint/style/noNonNullAssertion: <TODO>
 			c |= a[i]! ^ b[i]!;
 		}
 		return c === 0;
