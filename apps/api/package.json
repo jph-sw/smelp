@@ -1,20 +1,20 @@
 {
-  "name": "@smelp/api",
-  "module": "./src/index.ts",
-  "devDependencies": {
-    "@types/bun": "latest"
-  },
-  "peerDependencies": {
-    "typescript": "^5"
-  },
-  "dependencies": {
-    "@smelp/db": "*",
-    "@smelp/migrate": "*",
-    "@smelp/auth": "*"
-  },
-  "private": true,
-  "scripts": {
-    "dev": "bun --watch ./src/index.ts"
-  },
-  "type": "module"
+	"name": "@smelp/api",
+	"module": "./src/index.ts",
+	"devDependencies": {
+		"@types/bun": "latest"
+	},
+	"peerDependencies": {
+		"typescript": "^5"
+	},
+	"dependencies": {
+		"@smelp/db": "*",
+		"@smelp/migrate": "*",
+		"@smelp/auth": "*"
+	},
+	"private": true,
+	"scripts": {
+		"dev": "bun --watch ./src/index.ts"
+	},
+	"type": "module"
 }

@@ -4,24 +4,24 @@ import { Migrator } from "@smelp/migrate";
 import { SignInHandler } from "./routes/auth/signin";
 import { SignUpHandler } from "./routes/auth/signup";
 
-const migrator = new Migrator()
-const auth = new Auth()
-const utils = new Utils()
+const migrator = new Migrator();
+const auth = new Auth();
+const utils = new Utils();
 
-await migrator.up()
+await migrator.up();
 
-await auth.createAuthSession("test_user")
+await auth.createAuthSession("test_user");
 
 const server = Bun.serve({
-  routes: {
-    "/api/status": new Response("OK"),
-    "/api/auth/signin": {
-      POST: SignInHandler,
-    },
-    "/api/auth/signup": {
-      POST: SignUpHandler
-    }
-  }
-})
+	routes: {
+		"/api/status": new Response("OK"),
+		"/api/auth/signin": {
+			POST: SignInHandler,
+		},
+		"/api/auth/signup": {
+			POST: SignUpHandler,
+		},
+	},
+});
 
-utils.logger.info(`𖹭 Server running at ${server.url}`)
+utils.logger.info(`𖹭 Server running at ${server.url}`);

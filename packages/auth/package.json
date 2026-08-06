@@ -1,18 +1,18 @@
 {
-  "name": "@smelp/auth",
-  "module": "index.ts",
-  "type": "module",
-  "exports": {
-    ".": "./src/index.ts"
-  },
-  "devDependencies": {
-    "@types/bun": "latest"
-  },
-  "peerDependencies": {
-    "typescript": "^5"
-  },
-  "dependencies": {
-    "@smelp/db": "*",
-    "argon2": "^0.45.1"
-  }
+	"name": "@smelp/auth",
+	"module": "index.ts",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"devDependencies": {
+		"@types/bun": "latest"
+	},
+	"peerDependencies": {
+		"typescript": "^5"
+	},
+	"dependencies": {
+		"@smelp/db": "*",
+		"argon2": "^0.45.1"
+	}
 }

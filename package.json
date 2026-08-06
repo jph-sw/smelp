@@ -1,16 +1,17 @@
 {
-  "name": "smerp",
-  "private": true,
-  "scripts": {
-    "clean": "rm -rf node_modules bun.lockb",
-    "dev": "bun --watch ./apps/api/src/index.ts",
-    "migrate:new": "bun run scripts/migrate-new.ts"
-  },
-  "workspaces": [
-    "packages/*",
-    "apps/*"
-  ],
-  "devDependencies": {
-    "@biomejs/biome": "^2.5.7"
-  }
+	"name": "smerp",
+	"private": true,
+	"scripts": {
+		"clean": "rm -rf node_modules bun.lockb",
+		"dev": "bun --watch ./apps/api/src/index.ts",
+		"migrate:new": "bun run scripts/migrate-new.ts",
+		"chore:format": "bunx --bun @biomejs/biome format --write"
+	},
+	"workspaces": [
+		"packages/*",
+		"apps/*"
+	],
+	"devDependencies": {
+		"@biomejs/biome": "^2.5.7"
+	}
 }
