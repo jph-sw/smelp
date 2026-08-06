@@ -3,6 +3,7 @@ CREATE TABLE auth_user (
     name TEXT NOT NULL,
     email TEXT NOT NULL,
     image TEXT,
+    role TEXT,
     createdAt INTEGER NOT NULL,
     updatedAt INTEGER NOT NULL
 ) STRICT;
@@ -29,4 +30,13 @@ CREATE TABLE auth_account (
     password TEXT,
     createdAt INTEGER NOT NULL,
     updatedAt INTEGER NOT NULL
-)
+) STRICT;
+
+CREATE TABLE auth_permission (
+    id TEXT NOT NULL PRIMARY KEY,
+    spaceId TEXT NOT NULL,
+    userId TEXT NOT NULL,
+    permission TEXT
+) STRICT;
+
+-- CREATE UNIQUE INDEX auth_user_email ON auth_user (email);

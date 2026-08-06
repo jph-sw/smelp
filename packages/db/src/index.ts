@@ -3,10 +3,15 @@ import { type BunFile, SQL } from "bun";
 import { Logger } from "tslog";
 import type {
 	auth_account,
+	auth_permission,
 	auth_session,
+	auth_space,
+	auth_space_member,
 	auth_user,
 	schema_migrations,
 } from "../types/tables";
+
+export type { SpaceRole } from "../types/tables";
 
 export class DB {
 	public sqlite = new SQL("sqlite://database.sqlite");
@@ -38,4 +43,7 @@ export type tables = {
 	auth_session: auth_session;
 	auth_user: auth_user;
 	auth_account: auth_account;
+	auth_permission: auth_permission;
+	auth_space: auth_space;
+	auth_space_member: auth_space_member;
 };

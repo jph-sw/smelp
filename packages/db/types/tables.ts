@@ -18,6 +18,7 @@ export type auth_user = {
 	id: string;
 	name: string;
 	email: string;
+	role?: string;
 	image?: string;
 	createdAt: number;
 	updatedAt: number;
@@ -37,4 +38,30 @@ export type auth_account = {
 	password?: string;
 	createdAt: number;
 	updatedAt: number;
+};
+
+export type auth_permission = {
+	id: string;
+	spaceId: string;
+	userId: string;
+	permission?: string;
+	effect: "grant" | "deny";
+};
+
+export type auth_space = {
+	id: string;
+	name: string;
+	ownerId: string;
+	createdAt: number;
+	updatedAt: number;
+};
+
+export type SpaceRole = "viewer" | "participant" | "admin" | "owner";
+
+export type auth_space_member = {
+	id: string;
+	spaceId: string;
+	userId: string;
+	role: SpaceRole;
+	createdAt: number;
 };
