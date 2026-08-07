@@ -10,8 +10,8 @@ export type auth_user = {
 	id: string;
 	name: string;
 	email: string;
-	role?: string;
-	image?: string;
+	role: string | null;
+	image: string | null;
 	createdAt: number;
 	updatedAt: number;
 };
@@ -21,13 +21,13 @@ export type auth_account = {
 	userId: string;
 	accountId: string;
 	providerId: string;
-	accessToken?: string;
-	refreshToken?: string;
-	accessTokenExpiresAt?: number;
-	refreshTokenExpiresAt?: number;
-	scope?: string;
-	idToken?: string;
-	password?: string;
+	accessToken: string | null;
+	refreshToken: string | null;
+	accessTokenExpiresAt: number | null;
+	refreshTokenExpiresAt: number | null;
+	scope: string | null;
+	idToken: string | null;
+	password: string | null;
 	createdAt: number;
 	updatedAt: number;
 };
@@ -36,7 +36,7 @@ export type auth_permission = {
 	id: string;
 	spaceId: string;
 	userId: string;
-	permission?: string;
+	permission: string | null;
 	effect: "grant" | "deny";
 };
 

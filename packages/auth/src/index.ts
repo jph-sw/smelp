@@ -127,6 +127,8 @@ export class Auth {
 			email: email,
 			createdAt: now,
 			updatedAt: now,
+			role: null,
+			image: null,
 		};
 
 		const account: tables["auth_account"] = {
@@ -137,6 +139,12 @@ export class Auth {
 			password: passwordHash,
 			createdAt: now,
 			updatedAt: now,
+			accessToken: null,
+			refreshToken: null,
+			accessTokenExpiresAt: null,
+			refreshTokenExpiresAt: null,
+			scope: null,
+			idToken: null,
 		};
 
 		try {

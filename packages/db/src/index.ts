@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { type BunFile, SQL } from "bun";
 import { Logger } from "tslog";
+import type { activity_logs } from "../types/tables/activity";
 import type {
 	auth_account,
 	auth_permission,
@@ -44,4 +45,5 @@ export type tables = {
 	auth_permission: auth_permission;
 	auth_space: auth_space;
 	auth_space_member: auth_space_member;
+	activity_logs: activity_logs;
 };

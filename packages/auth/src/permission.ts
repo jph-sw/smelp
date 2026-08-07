@@ -1,4 +1,4 @@
-import type { SpaceRole } from "@smelp/db";
+import type { SpaceRole } from "../../db/types/tables/auth";
 
 /*
   "owner" only needs to list what "admin" doesn't already have
