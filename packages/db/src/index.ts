@@ -8,10 +8,8 @@ import type {
 	auth_space,
 	auth_space_member,
 	auth_user,
-	schema_migrations,
-} from "../types/tables";
-
-export type { SpaceRole } from "../types/tables";
+} from "../types/tables/auth";
+import type { schema_migrations } from "../types/tables/migration";
 
 export class DB {
 	public sqlite = new SQL("sqlite://database.sqlite");
