@@ -48,7 +48,7 @@ export type auth_space = {
 	updatedAt: number;
 };
 
-export type SpaceRole = "viewer" | "participant" | "admin" | "owner";
+export type SpaceRole = "guest" | "member" | "admin";
 
 export type auth_space_member = {
 	id: string;
