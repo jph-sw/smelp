@@ -6,7 +6,7 @@ export const queryClient = new QueryClient();
 
 export const router = createRouter({
 	routeTree,
-	context: { queryClient },
+	context: { queryClient, user: null },
 	defaultPreload: "intent",
 });
 

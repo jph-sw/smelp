@@ -1,6 +1,7 @@
 import { Auth } from "@smelp/auth";
 import { Utils } from "@smelp/db";
 import { Migrator } from "@smelp/migrate";
+import { MeHandler } from "./routes/auth/me";
 import { SignInHandler } from "./routes/auth/signin";
 import { SignUpHandler } from "./routes/auth/signup";
 
@@ -20,6 +21,9 @@ const server = Bun.serve({
 		},
 		"/api/auth/signup": {
 			POST: SignUpHandler,
+		},
+		"/api/auth/me": {
+			GET: MeHandler,
 		},
 	},
 });
