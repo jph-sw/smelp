@@ -8,9 +8,10 @@
 		"typescript": "^5"
 	},
 	"dependencies": {
+		"@smelp/auth": "*",
 		"@smelp/db": "*",
 		"@smelp/migrate": "*",
-		"@smelp/auth": "*"
+		"arktype": "^2.2.3"
 	},
 	"private": true,
 	"scripts": {

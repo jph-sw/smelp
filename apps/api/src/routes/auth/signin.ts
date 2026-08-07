@@ -1,25 +1,22 @@
 import { Auth } from "@smelp/auth";
+import { type } from "arktype";
 import type { BunRequest } from "bun";
+
+const Params = type({
+	email: "string.email",
+	password: "string >= 1 & string <= 128",
+});
 
 export async function SignInHandler(req: BunRequest) {
 	const auth = new Auth();
+	const json = await req.json();
+	const params = Params(json);
 
-	let body: { email?: unknown; password?: unknown };
-	try {
-		body = (await req.json()) as typeof body;
-	} catch {
-		return Response.json({ error: "invalid JSON body" }, { status: 400 });
+	if (params instanceof type.errors) {
+		return Response.json(params);
 	}
 
-	const { email, password } = body;
-	if (typeof email !== "string" || typeof password !== "string") {
-		return Response.json(
-			{ error: "email and password are required" },
-			{ status: 400 },
-		);
-	}
-
-	const result = await auth.signIn(email, password);
+	const result = await auth.signIn(params.email, params.password);
 
 	if (result == null) {
 		return Response.json({ error: "invalid credentials" }, { status: 401 });
