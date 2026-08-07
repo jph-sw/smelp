@@ -10,12 +10,19 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as OvalOfficeRouteRouteImport } from './routes/oval-office/route'
 import { Route as SigninRouteImport } from './routes/signin'
 import { Route as SignupRouteImport } from './routes/signup'
+import { Route as OvalOfficeIndexRouteImport } from './routes/oval-office/index'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OvalOfficeRouteRoute = OvalOfficeRouteRouteImport.update({
+  id: '/oval-office',
+  path: '/oval-office',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SigninRoute = SigninRouteImport.update({
@@ -28,33 +35,45 @@ const SignupRoute = SignupRouteImport.update({
   path: '/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OvalOfficeIndexRoute = OvalOfficeIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => OvalOfficeRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/oval-office': typeof OvalOfficeRouteRouteWithChildren
   '/signin': typeof SigninRoute
   '/signup': typeof SignupRoute
+  '/oval-office/': typeof OvalOfficeIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/signin': typeof SigninRoute
   '/signup': typeof SignupRoute
+  '/oval-office': typeof OvalOfficeIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/oval-office': typeof OvalOfficeRouteRouteWithChildren
   '/signin': typeof SigninRoute
   '/signup': typeof SignupRoute
+  '/oval-office/': typeof OvalOfficeIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/signin' | '/signup'
+  fullPaths: '/' | '/oval-office' | '/signin' | '/signup' | '/oval-office/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/signin' | '/signup'
-  id: '__root__' | '/' | '/signin' | '/signup'
+  to: '/' | '/signin' | '/signup' | '/oval-office'
+  id:
+    '__root__' | '/' | '/oval-office' | '/signin' | '/signup' | '/oval-office/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  OvalOfficeRouteRoute: typeof OvalOfficeRouteRouteWithChildren
   SigninRoute: typeof SigninRoute
   SignupRoute: typeof SignupRoute
 }
@@ -66,6 +85,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/oval-office': {
+      id: '/oval-office'
+      path: '/oval-office'
+      fullPath: '/oval-office'
+      preLoaderRoute: typeof OvalOfficeRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/signin': {
@@ -82,11 +108,31 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SignupRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/oval-office/': {
+      id: '/oval-office/'
+      path: '/'
+      fullPath: '/oval-office/'
+      preLoaderRoute: typeof OvalOfficeIndexRouteImport
+      parentRoute: typeof OvalOfficeRouteRoute
+    }
   }
 }
 
+interface OvalOfficeRouteRouteChildren {
+  OvalOfficeIndexRoute: typeof OvalOfficeIndexRoute
+}
+
+const OvalOfficeRouteRouteChildren: OvalOfficeRouteRouteChildren = {
+  OvalOfficeIndexRoute: OvalOfficeIndexRoute,
+}
+
+const OvalOfficeRouteRouteWithChildren = OvalOfficeRouteRoute._addFileChildren(
+  OvalOfficeRouteRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  OvalOfficeRouteRoute: OvalOfficeRouteRouteWithChildren,
   SigninRoute: SigninRoute,
   SignupRoute: SignupRoute,
 }
