@@ -1,22 +1,22 @@
 import { Auth } from "@smelp/auth";
-import { type } from "arktype";
 import type { BunRequest } from "bun";
+import * as v from "valibot";
 
-const Params = type({
-	email: "string.email",
-	password: "string >= 1 & string <= 128",
+const Params = v.object({
+	email: v.pipe(v.string(), v.email()),
+	password: v.pipe(v.string(), v.minLength(1), v.maxLength(128)),
 });
 
 export async function SignInHandler(req: BunRequest) {
 	const auth = new Auth();
 	const json = await req.json();
-	const params = Params(json);
+	const params = v.safeParse(Params, json);
 
-	if (params instanceof type.errors) {
-		return Response.json(params);
+	if (!params.success) {
+		return Response.json(params.issues);
 	}
 
-	const result = await auth.signIn(params.email, params.password);
+	const result = await auth.signIn(params.output.email, params.output.password);
 
 	if (result == null) {
 		return Response.json({ error: "invalid credentials" }, { status: 401 });

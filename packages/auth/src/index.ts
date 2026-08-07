@@ -154,23 +154,9 @@ export class Auth {
 			idToken: null,
 		};
 
-		try {
-			await this.sql`INSERT INTO auth_user ${this.sql(user)}`;
-		} catch (error) {
-			if (error instanceof Error) {
-				this.utils.logger.fatal(error);
-			}
-			throw error;
-		}
+		await this.sql`INSERT INTO auth_user ${this.sql(user)}`;
 
-		try {
-			await this.sql`INSERT INTO auth_account ${this.sql(account)}`;
-		} catch (error) {
-			if (error instanceof Error) {
-				this.utils.logger.fatal(error);
-			}
-			throw error;
-		}
+		await this.sql`INSERT INTO auth_account ${this.sql(account)}`;
 
 		const session = await this.createAuthSession(userId);
 

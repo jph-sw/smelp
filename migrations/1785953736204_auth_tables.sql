@@ -1,7 +1,7 @@
 CREATE TABLE auth_user (
     id TEXT NOT NULL PRIMARY KEY,
-    name TEXT NOT NULL,
-    email TEXT NOT NULL,
+    name TEXT UNIQUE NOT NULL,
+    email TEXT UNIQUE NOT NULL,
     image TEXT,
     role TEXT,
     createdAt INTEGER NOT NULL,

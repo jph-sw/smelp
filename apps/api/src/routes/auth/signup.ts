@@ -1,29 +1,28 @@
 import { Auth } from "@smelp/auth";
-import { type } from "arktype";
 import type { BunRequest } from "bun";
 import { SQL } from "bun";
-import { Email, Password } from "../../validators/auth";
+import * as v from "valibot";
 
-const Params = type({
-	email: Email,
-	username: "string",
-	password: Password,
+const Params = v.object({
+	email: v.pipe(v.string(), v.trim(), v.toLowerCase(), v.email()),
+	username: v.pipe(v.string()),
+	password: v.pipe(v.string(), v.minLength(10), v.maxLength(64)),
 });
 
 export async function SignUpHandler(req: BunRequest) {
 	const auth = new Auth();
 	const json = await req.json();
-	const params = Params(json);
+	const params = v.safeParse(Params, json);
 
-	if (params instanceof type.errors) {
-		return Response.json(params);
+	if (!params.success) {
+		return Response.json(params.issues);
 	}
 
 	try {
 		const { session, user } = await auth.signUp(
-			params.email,
-			params.username,
-			params.password,
+			params.output.email,
+			params.output.username,
+			params.output.password,
 		);
 
 		return Response.json(
@@ -38,10 +37,10 @@ export async function SignUpHandler(req: BunRequest) {
 	} catch (error) {
 		if (
 			error instanceof SQL.SQLiteError &&
-			error.code === "SQLITE_CONSTRAINT"
+			error.code === "SQLITE_CONSTRAINT_UNIQUE"
 		) {
 			return Response.json(
-				{ error: "email already registered" },
+				{ error: "Email already registered" },
 				{ status: 409 },
 			);
 		}

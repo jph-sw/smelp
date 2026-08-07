@@ -11,7 +11,7 @@
 		"@smelp/auth": "*",
 		"@smelp/db": "*",
 		"@smelp/migrate": "*",
-		"arktype": "^2.2.3"
+		"valibot": "^1.4.2"
 	},
 	"private": true,
 	"scripts": {
