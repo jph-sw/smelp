@@ -30,6 +30,20 @@ export type DomainEvent =
 			actorId: string;
 			entityId: string;
 			payload: { issueId: string; body: string };
+	  }
+	| {
+			type: "auth.signin";
+			workspaceId: string;
+			actorId: string;
+			entityId: string;
+			payload: { sessionId: string; username: string };
+	  }
+	| {
+			type: "auth.signup";
+			workspaceId: string;
+			actorId: string;
+			entityId: string;
+			payload: { sessionId: string; username: string };
 	  };
 
 export type DomainEventType = DomainEvent["type"];

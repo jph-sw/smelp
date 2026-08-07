@@ -26,6 +26,7 @@
       "name": "@smelp/auth",
       "dependencies": {
         "@smelp/db": "*",
+        "@smelp/events": "*",
         "argon2": "^0.45.1",
       },
       "devDependencies": {
@@ -39,6 +40,18 @@
       "name": "@smelp/db",
       "dependencies": {
         "tslog": "^5.1.0",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
+      },
+      "peerDependencies": {
+        "typescript": "^5",
+      },
+    },
+    "packages/events": {
+      "name": "@smelp/events",
+      "dependencies": {
+        "@smelp/db": "*",
       },
       "devDependencies": {
         "@types/bun": "latest",
@@ -89,6 +102,8 @@
     "@smelp/auth": ["@smelp/auth@workspace:packages/auth"],
 
     "@smelp/db": ["@smelp/db@workspace:packages/db"],
+
+    "@smelp/events": ["@smelp/events@workspace:packages/events"],
 
     "@smelp/migrate": ["@smelp/migrate@workspace:packages/migrate"],
 

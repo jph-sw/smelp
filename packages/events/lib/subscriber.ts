@@ -1,7 +1,8 @@
-import { DB, type tables } from "@smelp/db";
+import { DB, type tables, Utils } from "@smelp/db";
 import { eventBus } from "./bus";
 
 const sql = new DB().sqlite;
+const utils = new Utils();
 
 const ACTION_MAP: Record<string, string> = {
 	"issue.created": "created",
@@ -27,5 +28,15 @@ eventBus.onAny(async (event) => {
 		createdAt: Date.now(),
 	};
 
-	await sql`INSERT INTO activity_logs ${sql(log)}`;
+	utils.logger.debug(`${log.action}\n`, event.payload);
+
+	try {
+		await sql`INSERT INTO activity_logs ${sql(log)}`;
+	} catch (error) {
+		if (error) {
+			if (error instanceof Error) {
+				utils.logger.fatal(error);
+			}
+		}
+	}
 });

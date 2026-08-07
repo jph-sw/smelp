@@ -3,6 +3,7 @@
 */
 
 import { DB, type tables, Utils } from "@smelp/db";
+import { eventBus } from "@smelp/events";
 import type { SQL } from "bun";
 import { matchesPermission, permissionsForRole } from "./permission";
 
@@ -103,13 +104,19 @@ export class Auth {
 			account?.password ?? DUMMY_PASSWORD_HASH,
 		);
 
-		this.utils.logger.debug(`login: ${isMatch ? "success" : "failed"}`);
-
 		if (user == null || account == null || !isMatch) {
 			return null;
 		}
 
 		const session = await this.createAuthSession(user.id);
+
+		eventBus.emit({
+			type: "auth.signin",
+			actorId: user.id,
+			workspaceId: "",
+			entityId: "",
+			payload: { sessionId: session.authSession.id, username: user.name },
+		});
 
 		return { session, user };
 	}
@@ -166,6 +173,14 @@ export class Auth {
 		}
 
 		const session = await this.createAuthSession(userId);
+
+		eventBus.emit({
+			type: "auth.signup",
+			actorId: user.id,
+			workspaceId: "",
+			entityId: "",
+			payload: { sessionId: session.authSession.id, username: user.name },
+		});
 
 		return { session, user };
 	}
