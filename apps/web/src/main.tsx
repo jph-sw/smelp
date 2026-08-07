@@ -10,6 +10,11 @@ if (!rootElement) {
 	throw new Error("root element not found");
 }
 
+const darkMediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+darkMediaQuery.addEventListener("change", (e) => {
+	document.documentElement.classList.toggle("dark", e.matches);
+});
+
 createRoot(rootElement).render(
 	<StrictMode>
 		<QueryClientProvider client={queryClient}>
