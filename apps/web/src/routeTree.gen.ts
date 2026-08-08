@@ -10,14 +10,21 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as workspaceRouteRouteImport } from './routes/(workspace)/route'
 import { Route as OvalOfficeRouteRouteImport } from './routes/oval-office/route'
 import { Route as SigninRouteImport } from './routes/signin'
 import { Route as SignupRouteImport } from './routes/signup'
+import { Route as workspaceIdRouteImport } from './routes/(workspace)/$id'
+import { Route as workspaceCreateWorkspaceRouteImport } from './routes/(workspace)/create-workspace'
 import { Route as OvalOfficeIndexRouteImport } from './routes/oval-office/index'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const workspaceRouteRoute = workspaceRouteRouteImport.update({
+  id: '/(workspace)',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OvalOfficeRouteRoute = OvalOfficeRouteRouteImport.update({
@@ -35,6 +42,17 @@ const SignupRoute = SignupRouteImport.update({
   path: '/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
+const workspaceIdRoute = workspaceIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => workspaceRouteRoute,
+} as any)
+const workspaceCreateWorkspaceRoute =
+  workspaceCreateWorkspaceRouteImport.update({
+    id: '/create-workspace',
+    path: '/create-workspace',
+    getParentRoute: () => workspaceRouteRoute,
+  } as any)
 const OvalOfficeIndexRoute = OvalOfficeIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -46,33 +64,57 @@ export interface FileRoutesByFullPath {
   '/oval-office': typeof OvalOfficeRouteRouteWithChildren
   '/signin': typeof SigninRoute
   '/signup': typeof SignupRoute
+  '/$id': typeof workspaceIdRoute
+  '/create-workspace': typeof workspaceCreateWorkspaceRoute
   '/oval-office/': typeof OvalOfficeIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/signin': typeof SigninRoute
   '/signup': typeof SignupRoute
+  '/$id': typeof workspaceIdRoute
+  '/create-workspace': typeof workspaceCreateWorkspaceRoute
   '/oval-office': typeof OvalOfficeIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/(workspace)': typeof workspaceRouteRouteWithChildren
   '/oval-office': typeof OvalOfficeRouteRouteWithChildren
   '/signin': typeof SigninRoute
   '/signup': typeof SignupRoute
+  '/(workspace)/$id': typeof workspaceIdRoute
+  '/(workspace)/create-workspace': typeof workspaceCreateWorkspaceRoute
   '/oval-office/': typeof OvalOfficeIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/oval-office' | '/signin' | '/signup' | '/oval-office/'
+  fullPaths:
+    | '/'
+    | '/oval-office'
+    | '/signin'
+    | '/signup'
+    | '/$id'
+    | '/create-workspace'
+    | '/oval-office/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/signin' | '/signup' | '/oval-office'
+  to:
+    '/' | '/signin' | '/signup' | '/$id' | '/create-workspace' | '/oval-office'
   id:
-    '__root__' | '/' | '/oval-office' | '/signin' | '/signup' | '/oval-office/'
+    | '__root__'
+    | '/'
+    | '/(workspace)'
+    | '/oval-office'
+    | '/signin'
+    | '/signup'
+    | '/(workspace)/$id'
+    | '/(workspace)/create-workspace'
+    | '/oval-office/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  workspaceRouteRoute: typeof workspaceRouteRouteWithChildren
   OvalOfficeRouteRoute: typeof OvalOfficeRouteRouteWithChildren
   SigninRoute: typeof SigninRoute
   SignupRoute: typeof SignupRoute
@@ -85,6 +127,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(workspace)': {
+      id: '/(workspace)'
+      path: ''
+      fullPath: ''
+      preLoaderRoute: typeof workspaceRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/oval-office': {
@@ -108,6 +157,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SignupRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/(workspace)/$id': {
+      id: '/(workspace)/$id'
+      path: '/$id'
+      fullPath: '/$id'
+      preLoaderRoute: typeof workspaceIdRouteImport
+      parentRoute: typeof workspaceRouteRoute
+    }
+    '/(workspace)/create-workspace': {
+      id: '/(workspace)/create-workspace'
+      path: '/create-workspace'
+      fullPath: '/create-workspace'
+      preLoaderRoute: typeof workspaceCreateWorkspaceRouteImport
+      parentRoute: typeof workspaceRouteRoute
+    }
     '/oval-office/': {
       id: '/oval-office/'
       path: '/'
@@ -117,6 +180,20 @@ declare module '@tanstack/react-router' {
     }
   }
 }
+
+interface workspaceRouteRouteChildren {
+  workspaceIdRoute: typeof workspaceIdRoute
+  workspaceCreateWorkspaceRoute: typeof workspaceCreateWorkspaceRoute
+}
+
+const workspaceRouteRouteChildren: workspaceRouteRouteChildren = {
+  workspaceIdRoute: workspaceIdRoute,
+  workspaceCreateWorkspaceRoute: workspaceCreateWorkspaceRoute,
+}
+
+const workspaceRouteRouteWithChildren = workspaceRouteRoute._addFileChildren(
+  workspaceRouteRouteChildren,
+)
 
 interface OvalOfficeRouteRouteChildren {
   OvalOfficeIndexRoute: typeof OvalOfficeIndexRoute
@@ -132,6 +209,7 @@ const OvalOfficeRouteRouteWithChildren = OvalOfficeRouteRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  workspaceRouteRoute: workspaceRouteRouteWithChildren,
   OvalOfficeRouteRoute: OvalOfficeRouteRouteWithChildren,
   SigninRoute: SigninRoute,
   SignupRoute: SignupRoute,

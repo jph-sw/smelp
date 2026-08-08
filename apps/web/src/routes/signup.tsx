@@ -10,11 +10,12 @@ export const Route = createFileRoute("/signup")({
 function SignUp() {
 	const navigate = useNavigate();
 	const [email, setEmail] = useState("");
-	const [username, setUsername] = useState("");
+	const [fullName, setFullName] = useState("");
+	const [displayName, setDisplayName] = useState("");
 	const [password, setPassword] = useState("");
 
 	const mutation = useMutation({
-		mutationFn: () => signUp(email, username, password),
+		mutationFn: () => signUp(email, fullName, displayName, password),
 		onSuccess: () => navigate({ to: "/" }),
 	});
 
@@ -39,13 +40,23 @@ function SignUp() {
 						/>
 					</label>
 					<label>
-						Username
+						Fullname
+						<input
+							type="text"
+							required
+							autoComplete="name"
+							value={fullName}
+							onChange={(e) => setFullName(e.target.value)}
+						/>
+					</label>
+					<label>
+						Displayname
 						<input
 							type="text"
 							required
 							autoComplete="username"
-							value={username}
-							onChange={(e) => setUsername(e.target.value)}
+							value={displayName}
+							onChange={(e) => setDisplayName(e.target.value)}
 						/>
 					</label>
 					<label>

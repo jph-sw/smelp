@@ -115,13 +115,21 @@ export class Auth {
 			actorId: user.id,
 			workspaceId: "",
 			entityId: "",
-			payload: { sessionId: session.authSession.id, username: user.name },
+			payload: {
+				sessionId: session.authSession.id,
+				username: user.displayName,
+			},
 		});
 
 		return { session, user };
 	}
 
-	async signUp(email: string, username: string, password: string) {
+	async signUp(
+		email: string,
+		fullName: string,
+		displayName: string,
+		password: string,
+	) {
 		const now = Date.now();
 		const passwordHash = await Bun.password.hash(password, {
 			algorithm: "argon2id",
@@ -130,7 +138,8 @@ export class Auth {
 
 		const user: tables["auth_user"] = {
 			id: userId,
-			name: username,
+			fullName: fullName,
+			displayName: displayName,
 			email: email,
 			createdAt: now,
 			updatedAt: now,
@@ -165,7 +174,10 @@ export class Auth {
 			actorId: user.id,
 			workspaceId: "",
 			entityId: "",
-			payload: { sessionId: session.authSession.id, username: user.name },
+			payload: {
+				sessionId: session.authSession.id,
+				username: user.displayName,
+			},
 		});
 
 		return { session, user };

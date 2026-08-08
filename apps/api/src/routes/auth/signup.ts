@@ -5,7 +5,8 @@ import * as v from "valibot";
 
 const Params = v.object({
 	email: v.pipe(v.string(), v.trim(), v.toLowerCase(), v.email()),
-	username: v.pipe(v.string()),
+	fullName: v.pipe(v.string()),
+	displayName: v.pipe(v.string()),
 	password: v.pipe(v.string(), v.minLength(10), v.maxLength(64)),
 });
 
@@ -21,12 +22,20 @@ export async function SignUpHandler(req: BunRequest) {
 	try {
 		const { session, user } = await auth.signUp(
 			params.output.email,
-			params.output.username,
+			params.output.fullName,
+			params.output.displayName,
 			params.output.password,
 		);
 
 		return Response.json(
-			{ user: { id: user.id, email: user.email, name: user.name } },
+			{
+				user: {
+					id: user.id,
+					email: user.email,
+					fullName: user.fullName,
+					displayName: user.displayName,
+				},
+			},
 			{
 				status: 201,
 				headers: {

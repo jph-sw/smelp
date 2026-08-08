@@ -28,13 +28,14 @@ export async function signIn(
 
 export async function signUp(
 	email: string,
-	username: string,
+	fullName: string,
+	displayName: string,
 	password: string,
 ): Promise<AuthUser> {
 	const res = await fetch("/api/auth/signup", {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify({ email, username, password }),
+		body: JSON.stringify({ email, fullName, displayName, password }),
 	});
 	return parseAuthResponse(res);
 }

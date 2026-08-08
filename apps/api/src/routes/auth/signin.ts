@@ -25,7 +25,14 @@ export async function SignInHandler(req: BunRequest) {
 	const { session, user } = result;
 
 	return Response.json(
-		{ user: { id: user.id, email: user.email, name: user.name } },
+		{
+			user: {
+				id: user.id,
+				email: user.email,
+				fullName: user.fullName,
+				displayName: user.displayName,
+			},
+		},
 		{
 			headers: {
 				"Set-Cookie": `auth_session=${session.authSessionToken}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${auth.authSessionExpiresInSeconds}`,

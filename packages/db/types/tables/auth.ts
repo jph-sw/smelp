@@ -8,7 +8,8 @@ export type auth_session = {
 
 export type auth_user = {
 	id: string;
-	name: string;
+	fullName: string;
+	displayName: string;
 	email: string;
 	role: string | null;
 	image: string | null;
