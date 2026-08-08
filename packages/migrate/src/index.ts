@@ -24,7 +24,11 @@ export class Migrator {
     );`;
 
 		// TODO: handle no folder found
-		const files = await readdir(this.migrations_folder);
+		let files = await readdir(this.migrations_folder);
+
+		files = files
+			.filter((f) => /^\d+_/.test(f))
+			.sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
 
 		this.utils.logger.debug(`found ${files.length} migration/s`);
 
