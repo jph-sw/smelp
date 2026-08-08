@@ -143,7 +143,7 @@ export class Auth {
 			email: email,
 			createdAt: now,
 			updatedAt: now,
-			role: null,
+			role: "user",
 			image: null,
 		};
 
