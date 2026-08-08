@@ -11,12 +11,12 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as workspaceRouteRouteImport } from './routes/(workspace)/route'
-import { Route as OvalOfficeRouteRouteImport } from './routes/oval-office/route'
+import { Route as CeoRouteRouteImport } from './routes/ceo/route'
 import { Route as SigninRouteImport } from './routes/signin'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as workspaceIdRouteImport } from './routes/(workspace)/$id'
 import { Route as workspaceCreateWorkspaceRouteImport } from './routes/(workspace)/create-workspace'
-import { Route as OvalOfficeIndexRouteImport } from './routes/oval-office/index'
+import { Route as CeoIndexRouteImport } from './routes/ceo/index'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -27,9 +27,9 @@ const workspaceRouteRoute = workspaceRouteRouteImport.update({
   id: '/(workspace)',
   getParentRoute: () => rootRouteImport,
 } as any)
-const OvalOfficeRouteRoute = OvalOfficeRouteRouteImport.update({
-  id: '/oval-office',
-  path: '/oval-office',
+const CeoRouteRoute = CeoRouteRouteImport.update({
+  id: '/ceo',
+  path: '/ceo',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SigninRoute = SigninRouteImport.update({
@@ -53,20 +53,20 @@ const workspaceCreateWorkspaceRoute =
     path: '/create-workspace',
     getParentRoute: () => workspaceRouteRoute,
   } as any)
-const OvalOfficeIndexRoute = OvalOfficeIndexRouteImport.update({
+const CeoIndexRoute = CeoIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => OvalOfficeRouteRoute,
+  getParentRoute: () => CeoRouteRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/oval-office': typeof OvalOfficeRouteRouteWithChildren
+  '/ceo': typeof CeoRouteRouteWithChildren
   '/signin': typeof SigninRoute
   '/signup': typeof SignupRoute
   '/$id': typeof workspaceIdRoute
   '/create-workspace': typeof workspaceCreateWorkspaceRoute
-  '/oval-office/': typeof OvalOfficeIndexRoute
+  '/ceo/': typeof CeoIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -74,48 +74,47 @@ export interface FileRoutesByTo {
   '/signup': typeof SignupRoute
   '/$id': typeof workspaceIdRoute
   '/create-workspace': typeof workspaceCreateWorkspaceRoute
-  '/oval-office': typeof OvalOfficeIndexRoute
+  '/ceo': typeof CeoIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/(workspace)': typeof workspaceRouteRouteWithChildren
-  '/oval-office': typeof OvalOfficeRouteRouteWithChildren
+  '/ceo': typeof CeoRouteRouteWithChildren
   '/signin': typeof SigninRoute
   '/signup': typeof SignupRoute
   '/(workspace)/$id': typeof workspaceIdRoute
   '/(workspace)/create-workspace': typeof workspaceCreateWorkspaceRoute
-  '/oval-office/': typeof OvalOfficeIndexRoute
+  '/ceo/': typeof CeoIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/oval-office'
+    | '/ceo'
     | '/signin'
     | '/signup'
     | '/$id'
     | '/create-workspace'
-    | '/oval-office/'
+    | '/ceo/'
   fileRoutesByTo: FileRoutesByTo
-  to:
-    '/' | '/signin' | '/signup' | '/$id' | '/create-workspace' | '/oval-office'
+  to: '/' | '/signin' | '/signup' | '/$id' | '/create-workspace' | '/ceo'
   id:
     | '__root__'
     | '/'
     | '/(workspace)'
-    | '/oval-office'
+    | '/ceo'
     | '/signin'
     | '/signup'
     | '/(workspace)/$id'
     | '/(workspace)/create-workspace'
-    | '/oval-office/'
+    | '/ceo/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   workspaceRouteRoute: typeof workspaceRouteRouteWithChildren
-  OvalOfficeRouteRoute: typeof OvalOfficeRouteRouteWithChildren
+  CeoRouteRoute: typeof CeoRouteRouteWithChildren
   SigninRoute: typeof SigninRoute
   SignupRoute: typeof SignupRoute
 }
@@ -136,11 +135,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof workspaceRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/oval-office': {
-      id: '/oval-office'
-      path: '/oval-office'
-      fullPath: '/oval-office'
-      preLoaderRoute: typeof OvalOfficeRouteRouteImport
+    '/ceo': {
+      id: '/ceo'
+      path: '/ceo'
+      fullPath: '/ceo'
+      preLoaderRoute: typeof CeoRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/signin': {
@@ -171,12 +170,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof workspaceCreateWorkspaceRouteImport
       parentRoute: typeof workspaceRouteRoute
     }
-    '/oval-office/': {
-      id: '/oval-office/'
+    '/ceo/': {
+      id: '/ceo/'
       path: '/'
-      fullPath: '/oval-office/'
-      preLoaderRoute: typeof OvalOfficeIndexRouteImport
-      parentRoute: typeof OvalOfficeRouteRoute
+      fullPath: '/ceo/'
+      preLoaderRoute: typeof CeoIndexRouteImport
+      parentRoute: typeof CeoRouteRoute
     }
   }
 }
@@ -195,22 +194,22 @@ const workspaceRouteRouteWithChildren = workspaceRouteRoute._addFileChildren(
   workspaceRouteRouteChildren,
 )
 
-interface OvalOfficeRouteRouteChildren {
-  OvalOfficeIndexRoute: typeof OvalOfficeIndexRoute
+interface CeoRouteRouteChildren {
+  CeoIndexRoute: typeof CeoIndexRoute
 }
 
-const OvalOfficeRouteRouteChildren: OvalOfficeRouteRouteChildren = {
-  OvalOfficeIndexRoute: OvalOfficeIndexRoute,
+const CeoRouteRouteChildren: CeoRouteRouteChildren = {
+  CeoIndexRoute: CeoIndexRoute,
 }
 
-const OvalOfficeRouteRouteWithChildren = OvalOfficeRouteRoute._addFileChildren(
-  OvalOfficeRouteRouteChildren,
+const CeoRouteRouteWithChildren = CeoRouteRoute._addFileChildren(
+  CeoRouteRouteChildren,
 )
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   workspaceRouteRoute: workspaceRouteRouteWithChildren,
-  OvalOfficeRouteRoute: OvalOfficeRouteRouteWithChildren,
+  CeoRouteRoute: CeoRouteRouteWithChildren,
   SigninRoute: SigninRoute,
   SignupRoute: SignupRoute,
 }
