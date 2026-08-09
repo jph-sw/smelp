@@ -79,7 +79,7 @@ function SignIn() {
 								)}
 							</FormischField>
 							<FormError errors={signInForm.errors} />
-							<Field>
+							<Field orientation={"horizontal"}>
 								<Button type="submit" form="signin-form">
 									Sign In
 								</Button>

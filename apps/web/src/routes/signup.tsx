@@ -108,9 +108,9 @@ function SignUp() {
 								)}
 							</FormischField>
 							<FormError errors={signUpForm.errors} />
-							<Field>
+							<Field orientation={"horizontal"}>
 								<Button type="submit" form="signup-form">
-									Sign In
+									Sign Up
 								</Button>
 							</Field>
 						</FieldGroup>
