@@ -10,9 +10,5 @@ export const Route = createFileRoute("/(workspace)")({
 });
 
 function RouteComponent() {
-	return (
-		<div>
-			<Outlet />
-		</div>
-	);
+	return <Outlet />;
 }
