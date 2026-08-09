@@ -11,6 +11,7 @@ import { TextInput } from "#/components/form/TextInput";
 import { Button } from "#/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "#/components/ui/card";
 import { Field, FieldGroup } from "#/components/ui/field";
+import { toast } from "#/components/ui/toast";
 
 const CreateWorkspaceSchema = v.object({
 	name: v.string(),
@@ -26,7 +27,10 @@ function RouteComponent() {
 	const handleSubmit: SubmitHandler<typeof CreateWorkspaceSchema> = (
 		output,
 	) => {
-		console.log(output);
+		toast.add({
+			type: "success",
+			description: <code>{JSON.stringify(output, null, 2)}</code>,
+		});
 	};
 
 	return (

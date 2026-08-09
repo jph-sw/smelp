@@ -1,5 +1,6 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { createRootRouteWithContext, Outlet } from "@tanstack/react-router";
+import { Toaster } from "#/components/ui/toast";
 import { type AuthUser, currentUserQueryOptions } from "../../lib/auth";
 
 export const Route = createRootRouteWithContext<{
@@ -12,5 +13,10 @@ export const Route = createRootRouteWithContext<{
 		);
 		return { user };
 	},
-	component: () => <Outlet />,
+	component: () => (
+		<>
+			<Toaster />
+			<Outlet />
+		</>
+	),
 });
