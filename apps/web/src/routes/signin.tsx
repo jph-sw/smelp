@@ -1,7 +1,32 @@
+import {
+	Form,
+	Field as FormischField,
+	type SubmitHandler,
+	setErrors,
+	useForm,
+} from "@formisch/react";
 import { useMutation } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import * as v from "valibot";
+import { FormError } from "#/components/form/form-errror";
+import { TextInput } from "#/components/form/text-input";
+import { Button } from "#/components/ui/button";
+import {
+	Card,
+	CardContent,
+	CardFooter,
+	CardHeader,
+	CardTitle,
+} from "#/components/ui/card";
+import { Field, FieldError, FieldGroup } from "#/components/ui/field";
+import { toast } from "#/components/ui/toast";
 import { signIn } from "../../lib/auth";
+
+const SignInSchema = v.object({
+	email: v.pipe(v.string(), v.email()),
+	password: v.pipe(v.string()),
+});
 
 export const Route = createFileRoute("/signin")({
 	component: SignIn,
@@ -9,53 +34,68 @@ export const Route = createFileRoute("/signin")({
 
 function SignIn() {
 	const navigate = useNavigate();
-	const [email, setEmail] = useState("");
-	const [password, setPassword] = useState("");
-
-	const mutation = useMutation({
-		mutationFn: () => signIn(email, password),
-		onSuccess: () => navigate({ to: "/" }),
+	const signInForm = useForm({
+		schema: SignInSchema,
 	});
 
+	const handleSubmit: SubmitHandler<typeof SignInSchema> = async (output) => {
+		try {
+			await signIn(output.email, output.password);
+			navigate({ to: "/" });
+		} catch (error) {
+			if (error instanceof Error) {
+				console.log("Form error: ", error);
+				setErrors(signInForm, { errors: [error.message] });
+			}
+		}
+	};
+
 	return (
-		<div>
-			<div>
-				<h1>Sign in</h1>
-				<form
-					onSubmit={(e) => {
-						e.preventDefault();
-						mutation.mutate();
-					}}
-				>
-					<label>
-						Email
-						<input
-							type="email"
-							required
-							autoComplete="email"
-							value={email}
-							onChange={(e) => setEmail(e.target.value)}
-						/>
-					</label>
-					<label>
-						Password
-						<input
-							type="password"
-							required
-							autoComplete="current-password"
-							value={password}
-							onChange={(e) => setPassword(e.target.value)}
-						/>
-					</label>
-					{mutation.isError ? <p>{mutation.error.message}</p> : null}
-					<button type="submit" disabled={mutation.isPending}>
-						{mutation.isPending ? "Signing in…" : "Sign in"}
-					</button>
-				</form>
-				<p>
-					No account? <Link to="/signup">Sign up</Link>
-				</p>
-			</div>
+		<div className="w-full h-dvh flex justify-center items-center">
+			<Card className="w-xl">
+				<CardHeader>
+					<CardTitle>Sign in</CardTitle>
+				</CardHeader>
+				<CardContent>
+					<Form of={signInForm} id="signin-form" onSubmit={handleSubmit}>
+						<FieldGroup>
+							<FormischField of={signInForm} path={["email"]}>
+								{(field) => (
+									<TextInput
+										input={field.input}
+										label="Email"
+										type="email"
+										errors={field.errors}
+										{...field.props}
+									/>
+								)}
+							</FormischField>
+							<FormischField of={signInForm} path={["password"]}>
+								{(field) => (
+									<TextInput
+										input={field.input}
+										label="Password"
+										type="password"
+										errors={field.errors}
+										{...field.props}
+									/>
+								)}
+							</FormischField>
+							<FormError errors={signInForm.errors} />
+							<Field>
+								<Button type="submit" form="signin-form">
+									Sign In
+								</Button>
+							</Field>
+						</FieldGroup>
+					</Form>
+				</CardContent>
+				<CardFooter>
+					<p>
+						No account? <Link to="/signup">Sign up</Link>
+					</p>
+				</CardFooter>
+			</Card>
 		</div>
 	);
 }
