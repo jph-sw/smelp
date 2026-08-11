@@ -20,11 +20,11 @@ export async function GetWorkspacesHandler(req: BunRequest) {
 
 	utils.logger.debug(`found ${workspaces.length} workspaces`);
 
-	return Response.json({ workspaces });
+	return Response.json(workspaces);
 }
 
 const Params = v.object({
-	name: v.pipe(v.string(), v.minLength(6), v.maxLength(16)),
+	name: v.pipe(v.string(), v.minLength(6), v.maxLength(32)),
 });
 
 export async function PostWorkspacesHandler(req: BunRequest) {
@@ -44,12 +44,23 @@ export async function PostWorkspacesHandler(req: BunRequest) {
 		);
 	}
 
+	const slug = utils.toSlug(params.output.name);
+
 	const workspace: tables["workspace"] = {
-		id: crypto.randomUUID(),
+		id: slug,
 		name: params.output.name,
 		ownerId: session.userId,
 		image: null,
 	};
+
+	const workspace_member: tables["workspace_member"] = {
+		id: crypto.randomUUID(),
+		workspaceId: workspace.id,
+		userId: session.userId,
+	};
+
 	await sql`INSERT INTO workspace ${sql(workspace)}`;
+	await sql`INSERT INTO workspace_member ${sql(workspace_member)}`;
+
 	return Response.json({ workspace }, { status: 201 });
 }

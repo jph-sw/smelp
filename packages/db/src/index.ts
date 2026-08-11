@@ -36,6 +36,27 @@ export class Utils {
 		const data = await file.bytes();
 		return this.checksumFile(data);
 	}
+
+	toSlug(input: string): string {
+		const umlautMap: Record<string, string> = {
+			ä: "ae",
+			ö: "oe",
+			ü: "ue",
+			ß: "ss",
+			Ä: "Ae",
+			Ö: "Oe",
+			Ü: "Ue",
+		};
+
+		return input
+			.replace(/[äöüßÄÖÜ]/g, (char) => umlautMap[char] ?? char)
+			.normalize("NFKD")
+			.replace(/[\u0300-\u036f]/g, "")
+			.toLowerCase()
+			.replace(/[^a-z0-9\s_-]/g, "")
+			.replace(/[\s-]+/g, "_")
+			.replace(/^_+|_+$/g, "");
+	}
 }
 
 export type tables = {
