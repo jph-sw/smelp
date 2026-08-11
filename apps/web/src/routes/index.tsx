@@ -19,17 +19,24 @@ const workspacesQueryOptions = ({ userId }: { userId: string }) =>
 export const Route = createFileRoute("/")({
 	component: Home,
 	loader: ({ context: { queryClient, user } }) => {
-		return queryClient.ensureQueryData(
-			workspacesQueryOptions({ userId: user!.id }),
-		);
+		if (user != null) {
+			return queryClient.ensureQueryData(
+				workspacesQueryOptions({ userId: user.id }),
+			);
+		}
 	},
 });
 
 function Home() {
-	const navigate = Route.useNavigate();
 	const { user } = Route.useRouteContext();
+	const navigate = Route.useNavigate();
+
+	if (user === null) {
+		throw navigate({ to: "/signin" });
+	}
+
 	const { data: workspaces } = useSuspenseQuery(
-		workspacesQueryOptions({ userId: user!.id }),
+		workspacesQueryOptions({ userId: user.id }),
 	);
 
 	if (workspaces && workspaces?.length > 0) {
