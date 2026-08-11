@@ -2,7 +2,7 @@ export type workspace = {
 	id: string;
 	name: string;
 	ownerId: string;
-	network: "public" | "private";
+	image: string | null;
 };
 
 export type workspace_member = {

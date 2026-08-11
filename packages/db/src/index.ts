@@ -11,6 +11,7 @@ import type {
 	auth_user,
 } from "../types/tables/auth";
 import type { schema_migrations } from "../types/tables/migration";
+import type { workspace, workspace_member } from "../types/tables/workspace";
 
 export class DB {
 	public sqlite = new SQL("sqlite://database.sqlite");
@@ -46,4 +47,6 @@ export type tables = {
 	auth_space: auth_space;
 	auth_space_member: auth_space_member;
 	activity_logs: activity_logs;
+	workspace: workspace;
+	workspace_member: workspace_member;
 };

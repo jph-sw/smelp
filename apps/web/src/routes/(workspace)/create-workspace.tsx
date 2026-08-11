@@ -2,12 +2,14 @@ import {
 	Form,
 	Field as FormischField,
 	type SubmitHandler,
+	setErrors,
 	useForm,
 } from "@formisch/react";
 import { createFileRoute } from "@tanstack/react-router";
 import * as v from "valibot";
 import libraryUrl from "#/assets/library.png";
-import { TextInput } from "#/components/form/TextInput";
+import { FormError } from "#/components/form/form-errror";
+import { TextInput } from "#/components/form/text-input";
 import { Button } from "#/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "#/components/ui/card";
 import { Field, FieldGroup } from "#/components/ui/field";
@@ -24,13 +26,53 @@ export const Route = createFileRoute("/(workspace)/create-workspace")({
 function RouteComponent() {
 	const createWorkspaceForm = useForm({ schema: CreateWorkspaceSchema });
 
-	const handleSubmit: SubmitHandler<typeof CreateWorkspaceSchema> = (
+	const handleSubmit: SubmitHandler<typeof CreateWorkspaceSchema> = async (
 		output,
 	) => {
-		toast.add({
-			type: "success",
-			description: <code>{JSON.stringify(output, null, 2)}</code>,
-		});
+		try {
+			const res = await fetch("/api/workspaces", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(output),
+			});
+
+			if (res.status === 401) {
+				toast.add({
+					type: "error",
+					description: "Your session expired. Please log in again.",
+				});
+				return;
+			}
+
+			if (res.status === 400) {
+				const body = await res.json();
+				setErrors(createWorkspaceForm, {
+					errors: body.issues.map(
+						(issue: { message: string }) => issue.message,
+					),
+				});
+				return;
+			}
+
+			if (!res.ok) {
+				toast.add({
+					type: "error",
+					description: "Something went wrong. Please try again.",
+				});
+				return;
+			}
+
+			const { workspace } = await res.json();
+			toast.add({
+				type: "success",
+				description: `Workspace "${workspace.name}" created.`,
+			});
+		} catch {
+			toast.add({
+				type: "error",
+				description: "Network error. Please check your connection.",
+			});
+		}
 	};
 
 	return (
@@ -64,6 +106,7 @@ function RouteComponent() {
 											/>
 										)}
 									</FormischField>
+									<FormError errors={createWorkspaceForm.errors} />
 									<Field orientation="horizontal">
 										<Button type="submit" form="create-workspace-form">
 											Create
