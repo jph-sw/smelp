@@ -1,6 +1,6 @@
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { workspacesQueryOptions } from "#/lib/data/workspaces";
+import { workspacesQueryOptions } from "#/lib/data/workspace";
 
 export const Route = createFileRoute("/")({
 	component: Home,

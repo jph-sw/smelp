@@ -5,6 +5,7 @@ import { MeHandler } from "./routes/auth/me";
 import { SignInHandler } from "./routes/auth/signin";
 import { SignUpHandler } from "./routes/auth/signup";
 import {
+	GetWorkspaceHandler,
 	GetWorkspacesHandler,
 	PostWorkspacesHandler,
 } from "./routes/workspace";
@@ -32,6 +33,9 @@ const server = Bun.serve({
 		"/api/workspaces": {
 			GET: GetWorkspacesHandler,
 			POST: PostWorkspacesHandler,
+		},
+		"/api/workspace": {
+			GET: GetWorkspaceHandler,
 		},
 	},
 });

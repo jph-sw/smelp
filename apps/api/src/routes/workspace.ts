@@ -7,6 +7,23 @@ const sql = new DB().sqlite;
 const utils = new Utils();
 const auth = new Auth();
 
+export async function GetWorkspaceHandler(req: BunRequest) {
+	const url = new URL(req.url);
+	const workspaceId = url.searchParams.get("workspaceId");
+
+	if (workspaceId == null)
+		return Response.json(
+			{ error: "validation", issues: ["workspaceId is missing"] },
+			{ status: 400 },
+		);
+
+	const workspace = (
+		await sql`SELECT * FROM workspace WHERE id = ${workspaceId}`
+	)[0] as tables["workspace"];
+
+	return Response.json(workspace);
+}
+
 export async function GetWorkspacesHandler(req: BunRequest) {
 	const url = new URL(req.url);
 	const userId = url.searchParams.get("userId");
@@ -23,7 +40,7 @@ export async function GetWorkspacesHandler(req: BunRequest) {
 	return Response.json(workspaces);
 }
 
-const Params = v.object({
+const PostWorkspacesHandlerParams = v.object({
 	name: v.pipe(v.string(), v.minLength(6), v.maxLength(32)),
 });
 
@@ -36,7 +53,7 @@ export async function PostWorkspacesHandler(req: BunRequest) {
 		return Response.json({ error: "unauthorized" }, { status: 401 });
 
 	const json = await req.json();
-	const params = v.safeParse(Params, json);
+	const params = v.safeParse(PostWorkspacesHandlerParams, json);
 	if (!params.success) {
 		return Response.json(
 			{ error: "validation", issues: params.issues },

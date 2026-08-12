@@ -10,10 +10,5 @@ export const Route = createFileRoute("/(workspace)")({
 });
 
 function RouteComponent() {
-	return (
-		<div>
-			<div className="w-full h-10 border-b"></div>
-			<Outlet />
-		</div>
-	);
+	return <Outlet />;
 }
