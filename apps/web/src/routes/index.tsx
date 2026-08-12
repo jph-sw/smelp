@@ -1,20 +1,6 @@
-import type { tables } from "@smelp/db";
-import {
-	queryOptions,
-	useQuery,
-	useSuspenseQuery,
-} from "@tanstack/react-query";
+import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-
-const workspacesQueryOptions = ({ userId }: { userId: string }) =>
-	queryOptions({
-		queryKey: ["workspaces", userId],
-		queryFn: async () => {
-			const res = await fetch(`/api/workspaces?userId=${userId}`);
-			const body = (await res.json()) as tables["workspace"][];
-			return body;
-		},
-	});
+import { workspacesQueryOptions } from "#/lib/data/workspaces";
 
 export const Route = createFileRoute("/")({
 	component: Home,
