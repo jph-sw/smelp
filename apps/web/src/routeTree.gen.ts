@@ -17,6 +17,7 @@ import { Route as SignupRouteImport } from './routes/signup'
 import { Route as workspaceIdRouteRouteImport } from './routes/(workspace)/$id/route'
 import { Route as workspaceCreateWorkspaceRouteImport } from './routes/(workspace)/create-workspace'
 import { Route as CeoIndexRouteImport } from './routes/ceo/index'
+import { Route as workspaceIdIndexRouteImport } from './routes/(workspace)/$id/index'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -58,23 +59,29 @@ const CeoIndexRoute = CeoIndexRouteImport.update({
   path: '/',
   getParentRoute: () => CeoRouteRoute,
 } as any)
+const workspaceIdIndexRoute = workspaceIdIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => workspaceIdRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/ceo': typeof CeoRouteRouteWithChildren
   '/signin': typeof SigninRoute
   '/signup': typeof SignupRoute
-  '/$id': typeof workspaceIdRouteRoute
+  '/$id': typeof workspaceIdRouteRouteWithChildren
   '/create-workspace': typeof workspaceCreateWorkspaceRoute
   '/ceo/': typeof CeoIndexRoute
+  '/$id/': typeof workspaceIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/signin': typeof SigninRoute
   '/signup': typeof SignupRoute
-  '/$id': typeof workspaceIdRouteRoute
   '/create-workspace': typeof workspaceCreateWorkspaceRoute
   '/ceo': typeof CeoIndexRoute
+  '/$id': typeof workspaceIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -83,9 +90,10 @@ export interface FileRoutesById {
   '/ceo': typeof CeoRouteRouteWithChildren
   '/signin': typeof SigninRoute
   '/signup': typeof SignupRoute
-  '/(workspace)/$id': typeof workspaceIdRouteRoute
+  '/(workspace)/$id': typeof workspaceIdRouteRouteWithChildren
   '/(workspace)/create-workspace': typeof workspaceCreateWorkspaceRoute
   '/ceo/': typeof CeoIndexRoute
+  '/(workspace)/$id/': typeof workspaceIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -97,8 +105,9 @@ export interface FileRouteTypes {
     | '/$id'
     | '/create-workspace'
     | '/ceo/'
+    | '/$id/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/signin' | '/signup' | '/$id' | '/create-workspace' | '/ceo'
+  to: '/' | '/signin' | '/signup' | '/create-workspace' | '/ceo' | '/$id'
   id:
     | '__root__'
     | '/'
@@ -109,6 +118,7 @@ export interface FileRouteTypes {
     | '/(workspace)/$id'
     | '/(workspace)/create-workspace'
     | '/ceo/'
+    | '/(workspace)/$id/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -177,16 +187,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CeoIndexRouteImport
       parentRoute: typeof CeoRouteRoute
     }
+    '/(workspace)/$id/': {
+      id: '/(workspace)/$id/'
+      path: '/'
+      fullPath: '/$id/'
+      preLoaderRoute: typeof workspaceIdIndexRouteImport
+      parentRoute: typeof workspaceIdRouteRoute
+    }
   }
 }
 
+interface workspaceIdRouteRouteChildren {
+  workspaceIdIndexRoute: typeof workspaceIdIndexRoute
+}
+
+const workspaceIdRouteRouteChildren: workspaceIdRouteRouteChildren = {
+  workspaceIdIndexRoute: workspaceIdIndexRoute,
+}
+
+const workspaceIdRouteRouteWithChildren =
+  workspaceIdRouteRoute._addFileChildren(workspaceIdRouteRouteChildren)
+
 interface workspaceRouteRouteChildren {
-  workspaceIdRouteRoute: typeof workspaceIdRouteRoute
+  workspaceIdRouteRoute: typeof workspaceIdRouteRouteWithChildren
   workspaceCreateWorkspaceRoute: typeof workspaceCreateWorkspaceRoute
 }
 
 const workspaceRouteRouteChildren: workspaceRouteRouteChildren = {
-  workspaceIdRouteRoute: workspaceIdRouteRoute,
+  workspaceIdRouteRoute: workspaceIdRouteRouteWithChildren,
   workspaceCreateWorkspaceRoute: workspaceCreateWorkspaceRoute,
 }
 

@@ -1,21 +1,8 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
-import { Avatar, AvatarFallback, AvatarImage } from "#/components/ui/avatar";
-import { Button } from "#/components/ui/button";
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuGroup,
-	DropdownMenuItem,
-	DropdownMenuLabel,
-	DropdownMenuSeparator,
-	DropdownMenuTrigger,
-} from "#/components/ui/dropdown-menu";
-import {
-	Popover,
-	PopoverContent,
-	PopoverTrigger,
-} from "#/components/ui/popover";
+import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { SiteHeader } from "#/components/sidebar/header";
+import { AppSidebar } from "#/components/sidebar/sidebar";
+import { SidebarInset, SidebarProvider } from "#/components/ui/sidebar";
 import { workspaceQueryOptions } from "#/lib/data/workspace";
 import { ApiError } from "#/lib/utils";
 
@@ -35,6 +22,7 @@ export const Route = createFileRoute("/(workspace)/$id")({
 });
 
 function RouteComponent() {
+	const navigate = Route.useNavigate();
 	const { id: workspaceId } = Route.useParams();
 	const { user } = Route.useRouteContext();
 
@@ -42,53 +30,21 @@ function RouteComponent() {
 		workspaceQueryOptions({ workspaceId }),
 	);
 
+	if (user === null) {
+		throw navigate({ to: "/signin" });
+	}
+
 	return (
-		<div className="relative flex size-full flex-col">
-			<div className="h-10 border-b w-full flex justify-between items-center px-2">
-				<div>
-					<Popover>
-						<PopoverTrigger render={<Button variant="outline" />}>
-							{workspace.name}
-						</PopoverTrigger>
-						<PopoverContent className={"px-0 gap-0"}>
-							<div className="px-2 mb-2">
-								<span>{user?.email}</span>
-							</div>
-							<div className="px-2 py-4 grid gap-2 bg-secondary">
-								<span className="text-lg">{workspace.name}</span>
-								<div>
-									<Button>Settings</Button>
-								</div>
-							</div>
-						</PopoverContent>
-					</Popover>
+		<div className="[--header-height:calc(--spacing(10))]">
+			<SidebarProvider className="flex flex-col">
+				<SiteHeader workspace={workspace} user={user} />
+				<div className="flex flex-1">
+					<AppSidebar />
+					<SidebarInset>
+						<Outlet />
+					</SidebarInset>
 				</div>
-				<div>middle</div>
-				<div>
-					<DropdownMenu>
-						<DropdownMenuTrigger
-							render={
-								<Avatar>
-									<AvatarImage src="https://github.com/shadcn.png" />
-									<AvatarFallback>CN</AvatarFallback>
-								</Avatar>
-							}
-						></DropdownMenuTrigger>
-						<DropdownMenuContent>
-							<DropdownMenuGroup>
-								<DropdownMenuLabel>My Account</DropdownMenuLabel>
-								<DropdownMenuItem>Settings</DropdownMenuItem>
-								<DropdownMenuItem>Preferences</DropdownMenuItem>
-							</DropdownMenuGroup>
-							<DropdownMenuSeparator />
-							<DropdownMenuGroup>
-								<DropdownMenuItem>Sign Out</DropdownMenuItem>
-							</DropdownMenuGroup>
-						</DropdownMenuContent>
-					</DropdownMenu>
-				</div>
-			</div>
-			<div className="relative bg-card flex size-full">page content</div>
+			</SidebarProvider>
 		</div>
 	);
 }
