@@ -41,7 +41,11 @@ function RouteComponent() {
 				<div className="flex flex-1">
 					<AppSidebar />
 					<SidebarInset>
-						<Outlet />
+						<div className="flex flex-1 flex-col">
+							<div className="min-h-screen flex-1 rounded-xl bg-muted/50 md:min-h-min p-2">
+								<Outlet />
+							</div>
+						</div>
 					</SidebarInset>
 				</div>
 			</SidebarProvider>
