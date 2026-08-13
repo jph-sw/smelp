@@ -1,9 +1,4 @@
-import {
-	Briefcase,
-	EllipsisIcon,
-	PlusSignIcon,
-	SmileIcon,
-} from "@hugeicons/core-free-icons";
+import { PlusSignIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
 	Sidebar,
@@ -11,12 +6,13 @@ import {
 	SidebarFooter,
 	SidebarGroup,
 	SidebarGroupContent,
-	SidebarGroupLabel,
 	SidebarHeader,
 	SidebarMenu,
 	SidebarMenuButton,
 	SidebarMenuItem,
 } from "#/components/ui/sidebar";
+import { NavProjects } from "./nav-projects";
+import { NavWorkspaces } from "./nav-workspaces";
 
 export function AppSidebar() {
 	return (
@@ -40,44 +36,8 @@ export function AppSidebar() {
 						</SidebarMenu>
 					</SidebarGroupContent>
 				</SidebarGroup>
-				<SidebarGroup>
-					<SidebarGroupLabel>Workspace</SidebarGroupLabel>
-					<SidebarGroupContent>
-						<SidebarMenu>
-							<SidebarMenuItem>
-								<SidebarMenuButton>
-									<HugeiconsIcon icon={Briefcase} />
-									Projects
-								</SidebarMenuButton>
-							</SidebarMenuItem>
-							<SidebarMenuItem>
-								<SidebarMenuButton>
-									<HugeiconsIcon icon={EllipsisIcon} />
-									More
-								</SidebarMenuButton>
-							</SidebarMenuItem>
-						</SidebarMenu>
-					</SidebarGroupContent>
-				</SidebarGroup>
-				<SidebarGroup>
-					<SidebarGroupLabel>Projects</SidebarGroupLabel>
-					<SidebarGroupContent>
-						<SidebarMenu>
-							<SidebarMenuItem>
-								<SidebarMenuButton>
-									<HugeiconsIcon icon={SmileIcon} />
-									Projects 1
-								</SidebarMenuButton>
-							</SidebarMenuItem>
-							<SidebarMenuItem>
-								<SidebarMenuButton>
-									<HugeiconsIcon icon={SmileIcon} />
-									Projects 2
-								</SidebarMenuButton>
-							</SidebarMenuItem>
-						</SidebarMenu>
-					</SidebarGroupContent>
-				</SidebarGroup>
+				<NavWorkspaces />
+				<NavProjects />
 			</SidebarContent>
 			<SidebarFooter></SidebarFooter>
 		</Sidebar>
