@@ -13,6 +13,7 @@
       "dependencies": {
         "@smelp/auth": "*",
         "@smelp/db": "*",
+        "@smelp/events": "*",
         "@smelp/migrate": "*",
         "valibot": "^1.4.2",
       },

@@ -44,6 +44,13 @@ export type DomainEvent =
 			actorId: string;
 			entityId: string;
 			payload: { sessionId: string; username: string };
+	  }
+	| {
+			type: "workspace.created";
+			workspaceId: string;
+			actorId: string;
+			entityId: string;
+			payload: { name: string };
 	  };
 
 export type DomainEventType = DomainEvent["type"];

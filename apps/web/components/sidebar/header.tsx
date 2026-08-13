@@ -3,6 +3,7 @@
 import { ChevronDown, SearchIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { tables } from "@smelp/db";
+import { Link } from "@tanstack/react-router";
 import { Button } from "#/components/ui/button";
 import type { AuthUser } from "#/lib/auth";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
@@ -42,6 +43,9 @@ export function SiteHeader({
 									<Button>Settings</Button>
 								</div>
 							</div>
+							<Button render={<Link to="/create-workspace" />}>
+								New workspace
+							</Button>
 						</PopoverContent>
 					</Popover>
 				</div>

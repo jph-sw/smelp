@@ -1,5 +1,6 @@
 import { Auth } from "@smelp/auth";
 import { DB, type tables, Utils } from "@smelp/db";
+import { eventBus } from "@smelp/events";
 import type { BunRequest } from "bun";
 import * as v from "valibot";
 
@@ -78,6 +79,16 @@ export async function PostWorkspacesHandler(req: BunRequest) {
 
 	await sql`INSERT INTO workspace ${sql(workspace)}`;
 	await sql`INSERT INTO workspace_member ${sql(workspace_member)}`;
+
+	eventBus.emit({
+		type: "workspace.created",
+		workspaceId: workspace.id,
+		actorId: workspace.ownerId,
+		entityId: "",
+		payload: {
+			name: workspace.name,
+		},
+	});
 
 	return Response.json({ workspace }, { status: 201 });
 }
