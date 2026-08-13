@@ -4,6 +4,7 @@ import {
 	SmileIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { useState } from "react";
 import {
 	SidebarGroup,
 	SidebarGroupContent,
@@ -20,10 +21,12 @@ import {
 } from "../ui/collapsible";
 
 export function NavProjects() {
+	const [isOpen, setIsOpen] = useState(false);
+
 	return (
-		<Collapsible defaultOpen className="group/collapsible">
+		<Collapsible open={isOpen} defaultOpen className="group/collapsible">
 			<SidebarGroup>
-				<SidebarGroupLabel render={<CollapsibleTrigger />}>
+				<SidebarGroupLabel>
 					Projects
 					<div className="flex items-center ml-auto">
 						<Button
@@ -33,7 +36,11 @@ export function NavProjects() {
 						>
 							<HugeiconsIcon icon={PlusSignIcon} />
 						</Button>
-						<Button variant={"ghost"} size={"icon-xs"}>
+						<Button
+							variant={"ghost"}
+							size={"icon-xs"}
+							onClick={() => setIsOpen(!isOpen)}
+						>
 							<HugeiconsIcon
 								icon={ChevronUpIcon}
 								className="transition-transform group-data-open/collapsible:rotate-180"
