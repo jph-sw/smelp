@@ -53,7 +53,7 @@ export const createProject = base
 			if (e instanceof SQL.SQLiteError) {
 				if (e.code === "SQLITE_CONSTRAINT_PRIMARYKEY") {
 					throw new ORPCError("CONFLICT", {
-						message: "A workspace with this name already exists",
+						message: "A project with this name already exists",
 					});
 				}
 			}

@@ -7,18 +7,20 @@ export default function TextField({
 	type,
 	readOnly = false,
 	disabled = false,
+	className,
 }: {
 	label: string;
 	type?: string;
 	readOnly?: boolean;
 	disabled?: boolean;
+	className?: React.ComponentProps<"input">["className"];
 }) {
 	const id = `${label}-${crypto.randomUUID()}`;
 	const field = useFieldContext<string>();
 	const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
 
 	return (
-		<Field>
+		<Field className={className}>
 			<FieldLabel htmlFor={id}>{label}</FieldLabel>
 			<Input
 				id={id}

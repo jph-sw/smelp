@@ -38,7 +38,7 @@ export function AppSidebar({ workspace }: { workspace: tables["workspace"] }) {
 					</SidebarGroupContent>
 				</SidebarGroup>
 				<NavWorkspaces workspace={workspace} />
-				<NavProjects />
+				<NavProjects workspace={workspace} />
 			</SidebarContent>
 			<SidebarFooter></SidebarFooter>
 		</Sidebar>

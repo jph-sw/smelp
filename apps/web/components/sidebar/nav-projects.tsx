@@ -1,9 +1,6 @@
-import {
-	ChevronUpIcon,
-	PlusSignIcon,
-	SmileIcon,
-} from "@hugeicons/core-free-icons";
+import { ChevronUpIcon, SmileIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import type { tables } from "@smelp/db";
 import { useState } from "react";
 import {
 	SidebarGroup,
@@ -13,10 +10,11 @@ import {
 	SidebarMenuButton,
 	SidebarMenuItem,
 } from "#/components/ui/sidebar";
+import { CreateProjectDialog } from "../project/create-project-dialog";
 import { Button } from "../ui/button";
 import { Collapsible, CollapsibleContent } from "../ui/collapsible";
 
-export function NavProjects() {
+export function NavProjects({ workspace }: { workspace: tables["workspace"] }) {
 	const [isOpen, setIsOpen] = useState(false);
 
 	return (
@@ -25,13 +23,7 @@ export function NavProjects() {
 				<SidebarGroupLabel>
 					Projects
 					<div className="flex items-center ml-auto">
-						<Button
-							className={"hidden group-hover/collapsible:flex"}
-							variant={"ghost"}
-							size={"icon-xs"}
-						>
-							<HugeiconsIcon icon={PlusSignIcon} />
-						</Button>
+						<CreateProjectDialog workspace={workspace} />
 						<Button
 							variant={"ghost"}
 							size={"icon-xs"}
