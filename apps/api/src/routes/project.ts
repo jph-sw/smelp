@@ -1,14 +1,13 @@
 import { ORPCError } from "@orpc/server";
 import { getCookie } from "@orpc/server/helpers";
 import { Auth } from "@smelp/auth";
-import { DB, type tables, Utils } from "@smelp/db";
+import { DB, type tables } from "@smelp/db";
 import { eventBus } from "@smelp/events";
 import { SQL } from "bun";
 import * as v from "valibot";
 import { base } from "../orpc";
 
 const sql = new DB().sqlite;
-const utils = new Utils();
 const auth = new Auth();
 
 export const createProject = base
@@ -33,9 +32,10 @@ export const createProject = base
 			name: input.name,
 			description: input.description,
 			access: input.access,
-			leadUserId: "",
-			defaultAssigneeUserId: "",
+			leadUserId: null,
+			defaultAssigneeUserId: null,
 			workspaceId: input.workspaceId,
+			image: null,
 			createdBy: session.userId,
 			createdAt: Date.now(),
 			updatedAt: Date.now(),
@@ -60,6 +60,14 @@ export const createProject = base
 		}
 
 		await sql`INSERT INTO project_member ${sql(project_member)}`;
+
+		eventBus.emit({
+			type: "project.created",
+			workspaceId: input.workspaceId,
+			entityId: project.id,
+			actorId: session.userId,
+			payload: { name: project.name },
+		});
 
 		return project;
 	});
