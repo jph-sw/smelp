@@ -14,42 +14,40 @@ const Params = v.object({
 	password: v.pipe(v.string(), v.minLength(10), v.maxLength(64)),
 });
 
-export const signUp = base
-	.input(Params)
-	.handler(async ({ input, context }) => {
-		try {
-			const { session, user } = await auth.signUp(
-				input.email,
-				input.fullName,
-				input.displayName,
-				input.password,
-			);
+export const signUp = base.input(Params).handler(async ({ input, context }) => {
+	try {
+		const { session, user } = await auth.signUp(
+			input.email,
+			input.fullName,
+			input.displayName,
+			input.password,
+		);
 
-			setCookie(context.resHeaders, "auth_session", session.authSessionToken, {
-				httpOnly: true,
-				secure: process.env.NODE_ENV === "production",
-				sameSite: "lax",
-				path: "/",
-				maxAge: auth.authSessionExpiresInSeconds,
+		setCookie(context.resHeaders, "auth_session", session.authSessionToken, {
+			httpOnly: true,
+			secure: process.env.NODE_ENV === "production",
+			sameSite: "lax",
+			path: "/",
+			maxAge: auth.authSessionExpiresInSeconds,
+		});
+
+		return {
+			user: {
+				id: user.id,
+				email: user.email,
+				fullName: user.fullName,
+				displayName: user.displayName,
+			},
+		};
+	} catch (error) {
+		if (
+			error instanceof SQL.SQLiteError &&
+			error.code === "SQLITE_CONSTRAINT_UNIQUE"
+		) {
+			throw new ORPCError("CONFLICT", {
+				message: "Email already registered",
 			});
-
-			return {
-				user: {
-					id: user.id,
-					email: user.email,
-					fullName: user.fullName,
-					displayName: user.displayName,
-				},
-			};
-		} catch (error) {
-			if (
-				error instanceof SQL.SQLiteError &&
-				error.code === "SQLITE_CONSTRAINT_UNIQUE"
-			) {
-				throw new ORPCError("CONFLICT", {
-					message: "Email already registered",
-				});
-			}
-			throw error;
 		}
-	});
+		throw error;
+	}
+});

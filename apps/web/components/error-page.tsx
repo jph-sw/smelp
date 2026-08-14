@@ -3,7 +3,8 @@ import type { ErrorComponentProps } from "@tanstack/react-router";
 import { Button } from "#/components/ui/button";
 
 export function ErrorPage({ error, reset }: ErrorComponentProps) {
-	const title = error instanceof ORPCError ? orpcErrorTitle(error) : "Something went wrong";
+	const title =
+		error instanceof ORPCError ? orpcErrorTitle(error) : "Something went wrong";
 	const description =
 		error instanceof ORPCError
 			? orpcErrorDescription(error)
