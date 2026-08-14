@@ -8,7 +8,7 @@ import { Migrator } from "@smelp/migrate";
 import { me } from "./routes/auth/me";
 import { signIn } from "./routes/auth/signin";
 import { signUp } from "./routes/auth/signup";
-import { findWorkspace, PostWorkspacesHandler } from "./routes/workspace";
+import { createWorkspace, findWorkspace } from "./routes/workspace";
 import { findWorkspaces } from "./routes/workspaces";
 
 const migrator = new Migrator();
@@ -50,6 +50,7 @@ const router = {
 	},
 	workspace: {
 		find: findWorkspace,
+		create: createWorkspace,
 	},
 	workspaces: {
 		find: findWorkspaces,
@@ -79,9 +80,6 @@ const server = Bun.serve({
 		"/rpc": rpcRouteHandler,
 		"/rpc/*": rpcRouteHandler,
 		"/api/status": new Response("OK"),
-		"/api/workspaces": {
-			POST: PostWorkspacesHandler,
-		},
 	},
 });
 

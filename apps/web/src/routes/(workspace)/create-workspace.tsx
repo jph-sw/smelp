@@ -2,9 +2,9 @@ import {
 	Form,
 	Field as FormischField,
 	type SubmitHandler,
-	setErrors,
 	useForm,
 } from "@formisch/react";
+import { ORPCError } from "@orpc/client";
 import { createFileRoute } from "@tanstack/react-router";
 import * as v from "valibot";
 import libraryUrl from "#/assets/library.png";
@@ -14,9 +14,10 @@ import { Button } from "#/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "#/components/ui/card";
 import { Field, FieldGroup } from "#/components/ui/field";
 import { toast } from "#/components/ui/toast";
+import { orpc } from "#/lib/orpc";
 
 const CreateWorkspaceSchema = v.object({
-	name: v.string(),
+	name: v.pipe(v.string(), v.minLength(6), v.maxLength(32)),
 });
 
 export const Route = createFileRoute("/(workspace)/create-workspace")({
@@ -30,48 +31,19 @@ function RouteComponent() {
 		output,
 	) => {
 		try {
-			const res = await fetch("/api/workspaces", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify(output),
-			});
-
-			if (res.status === 401) {
-				toast.add({
-					type: "error",
-					description: "Your session expired. Please log in again.",
-				});
-				return;
-			}
-
-			if (res.status === 400) {
-				const body = await res.json();
-				setErrors(createWorkspaceForm, {
-					errors: body.issues.map(
-						(issue: { message: string }) => issue.message,
-					),
-				});
-				return;
-			}
-
-			if (!res.ok) {
-				toast.add({
-					type: "error",
-					description: "Something went wrong. Please try again.",
-				});
-				return;
-			}
-
-			const { workspace } = await res.json();
+			const res = await orpc.workspace.create({ name: output.name });
 			toast.add({
 				type: "success",
-				description: `Workspace "${workspace.name}" created.`,
+				description: `Workspace "${res.name}" created.`,
 			});
-		} catch {
-			toast.add({
-				type: "error",
-				description: "Network error. Please check your connection.",
-			});
+		} catch (e) {
+			if (e instanceof ORPCError) {
+				console.log(e);
+				toast.add({
+					type: "error",
+					description: e.message,
+				});
+			}
 		}
 	};
 
