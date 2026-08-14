@@ -1,3 +1,4 @@
+import { ORPCError, os } from "@orpc/server";
 import { Auth } from "@smelp/auth";
 import { DB, type tables, Utils } from "@smelp/db";
 import { eventBus } from "@smelp/events";
@@ -8,38 +9,20 @@ const sql = new DB().sqlite;
 const utils = new Utils();
 const auth = new Auth();
 
-export async function GetWorkspaceHandler(req: BunRequest) {
-	const url = new URL(req.url);
-	const workspaceId = url.searchParams.get("workspaceId");
+export const findWorkspace = os
+	.input(v.object({ workspaceId: v.string() }))
+	.handler(async ({ input }) => {
+		try {
+			const workspace = (
+				await sql`SELECT * FROM workspace WHERE id = ${input.workspaceId}`
+			)[0] as tables["workspace"];
 
-	if (workspaceId == null)
-		return Response.json(
-			{ error: "validation", issues: ["workspaceId is missing"] },
-			{ status: 400 },
-		);
-
-	const workspace = (
-		await sql`SELECT * FROM workspace WHERE id = ${workspaceId}`
-	)[0] as tables["workspace"];
-
-	return Response.json(workspace);
-}
-
-export async function GetWorkspacesHandler(req: BunRequest) {
-	const url = new URL(req.url);
-	const userId = url.searchParams.get("userId");
-
-	const workspaces = (await sql`
-		SELECT workspace.*
-		FROM workspace
-		JOIN workspace_member ON workspace_member.workspaceId = workspace.id
-		WHERE workspace_member.userId = ${userId}
-	`) as tables["workspace"][];
-
-	utils.logger.debug(`found ${workspaces.length} workspaces`);
-
-	return Response.json(workspaces);
-}
+			return workspace;
+		} catch (e) {
+			console.log(e);
+			throw new ORPCError("NOT_FOUND");
+		}
+	});
 
 const PostWorkspacesHandlerParams = v.object({
 	name: v.pipe(v.string(), v.minLength(6), v.maxLength(32)),

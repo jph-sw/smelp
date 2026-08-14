@@ -1,6 +1,9 @@
 {
 	"name": "@smelp/api",
 	"module": "./src/index.ts",
+	"exports": {
+		".": "./src/index.ts"
+	},
 	"devDependencies": {
 		"@types/bun": "latest"
 	},
@@ -8,10 +11,11 @@
 		"typescript": "^5"
 	},
 	"dependencies": {
+		"@orpc/server": "^1.15.0",
 		"@smelp/auth": "*",
 		"@smelp/db": "*",
-		"@smelp/migrate": "*",
 		"@smelp/events": "*",
+		"@smelp/migrate": "*",
 		"valibot": "^1.4.2"
 	},
 	"private": true,

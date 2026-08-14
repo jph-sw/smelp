@@ -1,10 +1,10 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { ErrorPage } from "#/components/error-page";
 import { SiteHeader } from "#/components/sidebar/header";
 import { AppSidebar } from "#/components/sidebar/sidebar";
 import { SidebarInset, SidebarProvider } from "#/components/ui/sidebar";
 import { workspaceQueryOptions } from "#/lib/data/workspace";
-import { ApiError } from "#/lib/utils";
 
 export const Route = createFileRoute("/(workspace)/$id")({
 	component: RouteComponent,
@@ -13,12 +13,7 @@ export const Route = createFileRoute("/(workspace)/$id")({
 			workspaceQueryOptions({ workspaceId: id }),
 		);
 	},
-	errorComponent: ({ error }) => {
-		if (error instanceof ApiError && error.status === 404) {
-			return <div>Workspace not found.</div>;
-		}
-		return <div>Something went wrong loading this workspace.</div>;
-	},
+	errorComponent: ErrorPage,
 });
 
 function RouteComponent() {
