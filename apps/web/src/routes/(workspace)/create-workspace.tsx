@@ -1,19 +1,11 @@
-import {
-	Form,
-	Field as FormischField,
-	type SubmitHandler,
-	useForm,
-} from "@formisch/react";
 import { ORPCError } from "@orpc/client";
 import { createFileRoute } from "@tanstack/react-router";
 import * as v from "valibot";
 import libraryUrl from "#/assets/library.png";
-import { FormError } from "#/components/form/form-errror";
-import { TextInput } from "#/components/form/text-input";
-import { Button } from "#/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "#/components/ui/card";
-import { Field, FieldGroup } from "#/components/ui/field";
+import { FieldGroup } from "#/components/ui/field";
 import { toast } from "#/components/ui/toast";
+import { useAppForm } from "#/hooks/form";
 import { orpc } from "#/lib/orpc";
 
 const CreateWorkspaceSchema = v.object({
@@ -25,27 +17,30 @@ export const Route = createFileRoute("/(workspace)/create-workspace")({
 });
 
 function RouteComponent() {
-	const createWorkspaceForm = useForm({ schema: CreateWorkspaceSchema });
-
-	const handleSubmit: SubmitHandler<typeof CreateWorkspaceSchema> = async (
-		output,
-	) => {
-		try {
-			const res = await orpc.workspace.create({ name: output.name });
-			toast.add({
-				type: "success",
-				description: `Workspace "${res.name}" created.`,
-			});
-		} catch (e) {
-			if (e instanceof ORPCError) {
-				console.log(e);
+	const form = useAppForm({
+		defaultValues: {
+			name: "",
+		},
+		validators: {
+			onSubmit: CreateWorkspaceSchema,
+		},
+		onSubmit: async ({ value }) => {
+			try {
+				const res = await orpc.workspace.create({ name: value.name });
 				toast.add({
-					type: "error",
-					description: e.message,
+					type: "success",
+					description: `Workspace "${res.name}" created.`,
 				});
+			} catch (e) {
+				if (e instanceof ORPCError) {
+					toast.add({
+						type: "error",
+						description: e.message,
+					});
+				}
 			}
-		}
-	};
+		},
+	});
 
 	return (
 		<div className="w-full h-dvh overflow-y-hidden relative">
@@ -61,31 +56,24 @@ function RouteComponent() {
 							<CardTitle>Create your workspace</CardTitle>
 						</CardHeader>
 						<CardContent>
-							<Form
-								of={createWorkspaceForm}
-								id="create-workspace-form"
-								onSubmit={handleSubmit}
+							<form
+								onSubmit={(e) => {
+									e.preventDefault();
+									form.handleSubmit();
+								}}
 							>
 								<FieldGroup>
-									<FormischField of={createWorkspaceForm} path={["name"]}>
-										{(field) => (
-											<TextInput
-												input={field.input}
-												label="Your workspace name"
-												type="text"
-												errors={field.errors}
-												{...field.props}
-											/>
+									<form.AppField
+										name="name"
+										children={(field) => (
+											<field.TextField label="Your workspace name" />
 										)}
-									</FormischField>
-									<FormError errors={createWorkspaceForm.errors} />
-									<Field orientation="horizontal">
-										<Button type="submit" form="create-workspace-form">
-											Create
-										</Button>
-									</Field>
+									/>
 								</FieldGroup>
-							</Form>
+								<form.AppForm>
+									<form.SubscribeButton label="Create" />
+								</form.AppForm>
+							</form>
 						</CardContent>
 					</Card>
 				</div>
