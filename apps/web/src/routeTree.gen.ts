@@ -9,15 +9,15 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from "./routes/__root";
-import { Route as IndexRouteImport } from "./routes/index";
-import { Route as workspaceRouteRouteImport } from "./routes/(workspace)/route";
-import { Route as CeoRouteRouteImport } from "./routes/ceo/route";
-import { Route as SigninRouteImport } from "./routes/signin";
-import { Route as SignupRouteImport } from "./routes/signup";
+import { Route as workspaceIdIndexRouteImport } from "./routes/(workspace)/$id/index";
 import { Route as workspaceIdRouteRouteImport } from "./routes/(workspace)/$id/route";
 import { Route as workspaceCreateWorkspaceRouteImport } from "./routes/(workspace)/create-workspace";
+import { Route as workspaceRouteRouteImport } from "./routes/(workspace)/route";
 import { Route as CeoIndexRouteImport } from "./routes/ceo/index";
-import { Route as workspaceIdIndexRouteImport } from "./routes/(workspace)/$id/index";
+import { Route as CeoRouteRouteImport } from "./routes/ceo/route";
+import { Route as IndexRouteImport } from "./routes/index";
+import { Route as SigninRouteImport } from "./routes/signin";
+import { Route as SignupRouteImport } from "./routes/signup";
 
 const IndexRoute = IndexRouteImport.update({
 	id: "/",

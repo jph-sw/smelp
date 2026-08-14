@@ -1,7 +1,7 @@
-import * as React from "react";
+import { SearchIcon, Tick02Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { Command as CommandPrimitive } from "cmdk";
-
-import { cn } from "#/lib/utils";
+import type * as React from "react";
 import {
 	Dialog,
 	DialogContent,
@@ -10,8 +10,7 @@ import {
 	DialogTitle,
 } from "#/components/ui/dialog";
 import { InputGroup, InputGroupAddon } from "#/components/ui/input-group";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { SearchIcon, Tick02Icon } from "@hugeicons/core-free-icons";
+import { cn } from "#/lib/utils";
 
 function Command({
 	className,
@@ -190,11 +189,11 @@ function CommandShortcut({
 export {
 	Command,
 	CommandDialog,
-	CommandInput,
-	CommandList,
 	CommandEmpty,
 	CommandGroup,
+	CommandInput,
 	CommandItem,
-	CommandShortcut,
+	CommandList,
 	CommandSeparator,
+	CommandShortcut,
 };
