@@ -16,6 +16,7 @@ export default defineConfig({
 	server: {
 		proxy: {
 			"/api": "http://localhost:3000",
+			"/rpc": "http://localhost:3000",
 		},
 	},
 });

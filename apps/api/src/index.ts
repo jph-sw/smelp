@@ -1,13 +1,13 @@
 import { type Context, onError } from "@orpc/server";
 import { RPCHandler } from "@orpc/server/fetch";
-import { CORSPlugin } from "@orpc/server/plugins";
+import { CORSPlugin, ResponseHeadersPlugin } from "@orpc/server/plugins";
 import type { FriendlyStandardHandleOptions } from "@orpc/server/standard";
 import { Auth } from "@smelp/auth";
 import { Utils } from "@smelp/db";
 import { Migrator } from "@smelp/migrate";
-import { MeHandler } from "./routes/auth/me";
-import { SignInHandler } from "./routes/auth/signin";
-import { SignUpHandler } from "./routes/auth/signup";
+import { me } from "./routes/auth/me";
+import { signIn } from "./routes/auth/signin";
+import { signUp } from "./routes/auth/signup";
 import { findWorkspace, PostWorkspacesHandler } from "./routes/workspace";
 import { findWorkspaces } from "./routes/workspaces";
 
@@ -42,6 +42,11 @@ function bunRequestHandler<T extends Context>(
 }
 
 const router = {
+	auth: {
+		signIn,
+		signUp,
+		me,
+	},
 	workspace: {
 		find: findWorkspace,
 	},
@@ -53,7 +58,7 @@ const router = {
 export type AppRouter = typeof router;
 
 const handler = new RPCHandler(router, {
-	plugins: [new CORSPlugin()],
+	plugins: [new CORSPlugin({ credentials: true }), new ResponseHeadersPlugin()],
 	interceptors: [
 		onError((error) => {
 			console.error(error);
@@ -73,15 +78,6 @@ const server = Bun.serve({
 		"/rpc": rpcRouteHandler,
 		"/rpc/*": rpcRouteHandler,
 		"/api/status": new Response("OK"),
-		"/api/auth/signin": {
-			POST: SignInHandler,
-		},
-		"/api/auth/signup": {
-			POST: SignUpHandler,
-		},
-		"/api/auth/me": {
-			GET: MeHandler,
-		},
 		"/api/workspaces": {
 			POST: PostWorkspacesHandler,
 		},

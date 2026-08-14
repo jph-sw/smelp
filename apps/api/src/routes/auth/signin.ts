@@ -1,42 +1,41 @@
+import { ORPCError } from "@orpc/server";
+import { setCookie } from "@orpc/server/helpers";
 import { Auth } from "@smelp/auth";
-import type { BunRequest } from "bun";
 import * as v from "valibot";
+import { base } from "../../orpc";
+
+const auth = new Auth();
 
 const Params = v.object({
 	email: v.pipe(v.string(), v.email()),
 	password: v.pipe(v.string(), v.minLength(1), v.maxLength(128)),
 });
 
-export async function SignInHandler(req: BunRequest) {
-	const auth = new Auth();
-	const json = await req.json();
-	const params = v.safeParse(Params, json);
+export const signIn = base
+	.input(Params)
+	.handler(async ({ input, context }) => {
+		const result = await auth.signIn(input.email, input.password);
 
-	if (!params.success) {
-		return Response.json(params.issues);
-	}
+		if (result == null) {
+			throw new ORPCError("UNAUTHORIZED", { message: "Invalid credentials" });
+		}
 
-	const result = await auth.signIn(params.output.email, params.output.password);
+		const { session, user } = result;
 
-	if (result == null) {
-		return Response.json({ error: "invalid credentials" }, { status: 401 });
-	}
+		setCookie(context.resHeaders, "auth_session", session.authSessionToken, {
+			httpOnly: true,
+			secure: process.env.NODE_ENV === "production",
+			sameSite: "lax",
+			path: "/",
+			maxAge: auth.authSessionExpiresInSeconds,
+		});
 
-	const { session, user } = result;
-
-	return Response.json(
-		{
+		return {
 			user: {
 				id: user.id,
 				email: user.email,
 				fullName: user.fullName,
 				displayName: user.displayName,
 			},
-		},
-		{
-			headers: {
-				"Set-Cookie": `auth_session=${session.authSessionToken}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${auth.authSessionExpiresInSeconds}`,
-			},
-		},
-	);
-}
+		};
+	});

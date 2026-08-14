@@ -1,29 +1,14 @@
+import { ORPCError, safe } from "@orpc/client";
 import type { tables } from "@smelp/db";
 import { queryOptions } from "@tanstack/react-query";
+import { orpc } from "./orpc";
 
 export type AuthUser = tables["auth_user"];
 
-async function parseAuthResponse(res: Response): Promise<AuthUser> {
-	const body = await res.json();
-	if (Array.isArray(body)) {
-		throw new Error(body.map((issue) => issue.message).join(", "));
-	}
-	if (!res.ok || body.error) {
-		throw new Error(body.error ?? "something went wrong");
-	}
-	return body.user as AuthUser;
-}
+export async function signIn(email: string, password: string) {
+	const res = await orpc.auth.signIn({ email, password });
 
-export async function signIn(
-	email: string,
-	password: string,
-): Promise<AuthUser> {
-	const res = await fetch("/api/auth/signin", {
-		method: "POST",
-		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify({ email, password }),
-	});
-	return parseAuthResponse(res);
+	return res.user;
 }
 
 export async function signUp(
@@ -31,25 +16,28 @@ export async function signUp(
 	fullName: string,
 	displayName: string,
 	password: string,
-): Promise<AuthUser> {
-	const res = await fetch("/api/auth/signup", {
-		method: "POST",
-		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify({ email, fullName, displayName, password }),
+) {
+	const res = await orpc.auth.signUp({
+		email,
+		fullName,
+		displayName,
+		password,
 	});
-	return parseAuthResponse(res);
+
+	return res.user;
 }
 
 export async function getCurrentUser(): Promise<AuthUser | null> {
-	const res = await fetch("/api/auth/me");
-	if (res.status === 401) {
-		return null;
+	const { data, error } = await safe(orpc.auth.me());
+
+	if (error) {
+		if (error instanceof ORPCError && error.code === "UNAUTHORIZED") {
+			return null;
+		}
+		throw error;
 	}
-	const body = await res.json();
-	if (!res.ok || body.error) {
-		throw new Error(body.error ?? "something went wrong");
-	}
-	return body.user as AuthUser;
+
+	return data.user;
 }
 
 export const currentUserQueryOptions = queryOptions({

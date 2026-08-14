@@ -4,7 +4,7 @@ import type { RouterClient } from "@orpc/server";
 import type { AppRouter } from "@smelp/api";
 
 const link = new RPCLink({
-	url: "http://127.0.0.1:3000/rpc",
+	url: `${window.location.origin}/rpc`,
 	headers: { Authorization: "Bearer token" },
 });
 

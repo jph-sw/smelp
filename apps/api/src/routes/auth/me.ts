@@ -1,26 +1,29 @@
+import { ORPCError } from "@orpc/server";
+import { getCookie } from "@orpc/server/helpers";
 import { Auth } from "@smelp/auth";
 import { DB, type tables } from "@smelp/db";
-import type { BunRequest } from "bun";
+import { base } from "../../orpc";
 
-export async function MeHandler(req: BunRequest) {
-	const token = req.cookies.get("auth_session");
+const auth = new Auth();
+const sql = new DB().sqlite;
+
+export const me = base.handler(async ({ context }) => {
+	const token = getCookie(context.headers, "auth_session");
 	if (token == null) {
-		return Response.json({ error: "not signed in" }, { status: 401 });
+		throw new ORPCError("UNAUTHORIZED", { message: "Not signed in" });
 	}
 
-	const auth = new Auth();
 	const session = await auth.validateAuthSessionToken(token);
 	if (session == null) {
-		return Response.json({ error: "not signed in" }, { status: 401 });
+		throw new ORPCError("UNAUTHORIZED", { message: "Not signed in" });
 	}
 
-	const sql = new DB().sqlite;
 	const users =
 		(await sql`SELECT * FROM auth_user WHERE id = ${session.userId}`) as tables["auth_user"][];
 	const user = users[0];
 	if (user == null) {
-		return Response.json({ error: "not signed in" }, { status: 401 });
+		throw new ORPCError("UNAUTHORIZED", { message: "Not signed in" });
 	}
 
-	return Response.json({ user });
-}
+	return { user };
+});
