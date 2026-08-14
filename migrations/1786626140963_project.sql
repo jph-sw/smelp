@@ -5,6 +5,7 @@ CREATE TABLE project (
     access TEXT NOT NULL CHECK (access IN ('public', 'private')),
     leadUserId TEXT,
     defaultAssigneeUserId TEXT,
+    workspaceId TEXT NOT NULL,
     createdBy TEXT NOT NULL,
     createdAt INTEGER NOT NULL,
     updatedAt INTEGER NOT NULL

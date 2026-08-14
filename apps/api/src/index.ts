@@ -8,6 +8,7 @@ import { Migrator } from "@smelp/migrate";
 import { me } from "./routes/auth/me";
 import { signIn } from "./routes/auth/signin";
 import { signUp } from "./routes/auth/signup";
+import { findProjects } from "./routes/projects";
 import { createWorkspace, findWorkspace } from "./routes/workspace";
 import { findWorkspaces } from "./routes/workspaces";
 
@@ -54,6 +55,9 @@ const router = {
 	},
 	workspaces: {
 		find: findWorkspaces,
+	},
+	projects: {
+		find: findProjects,
 	},
 };
 

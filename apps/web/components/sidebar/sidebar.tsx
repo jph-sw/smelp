@@ -1,5 +1,6 @@
 import { PlusSignIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import type { tables } from "@smelp/db";
 import {
 	Sidebar,
 	SidebarContent,
@@ -14,7 +15,7 @@ import {
 import { NavProjects } from "./nav-projects";
 import { NavWorkspaces } from "./nav-workspaces";
 
-export function AppSidebar() {
+export function AppSidebar({ workspace }: { workspace: tables["workspace"] }) {
 	return (
 		<Sidebar
 			variant={"inset"}
@@ -36,7 +37,7 @@ export function AppSidebar() {
 						</SidebarMenu>
 					</SidebarGroupContent>
 				</SidebarGroup>
-				<NavWorkspaces />
+				<NavWorkspaces workspace={workspace} />
 				<NavProjects />
 			</SidebarContent>
 			<SidebarFooter></SidebarFooter>

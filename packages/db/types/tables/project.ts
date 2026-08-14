@@ -5,6 +5,7 @@ export type project = {
 	access: "public" | "private";
 	leadUserId: string | null;
 	defaultAssigneeUserId: string | null;
+	workspaceId: string;
 	createdBy: string;
 	createdAt: number;
 	updatedAt: number;
