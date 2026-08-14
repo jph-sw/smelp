@@ -27,6 +27,10 @@ export async function signUp(
 	return res.user;
 }
 
+export async function signOut() {
+	await orpc.auth.signOut();
+}
+
 export async function getCurrentUser(): Promise<AuthUser | null> {
 	const { data, error } = await safe(orpc.auth.me());
 

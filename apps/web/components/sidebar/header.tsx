@@ -8,9 +8,10 @@ import {
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { tables } from "@smelp/db";
-import { Link } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { Button } from "#/components/ui/button";
-import type { AuthUser } from "#/lib/auth";
+import { type AuthUser, signOut } from "#/lib/auth";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import {
 	DropdownMenu,
@@ -32,6 +33,15 @@ export function SiteHeader({
 	workspaces: tables["workspace"][];
 	user: AuthUser;
 }) {
+	const navigate = useNavigate();
+	const queryClient = useQueryClient();
+
+	const handleSignOut = async () => {
+		await signOut();
+		await queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
+		navigate({ to: "/signin" });
+	};
+
 	return (
 		<header className="sticky top-0 z-50 flex w-full items-center bg-sidebar">
 			<div className="flex h-(--header-height) w-full items-center gap-2 px-4">
@@ -133,7 +143,9 @@ export function SiteHeader({
 							</DropdownMenuGroup>
 							<DropdownMenuSeparator />
 							<DropdownMenuGroup>
-								<DropdownMenuItem>Sign Out</DropdownMenuItem>
+								<DropdownMenuItem onClick={handleSignOut}>
+								Sign Out
+							</DropdownMenuItem>
 							</DropdownMenuGroup>
 						</DropdownMenuContent>
 					</DropdownMenu>

@@ -284,6 +284,10 @@ export class Auth {
 		return authSession;
 	}
 
+	async invalidateAuthSession(authSessionId: string): Promise<void> {
+		await this.sql`DELETE FROM auth_session WHERE id = ${authSessionId}`;
+	}
+
 	generateRandomId(): string {
 		const alphabet = "abcdefghijkmnpqrstuvwxyz23456789";
 

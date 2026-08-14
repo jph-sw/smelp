@@ -7,6 +7,7 @@ import { Utils } from "@smelp/db";
 import { Migrator } from "@smelp/migrate";
 import { me } from "./routes/auth/me";
 import { signIn } from "./routes/auth/signin";
+import { signOut } from "./routes/auth/signout";
 import { signUp } from "./routes/auth/signup";
 import { createProject } from "./routes/project";
 import { findProjects } from "./routes/projects";
@@ -48,6 +49,7 @@ const router = {
 	auth: {
 		signIn,
 		signUp,
+		signOut,
 		me,
 	},
 	workspace: {
