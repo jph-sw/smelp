@@ -1,4 +1,6 @@
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
+import { Card, CardContent } from "#/components/ui/card";
 import { projectsQueryOptions } from "#/lib/data/project";
 
 export const Route = createFileRoute("/(workspace)/$id/projects")({
@@ -11,5 +13,43 @@ export const Route = createFileRoute("/(workspace)/$id/projects")({
 });
 
 function RouteComponent() {
-	return <div>Hello "/(workspace)/$id/projects"!</div>;
+	const navigate = Route.useNavigate();
+	const { id: workspaceId } = Route.useParams();
+
+	const { data: projects } = useSuspenseQuery(
+		projectsQueryOptions({ workspaceId }),
+	);
+
+	return (
+		<div>
+			<div className="w-full grid md:grid-cols-3 xl:grid-cols-4 gap-4">
+				{projects.map((project) => (
+					<Card
+						key={project.id}
+						className="p-0 hover:cursor-pointer"
+						onClick={() => {
+							navigate({ to: "/$id", params: { id: workspaceId } });
+						}}
+					>
+						<CardContent className="p-0 h-25 relative">
+							<div className="w-full inset-0 z-[1] bg-gradient-to-t from-background to-background/50 absolute" />
+							<img
+								aria-label="a"
+								className="w-full absolute top-0 left-0 object-cover"
+								src="https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fimages.pexels.com%2Fphotos%2F20211127%2Fpexels-photo-20211127.jpeg%3Fcs%3Dsrgb%26dl%3Dpexels-robert-clark-504241532-20211127.jpg%26fm%3Djpg"
+							/>
+							<div className="absolute bottom-0 z-[1] flex  h-10 w-full items-center justify-between gap-3 px-4">
+								<div className="flex flex-grow items-center gap-2 truncate">
+									<div className="w-full flex flex-col justify-between gap-0.5 truncate">
+										<h3 className="truncate font-semibold">{project.name}</h3>
+									</div>
+								</div>
+								<div className="flex h-full flex-shrink-0 items-center gap-2"></div>
+							</div>
+						</CardContent>
+					</Card>
+				))}
+			</div>
+		</div>
+	);
 }
