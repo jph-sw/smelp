@@ -14,11 +14,7 @@ import {
 	SidebarMenuItem,
 } from "#/components/ui/sidebar";
 import { Button } from "../ui/button";
-import {
-	Collapsible,
-	CollapsibleContent,
-	CollapsibleTrigger,
-} from "../ui/collapsible";
+import { Collapsible, CollapsibleContent } from "../ui/collapsible";
 
 export function NavProjects() {
 	const [isOpen, setIsOpen] = useState(false);

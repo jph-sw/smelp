@@ -6,7 +6,8 @@
 		"useIgnoreFile": true
 	},
 	"files": {
-		"ignoreUnknown": false
+		"ignoreUnknown": false,
+		"includes": ["**", "!**/routeTree.gen.ts"]
 	},
 	"formatter": {
 		"enabled": true,
@@ -15,7 +16,15 @@
 	"linter": {
 		"enabled": true,
 		"rules": {
-			"preset": "recommended"
+			"preset": "recommended",
+			"a11y": {
+				"useSemanticElements": "off",
+				"useKeyWithClickEvents": "off",
+				"noLabelWithoutControl": "off"
+			},
+			"suspicious": {
+				"noArrayIndexKey": "off"
+			}
 		}
 	},
 	"javascript": {

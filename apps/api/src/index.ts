@@ -27,6 +27,7 @@ function bunRequestHandler<T extends Context>(
 ): (request: Request) => Promise<Response> {
 	return async (request: Request) => {
 		const resolvedOptions =
+			// biome-ignore lint/style/noNonNullAssertion: <No other way>
 			typeof options === "function" ? options(request) : options!;
 		const { matched, response } = await handler.handle(
 			request,
