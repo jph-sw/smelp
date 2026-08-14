@@ -6,7 +6,7 @@ import { Button } from "#/components/ui/button";
 import { Card, CardContent } from "#/components/ui/card";
 import { projectsQueryOptions } from "#/lib/data/project";
 
-export const Route = createFileRoute("/(workspace)/$id/projects")({
+export const Route = createFileRoute("/(workspace)/$id/projects/")({
 	component: RouteComponent,
 	loader: ({ context: { queryClient }, params: { id } }) => {
 		return queryClient.ensureQueryData(
@@ -31,7 +31,10 @@ function RouteComponent() {
 						key={project.id}
 						className="p-0 hover:cursor-pointer"
 						onClick={() => {
-							navigate({ to: "/$id", params: { id: workspaceId } });
+							navigate({
+								to: "/$id/projects/$projectId",
+								params: { id: workspaceId, projectId: project.id },
+							});
 						}}
 					>
 						<CardContent className="p-0">
