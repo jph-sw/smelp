@@ -1,15 +1,6 @@
-import {
-	Form,
-	Field as FormischField,
-	type SubmitHandler,
-	setErrors,
-	useForm,
-} from "@formisch/react";
+import { ORPCError } from "@orpc/client";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import * as v from "valibot";
-import { FormError } from "#/components/form/form-errror";
-import { TextInput } from "#/components/form/text-input";
-import { Button } from "#/components/ui/button";
 import {
 	Card,
 	CardContent,
@@ -17,7 +8,9 @@ import {
 	CardHeader,
 	CardTitle,
 } from "#/components/ui/card";
-import { Field, FieldGroup } from "#/components/ui/field";
+import { FieldGroup } from "#/components/ui/field";
+import { toast } from "#/components/ui/toast";
+import { useAppForm } from "#/hooks/form";
 import { signUp } from "../../lib/auth";
 
 const SignUpSchema = v.object({
@@ -33,26 +26,41 @@ export const Route = createFileRoute("/signup")({
 
 function SignUp() {
 	const navigate = useNavigate();
-	const signUpForm = useForm({
-		schema: SignUpSchema,
-	});
-
-	const handleSubmit: SubmitHandler<typeof SignUpSchema> = async (output) => {
-		try {
-			await signUp(
-				output.email,
-				output.fullName,
-				output.displayName,
-				output.password,
-			);
-			navigate({ to: "/" });
-		} catch (error) {
-			if (error instanceof Error) {
-				console.log("Form error: ", error);
-				setErrors(signUpForm, { errors: [error.message] });
+	const form = useAppForm({
+		defaultValues: {
+			email: "",
+			fullName: "",
+			displayName: "",
+			password: "",
+		},
+		validators: {
+			onSubmit: SignUpSchema,
+		},
+		onSubmit: async ({ value }) => {
+			try {
+				await signUp(
+					value.email,
+					value.fullName,
+					value.displayName,
+					value.password,
+				);
+				navigate({ to: "/" });
+			} catch (error) {
+				if (error instanceof ORPCError) {
+					toast.add({ type: "error", description: error.message });
+					if (error.code === "CONFLICT") {
+						form.setErrorMap({
+							onSubmit: {
+								fields: {
+									email: "",
+								},
+							},
+						});
+					}
+				}
 			}
-		}
-	};
+		},
+	});
 
 	return (
 		<div className="w-full h-dvh flex justify-center items-center">
@@ -61,60 +69,38 @@ function SignUp() {
 					<CardTitle>Sign up</CardTitle>
 				</CardHeader>
 				<CardContent>
-					<Form of={signUpForm} id="signup-form" onSubmit={handleSubmit}>
+					<form
+						onSubmit={(e) => {
+							e.preventDefault();
+							form.handleSubmit();
+						}}
+					>
 						<FieldGroup>
-							<FormischField of={signUpForm} path={["email"]}>
-								{(field) => (
-									<TextInput
-										input={field.input}
-										label="Email"
-										type="email"
-										errors={field.errors}
-										{...field.props}
-									/>
+							<form.AppField
+								name="email"
+								children={(field) => (
+									<field.TextField label="Email" type="email" />
 								)}
-							</FormischField>
-							<FormischField of={signUpForm} path={["fullName"]}>
-								{(field) => (
-									<TextInput
-										input={field.input}
-										label="Fullname"
-										type="text"
-										errors={field.errors}
-										{...field.props}
-									/>
+							/>
+							<form.AppField
+								name="fullName"
+								children={(field) => <field.TextField label="Fullname" />}
+							/>
+							<form.AppField
+								name="displayName"
+								children={(field) => <field.TextField label="Displayname" />}
+							/>
+							<form.AppField
+								name="password"
+								children={(field) => (
+									<field.TextField label="Password" type="password" />
 								)}
-							</FormischField>
-							<FormischField of={signUpForm} path={["displayName"]}>
-								{(field) => (
-									<TextInput
-										input={field.input}
-										label="Displayname"
-										type="text"
-										errors={field.errors}
-										{...field.props}
-									/>
-								)}
-							</FormischField>
-							<FormischField of={signUpForm} path={["password"]}>
-								{(field) => (
-									<TextInput
-										input={field.input}
-										label="Password"
-										type="password"
-										errors={field.errors}
-										{...field.props}
-									/>
-								)}
-							</FormischField>
-							<FormError errors={signUpForm.errors} />
-							<Field orientation={"horizontal"}>
-								<Button type="submit" form="signup-form">
-									Sign Up
-								</Button>
-							</Field>
+							/>
 						</FieldGroup>
-					</Form>
+						<form.AppForm>
+							<form.SubscribeButton label="Sign Up" />
+						</form.AppForm>
+					</form>
 				</CardContent>
 				<CardFooter>
 					<p>
