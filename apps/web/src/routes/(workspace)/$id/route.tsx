@@ -1,17 +1,23 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { ErrorPage } from "#/components/error-page";
 import { SiteHeader } from "#/components/sidebar/header";
 import { AppSidebar } from "#/components/sidebar/sidebar";
 import { SidebarInset, SidebarProvider } from "#/components/ui/sidebar";
-import { workspaceQueryOptions } from "#/lib/data/workspace";
+import {
+	workspaceQueryOptions,
+	workspacesQueryOptions,
+} from "#/lib/data/workspace";
 
 export const Route = createFileRoute("/(workspace)/$id")({
 	component: RouteComponent,
-	loader: ({ context: { queryClient }, params: { id } }) => {
-		return queryClient.ensureQueryData(
-			workspaceQueryOptions({ workspaceId: id }),
-		);
+	loader: async ({ context: { queryClient, user }, params: { id } }) => {
+		if (user == null) throw redirect({ to: "/signin" });
+
+		await Promise.all([
+			queryClient.ensureQueryData(workspacesQueryOptions({ userId: user.id })),
+			queryClient.ensureQueryData(workspaceQueryOptions({ workspaceId: id })),
+		]);
 	},
 	errorComponent: ErrorPage,
 });
@@ -21,8 +27,14 @@ function RouteComponent() {
 	const { id: workspaceId } = Route.useParams();
 	const { user } = Route.useRouteContext();
 
+	if (user == null) throw navigate({ to: "/signin" });
+
 	const { data: workspace } = useSuspenseQuery(
 		workspaceQueryOptions({ workspaceId }),
+	);
+
+	const { data: workspaces } = useSuspenseQuery(
+		workspacesQueryOptions({ userId: user.id }),
 	);
 
 	if (user === null) {
@@ -32,7 +44,7 @@ function RouteComponent() {
 	return (
 		<div className="[--header-height:calc(--spacing(10))]">
 			<SidebarProvider className="flex flex-col">
-				<SiteHeader workspace={workspace} user={user} />
+				<SiteHeader workspace={workspace} workspaces={workspaces} user={user} />
 				<div className="flex flex-1">
 					<AppSidebar workspace={workspace} />
 					<SidebarInset>

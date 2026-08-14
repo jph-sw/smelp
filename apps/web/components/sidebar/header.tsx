@@ -1,6 +1,11 @@
 "use client";
 
-import { ChevronDown, SearchIcon } from "@hugeicons/core-free-icons";
+import {
+	ChevronDown,
+	GearsIcon,
+	SearchIcon,
+	UserPlus,
+} from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { tables } from "@smelp/db";
 import { Link } from "@tanstack/react-router";
@@ -20,9 +25,11 @@ import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 
 export function SiteHeader({
 	workspace,
+	workspaces,
 	user,
 }: {
 	workspace: tables["workspace"];
+	workspaces: tables["workspace"][];
 	user: AuthUser;
 }) {
 	return (
@@ -35,12 +42,65 @@ export function SiteHeader({
 						</PopoverTrigger>
 						<PopoverContent className={"px-0 gap-0"}>
 							<div className="px-2 mb-2">
-								<span>{user.email}</span>
+								<span className="text-muted-foreground">{user.email}</span>
 							</div>
-							<div className="px-2 py-4 grid gap-2 bg-secondary">
-								<span className="text-lg">{workspace.name}</span>
-								<div>
-									<Button>Settings</Button>
+							<div className="border-b mb-2">
+								<div className="flex size-full flex-col items-start justify-start">
+									<div className="w-full">
+										<div className="px-4 py-2 bg-muted">
+											<div className="flex items-center justify-between gap-1 rounded-sm p-1">
+												<div className="relative flex w-[80%] items-center justify-start gap-2.5">
+													<span className="h-8 w-8 bg-background rounded-md" />
+													<div className="w-[inherit]">
+														<div className="truncate text-left font-medium text-ellipsis">
+															{workspace.name}
+														</div>
+														<div className="flex w-fit gap-2 capitalize">
+															Admin
+														</div>
+													</div>
+												</div>
+											</div>
+											<div className="mt-2 mb-1 flex gap-2">
+												<Button variant={"outline"}>
+													<HugeiconsIcon icon={GearsIcon} /> Settings
+												</Button>
+												<Button variant={"outline"}>
+													<HugeiconsIcon icon={UserPlus} /> Invite members
+												</Button>
+											</div>
+										</div>
+									</div>
+									{workspaces
+										.filter(
+											(workspaceItem) => workspaceItem.id !== workspace.id,
+										)
+										.map((workspaceItem) => (
+											<Link
+												key={workspace.id}
+												to="/$id"
+												className="w-full"
+												params={{ id: workspaceItem.id }}
+											>
+												<div className="w-full">
+													<div className="px-4 py-2 hover:bg-muted">
+														<div className="flex items-center justify-between gap-1 rounded-sm p-1">
+															<div className="relative flex w-[80%] items-center justify-start gap-2.5">
+																<span className="relative flex h-8 w-8 bg-blue-800 rounded-md" />
+																<div className="w-[inherit]">
+																	<div className="truncate text-left font-medium text-ellipsis text-secondary-foreground">
+																		{workspaceItem.name}
+																	</div>
+																	<div className="flex w-fit gap-2 capitalize">
+																		<span>Admin</span>
+																	</div>
+																</div>
+															</div>
+														</div>
+													</div>
+												</div>
+											</Link>
+										))}
 								</div>
 							</div>
 							<Button render={<Link to="/create-workspace" />}>
