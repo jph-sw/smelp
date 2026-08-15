@@ -1,4 +1,8 @@
-import { ChevronUpIcon } from "@hugeicons/core-free-icons";
+import {
+	ChevronUpIcon,
+	MoreHorizontal,
+	Setting07Icon,
+} from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { tables } from "@smelp/db";
 import { Link } from "@tanstack/react-router";
@@ -8,6 +12,7 @@ import {
 	SidebarGroupContent,
 	SidebarGroupLabel,
 	SidebarMenu,
+	SidebarMenuAction,
 	SidebarMenuButton,
 	SidebarMenuItem,
 } from "#/components/ui/sidebar";
@@ -15,6 +20,12 @@ import { DynamicIcon } from "../dynamic-icon";
 import { CreateProjectDialog } from "../project/create-project-dialog";
 import { Button } from "../ui/button";
 import { Collapsible, CollapsibleContent } from "../ui/collapsible";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
 
 export function NavProjects({
 	workspace,
@@ -34,7 +45,7 @@ export function NavProjects({
 						<CreateProjectDialog workspace={workspace} />
 						<Button
 							variant={"ghost"}
-							size={"icon-xs"}
+							size={"icon-sm"}
 							onClick={() => setIsOpen(!isOpen)}
 						>
 							<HugeiconsIcon
@@ -60,6 +71,26 @@ export function NavProjects({
 										<DynamicIcon name={project.icon} />
 										{project.name}
 									</SidebarMenuButton>
+									<DropdownMenu>
+										<DropdownMenuTrigger
+											render={<SidebarMenuAction showOnHover />}
+										>
+											<HugeiconsIcon icon={MoreHorizontal} />
+											<span className="sr-only">More</span>
+										</DropdownMenuTrigger>
+										<DropdownMenuContent>
+											<DropdownMenuItem
+												render={
+													<Link
+														to="/$id/settings/projects/$projectId"
+														params={{ id: workspace.id, projectId: project.id }}
+													/>
+												}
+											>
+												<HugeiconsIcon icon={Setting07Icon} /> Settings
+											</DropdownMenuItem>
+										</DropdownMenuContent>
+									</DropdownMenu>
 								</SidebarMenuItem>
 							))}
 						</SidebarMenu>

@@ -20,7 +20,7 @@ export function CreateProjectDialog({
 					<Button
 						className={"hidden group-hover/collapsible:flex"}
 						variant={"ghost"}
-						size={"icon-xs"}
+						size={"icon-sm"}
 					/>
 				}
 			>

@@ -24,7 +24,7 @@ function RouteComponent() {
 	);
 
 	return (
-		<div>
+		<div className="p-4">
 			<div className="w-full grid md:grid-cols-3 xl:grid-cols-4 gap-4">
 				{projects.map((project) => (
 					<Card
