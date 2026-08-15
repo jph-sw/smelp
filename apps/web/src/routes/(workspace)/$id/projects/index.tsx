@@ -39,19 +39,19 @@ function RouteComponent() {
 					>
 						<CardContent className="p-0">
 							<div className=" h-25 relative">
-								<div className="w-full inset-0 z-[1] bg-gradient-to-t from-card/60 to-background/50 absolute" />
+								<div className="w-full inset-0 z-1 bg-linear-to-t from-card/60 to-background/50 absolute" />
 								<img
 									aria-label="a"
 									className="w-full absolute top-0 left-0 object-cover h-full"
 									src="https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fimages.pexels.com%2Fphotos%2F20211127%2Fpexels-photo-20211127.jpeg%3Fcs%3Dsrgb%26dl%3Dpexels-robert-clark-504241532-20211127.jpg%26fm%3Djpg"
 								/>
-								<div className="absolute bottom-0 z-[1] flex  h-10 w-full items-center justify-between gap-3 px-4">
-									<div className="flex flex-grow items-center gap-2 truncate">
+								<div className="absolute bottom-0 z-1 flex  h-10 w-full items-center justify-between gap-3 px-4">
+									<div className="flex grow items-center gap-2 truncate">
 										<div className="w-full flex flex-col justify-between gap-0.5 truncate">
 											<h3 className="truncate font-semibold">{project.name}</h3>
 										</div>
 									</div>
-									<div className="flex h-full flex-shrink-0 items-center gap-2"></div>
+									<div className="flex h-full shrink-0 items-center gap-2"></div>
 								</div>
 							</div>
 							<div className="bg-card w-full flex-col justify-between p-4">

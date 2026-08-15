@@ -15,7 +15,13 @@ import {
 import { NavProjects } from "./nav-projects";
 import { NavWorkspaces } from "./nav-workspaces";
 
-export function AppSidebar({ workspace }: { workspace: tables["workspace"] }) {
+export function AppSidebar({
+	workspace,
+	projects,
+}: {
+	workspace: tables["workspace"];
+	projects: tables["project"][];
+}) {
 	return (
 		<Sidebar
 			variant={"inset"}
@@ -38,7 +44,7 @@ export function AppSidebar({ workspace }: { workspace: tables["workspace"] }) {
 					</SidebarGroupContent>
 				</SidebarGroup>
 				<NavWorkspaces workspace={workspace} />
-				<NavProjects workspace={workspace} />
+				<NavProjects workspace={workspace} projects={projects} />
 			</SidebarContent>
 			<SidebarFooter></SidebarFooter>
 		</Sidebar>

@@ -4,6 +4,7 @@ import { ErrorPage } from "#/components/error-page";
 import { SiteHeader } from "#/components/sidebar/header";
 import { AppSidebar } from "#/components/sidebar/sidebar";
 import { SidebarInset, SidebarProvider } from "#/components/ui/sidebar";
+import { projectsQueryOptions } from "#/lib/data/project";
 import {
 	workspaceQueryOptions,
 	workspacesQueryOptions,
@@ -17,6 +18,7 @@ export const Route = createFileRoute("/(workspace)/$id")({
 		await Promise.all([
 			queryClient.ensureQueryData(workspacesQueryOptions({ userId: user.id })),
 			queryClient.ensureQueryData(workspaceQueryOptions({ workspaceId: id })),
+			queryClient.ensureQueryData(projectsQueryOptions({ workspaceId: id })),
 		]);
 	},
 	errorComponent: ErrorPage,
@@ -37,6 +39,10 @@ function RouteComponent() {
 		workspacesQueryOptions({ userId: user.id }),
 	);
 
+	const { data: projects } = useSuspenseQuery(
+		projectsQueryOptions({ workspaceId }),
+	);
+
 	if (user === null) {
 		throw navigate({ to: "/signin" });
 	}
@@ -46,7 +52,7 @@ function RouteComponent() {
 			<SidebarProvider className="flex flex-col">
 				<SiteHeader workspace={workspace} workspaces={workspaces} user={user} />
 				<div className="flex flex-1">
-					<AppSidebar workspace={workspace} />
+					<AppSidebar workspace={workspace} projects={projects} />
 					<SidebarInset>
 						<div className="flex flex-1 flex-col">
 							<div className="min-h-screen flex-1 rounded-xl bg-muted/50 md:min-h-min p-2">
