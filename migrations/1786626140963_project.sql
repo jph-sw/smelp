@@ -6,6 +6,7 @@ CREATE TABLE project (
     leadUserId TEXT,
     defaultAssigneeUserId TEXT,
     image TEXT,
+    icon TEXT NOT NULL,
     workspaceId TEXT NOT NULL,
     createdBy TEXT NOT NULL,
     createdAt INTEGER NOT NULL,

@@ -1,4 +1,4 @@
-import { ChevronUpIcon, SmileIcon } from "@hugeicons/core-free-icons";
+import { ChevronUpIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { tables } from "@smelp/db";
 import { Link } from "@tanstack/react-router";
@@ -11,6 +11,7 @@ import {
 	SidebarMenuButton,
 	SidebarMenuItem,
 } from "#/components/ui/sidebar";
+import { DynamicIcon } from "../dynamic-icon";
 import { CreateProjectDialog } from "../project/create-project-dialog";
 import { Button } from "../ui/button";
 import { Collapsible, CollapsibleContent } from "../ui/collapsible";
@@ -56,7 +57,7 @@ export function NavProjects({
 											/>
 										}
 									>
-										<HugeiconsIcon icon={SmileIcon} />
+										<DynamicIcon name={project.icon} />
 										{project.name}
 									</SidebarMenuButton>
 								</SidebarMenuItem>

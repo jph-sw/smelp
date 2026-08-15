@@ -17,6 +17,7 @@ export const createProject = base
 			name: v.pipe(v.string(), v.minLength(6), v.maxLength(32)),
 			description: v.string(),
 			access: v.picklist(["public", "private"]),
+			icon: v.string(),
 			workspaceId: v.string(),
 		}),
 	)
@@ -36,6 +37,7 @@ export const createProject = base
 			defaultAssigneeUserId: null,
 			workspaceId: input.workspaceId,
 			image: null,
+			icon: input.icon,
 			createdBy: session.userId,
 			createdAt: Date.now(),
 			updatedAt: Date.now(),

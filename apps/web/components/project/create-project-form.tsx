@@ -1,9 +1,14 @@
 import { ORPCError } from "@orpc/client";
 import type { tables } from "@smelp/db";
+import { useState } from "react";
 import * as v from "valibot";
 import { useAppForm } from "#/hooks/form";
 import { orpc } from "#/lib/orpc";
+import { DynamicIcon } from "../dynamic-icon";
+import { Button } from "../ui/button";
 import { FieldGroup } from "../ui/field";
+import IconPicker from "../ui/icon-picker";
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { toast } from "../ui/toast";
 
 const CreateProjectSchema = v.object({
@@ -20,6 +25,8 @@ export function CreateProjectForm({
 	workspace: tables["workspace"];
 	onSuccess: () => void;
 }) {
+	const [selectedIcon, setSelectedIcon] = useState<string>("AppWindowIcon");
+
 	const form = useAppForm({
 		defaultValues: {
 			id: "",
@@ -36,6 +43,7 @@ export function CreateProjectForm({
 					id: value.id,
 					name: value.name,
 					description: value.description,
+					icon: selectedIcon,
 					access: value.access as "public" | "private",
 					workspaceId: workspace.id,
 				});
@@ -62,6 +70,21 @@ export function CreateProjectForm({
 			}}
 		>
 			<FieldGroup className="grid grid-cols-4">
+				<Popover>
+					<PopoverTrigger
+						className={"border col-span-4"}
+						render={<Button className={"h-12 w-12"} variant={"secondary"} />}
+					>
+						<DynamicIcon className="size-8" name={selectedIcon} />
+					</PopoverTrigger>
+					<PopoverContent className="w-fit p-0">
+						<IconPicker
+							selectedIcon={selectedIcon}
+							setSelectedIcon={setSelectedIcon}
+							className="bg-transparent border-none"
+						/>
+					</PopoverContent>
+				</Popover>
 				<form.AppField
 					name="name"
 					children={(field) => (

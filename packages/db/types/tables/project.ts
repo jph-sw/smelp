@@ -6,6 +6,7 @@ export type project = {
 	leadUserId: string | null;
 	defaultAssigneeUserId: string | null;
 	image: string | null;
+	icon: string;
 	workspaceId: string;
 	createdBy: string;
 	createdAt: number;
