@@ -6,6 +6,7 @@ CREATE TABLE issue (
     type TEXT NOT NULL,
     parentId TEXT,
     workspaceId TEXT NOT NULL,
+    projectId TEXT NOT NULL,
     createdAt INTEGER NOT NULL,
     updatedAt INTEGER NOT NULL
 );

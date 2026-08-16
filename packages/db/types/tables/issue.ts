@@ -6,6 +6,7 @@ export type issue = {
 	type: string;
 	parentId: string | null;
 	workspaceId: string;
+	projectId: string;
 	createdAt: number;
 	updatedAt: number;
 };

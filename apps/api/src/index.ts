@@ -9,6 +9,8 @@ import { me } from "./routes/auth/me";
 import { signIn } from "./routes/auth/signin";
 import { signOut } from "./routes/auth/signout";
 import { signUp } from "./routes/auth/signup";
+import { createIssue, findIssue } from "./routes/issue";
+import { findIssues } from "./routes/issues";
 import { createProject } from "./routes/project";
 import { findProjects } from "./routes/projects";
 import { createWorkspace, findWorkspace } from "./routes/workspace";
@@ -64,6 +66,13 @@ const router = {
 	},
 	project: {
 		create: createProject,
+	},
+	issue: {
+		find: findIssue,
+		create: createIssue,
+	},
+	issues: {
+		find: findIssues,
 	},
 };
 
