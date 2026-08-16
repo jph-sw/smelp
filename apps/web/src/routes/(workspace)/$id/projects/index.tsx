@@ -1,7 +1,10 @@
-import { GearsIcon, UserIcon } from "@hugeicons/core-free-icons";
+import {
+	Setting07Icon,
+	UserIcon,
+} from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "#/components/ui/button";
 import { Card, CardContent } from "#/components/ui/card";
 import { projectsQueryOptions } from "#/lib/data/project";
@@ -64,8 +67,18 @@ function RouteComponent() {
 										<HugeiconsIcon icon={UserIcon} className="h-4 w-4" />
 										<HugeiconsIcon icon={UserIcon} className="h-4 w-4" />
 									</span>
-									<Button variant={"secondary"} size={"icon-sm"}>
-										<HugeiconsIcon icon={GearsIcon} />
+									<Button
+										variant={"secondary"}
+										size={"icon-sm"}
+										onClick={(e) => e.stopPropagation()}
+										render={
+											<Link
+												to="/$id/settings/projects/$projectId"
+												params={{ id: workspaceId, projectId: project.id }}
+											/>
+										}
+									>
+										<HugeiconsIcon icon={Setting07Icon} />
 									</Button>
 								</div>
 							</div>
