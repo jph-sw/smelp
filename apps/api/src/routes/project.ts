@@ -49,6 +49,11 @@ export const createProject = base
 			userId: session.userId,
 		};
 
+		const project_counter: tables["project_counter"] = {
+			projectId: project.id,
+			lastNumber: 0,
+		};
+
 		try {
 			await sql`INSERT INTO project ${sql(project)}`;
 		} catch (e) {
@@ -62,6 +67,7 @@ export const createProject = base
 		}
 
 		await sql`INSERT INTO project_member ${sql(project_member)}`;
+		await sql`INSERT INTO project_counter ${sql(project_counter)}`;
 
 		eventBus.emit({
 			type: "project.created",

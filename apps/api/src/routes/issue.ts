@@ -22,6 +22,7 @@ export const findIssue = base
 export const createIssue = base
 	.input(
 		v.object({
+			title: v.string(),
 			description: v.string(),
 			state: v.string(),
 			type: v.string(),
@@ -38,10 +39,23 @@ export const createIssue = base
 		const session = await auth.validateAuthSessionToken(token);
 		if (!session) throw new ORPCError("UNAUTHORIZED");
 
-		const project: tables["issue"] = {
-			id: "",
+		console.log("creating, ", input);
+
+		const project_counter = (
+			await sql`SELECT * FROM project_counter WHERE projectId = ${input.projectId}`
+		)[0] as tables["project_counter"];
+
+		const project = (
+			await sql`SELECT * FROM project WHERE id = ${input.projectId}`
+		)[0] as tables["project"];
+
+		console.log(JSON.stringify(project_counter));
+
+		const issue: tables["issue"] = {
+			id: `${project.id}-${project_counter.lastNumber + 1}`,
 			assignee: input.assignee || null,
 			state: input.state,
+			title: input.title,
 			description: input.description,
 			type: input.type,
 			parentId: input.parentId || null,
@@ -52,16 +66,18 @@ export const createIssue = base
 		};
 
 		try {
-			await sql`INSERT INTO project ${sql(project)}`;
+			await sql`INSERT INTO issue ${sql(issue)}`;
 		} catch (e) {
 			if (e instanceof SQL.SQLiteError) {
 				if (e.code === "SQLITE_CONSTRAINT_PRIMARYKEY") {
 					throw new ORPCError("CONFLICT", {
-						message: "A project with this name already exists",
+						message: "An issue with this name already exists",
 					});
 				}
 			}
 		}
 
-		return project;
+		// await sql`UPDATE project_counter SET lastNumber = lastNumber + 1 WHERE projectId = ${project.id}`;
+
+		return issue;
 	});

@@ -13,6 +13,7 @@ import type {
 import type { issue } from "../types/tables/issue";
 import type { schema_migrations } from "../types/tables/migration";
 import type { project, project_member } from "../types/tables/project";
+import type { project_counter } from "../types/tables/project_counter";
 import type { state } from "../types/tables/state";
 import type { workspace, workspace_member } from "../types/tables/workspace";
 
@@ -75,6 +76,7 @@ export type tables = {
 	workspace_member: workspace_member;
 	project: project;
 	project_member: project_member;
+	project_counter: project_counter;
 	issue: issue;
 	state: state;
 };

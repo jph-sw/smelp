@@ -13,6 +13,7 @@ import {
 	SidebarMenuButton,
 	SidebarMenuItem,
 } from "#/components/ui/sidebar";
+import { openCreateIssueDialog } from "../issue/create-issue-dialog-store";
 import { NavProjects } from "./nav-projects";
 import { NavWorkspaces } from "./nav-workspaces";
 
@@ -36,7 +37,15 @@ export function AppSidebar({
 					<SidebarGroupContent>
 						<SidebarMenu>
 							<SidebarMenuItem>
-								<SidebarMenuButton className="mb-2 bg-secondary text-secondary-foreground duration-200 ease-linear hover:bg-secondary/90 hover:text-secondary-foreground active:bg-secondary/90 active:text-secondary-foreground">
+								<SidebarMenuButton
+									onClick={() =>
+										openCreateIssueDialog({
+											workspaceId: workspace.id,
+											projectId: projects[0].id,
+										})
+									}
+									className="mb-2 bg-secondary text-secondary-foreground duration-200 ease-linear hover:bg-secondary/90 hover:text-secondary-foreground active:bg-secondary/90 active:text-secondary-foreground"
+								>
 									<HugeiconsIcon icon={PlusSignIcon} />
 									New work item
 								</SidebarMenuButton>

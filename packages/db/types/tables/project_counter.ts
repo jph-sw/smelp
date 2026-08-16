@@ -1,4 +1,4 @@
 export type project_counter = {
-	id: string;
+	projectId: string;
 	lastNumber: number;
 };
