@@ -14,7 +14,7 @@ import type { issue } from "../types/tables/issue";
 import type { schema_migrations } from "../types/tables/migration";
 import type { project, project_member } from "../types/tables/project";
 import type { project_counter } from "../types/tables/project_counter";
-import type { state } from "../types/tables/state";
+import { STATE_GROUPS, type state } from "../types/tables/state";
 import type { workspace, workspace_member } from "../types/tables/workspace";
 
 export class DB {
@@ -79,4 +79,8 @@ export type tables = {
 	project_counter: project_counter;
 	issue: issue;
 	state: state;
+};
+
+export const DEFAULTS = {
+	STATE_GROUPS: STATE_GROUPS,
 };

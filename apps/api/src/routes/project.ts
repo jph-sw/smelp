@@ -54,6 +54,41 @@ export const createProject = base
 			lastNumber: 0,
 		};
 
+		const states: tables["state"][] = [
+			{
+				id: "backlog",
+				name: "Backlog",
+				color: "#ffffff",
+				group: "backlog",
+				projectId: project.id,
+				isDefault: true,
+			},
+			{
+				id: "todo",
+				name: "Todo",
+				color: "#ffffff",
+				group: "unstarted",
+				projectId: project.id,
+				isDefault: false,
+			},
+			{
+				id: "in_progress",
+				name: "In Progress",
+				color: "#ffffff",
+				group: "started",
+				projectId: project.id,
+				isDefault: false,
+			},
+			{
+				id: "done",
+				name: "Done",
+				color: "#ffffff",
+				group: "completed",
+				projectId: project.id,
+				isDefault: false,
+			},
+		];
+
 		try {
 			await sql`INSERT INTO project ${sql(project)}`;
 		} catch (e) {
@@ -68,6 +103,7 @@ export const createProject = base
 
 		await sql`INSERT INTO project_member ${sql(project_member)}`;
 		await sql`INSERT INTO project_counter ${sql(project_counter)}`;
+		await sql`INSERT INTO state ${sql(states)}`;
 
 		eventBus.emit({
 			type: "project.created",

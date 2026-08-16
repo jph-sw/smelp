@@ -13,6 +13,7 @@ import { createIssue, findIssue } from "./routes/issue";
 import { findIssues } from "./routes/issues";
 import { createProject } from "./routes/project";
 import { findProjects } from "./routes/projects";
+import { findStates } from "./routes/states";
 import { createWorkspace, findWorkspace } from "./routes/workspace";
 import { findWorkspaces } from "./routes/workspaces";
 
@@ -73,6 +74,9 @@ const router = {
 	},
 	issues: {
 		find: findIssues,
+	},
+	states: {
+		find: findStates,
 	},
 };
 

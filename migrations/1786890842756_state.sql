@@ -3,5 +3,6 @@ CREATE TABLE state (
     name TEXT NOT NULL,
     color TEXT NOT NULL,
     "group" TEXT NOT NULL,
-    isDefault BOOLEAN
+    projectId TEXT NOT NULL,
+    isDefault BOOLEAN DEFAULT FALSE
 );
