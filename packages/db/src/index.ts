@@ -10,8 +10,10 @@ import type {
 	auth_space_member,
 	auth_user,
 } from "../types/tables/auth";
+import type { issue } from "../types/tables/issue";
 import type { schema_migrations } from "../types/tables/migration";
 import type { project, project_member } from "../types/tables/project";
+import type { state } from "../types/tables/state";
 import type { workspace, workspace_member } from "../types/tables/workspace";
 
 export class DB {
@@ -73,4 +75,6 @@ export type tables = {
 	workspace_member: workspace_member;
 	project: project;
 	project_member: project_member;
+	issue: issue;
+	state: state;
 };
