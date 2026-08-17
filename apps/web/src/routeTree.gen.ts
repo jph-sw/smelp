@@ -19,6 +19,7 @@ import { Route as workspaceCreateWorkspaceRouteImport } from './routes/(workspac
 import { Route as CeoIndexRouteImport } from './routes/ceo/index'
 import { Route as workspaceIdIndexRouteImport } from './routes/(workspace)/$id/index'
 import { Route as workspaceIdProjectsRouteRouteImport } from './routes/(workspace)/$id/projects/route'
+import { Route as workspaceIdBrowseIssueIdRouteImport } from './routes/(workspace)/$id/browse.$issueId'
 import { Route as workspaceIdProjectsIndexRouteImport } from './routes/(workspace)/$id/projects/index'
 import { Route as workspaceIdSettingsIndexRouteImport } from './routes/(workspace)/$id/settings/index'
 import { Route as workspaceIdProjectsProjectIdIndexRouteImport } from './routes/(workspace)/$id/projects/$projectId/index'
@@ -76,6 +77,12 @@ const workspaceIdProjectsRouteRoute =
     path: '/projects',
     getParentRoute: () => workspaceIdRouteRoute,
   } as any)
+const workspaceIdBrowseIssueIdRoute =
+  workspaceIdBrowseIssueIdRouteImport.update({
+    id: '/browse/$issueId',
+    path: '/browse/$issueId',
+    getParentRoute: () => workspaceIdRouteRoute,
+  } as any)
 const workspaceIdProjectsIndexRoute =
   workspaceIdProjectsIndexRouteImport.update({
     id: '/',
@@ -117,6 +124,7 @@ export interface FileRoutesByFullPath {
   '/ceo/': typeof CeoIndexRoute
   '/$id/projects': typeof workspaceIdProjectsRouteRouteWithChildren
   '/$id/': typeof workspaceIdIndexRoute
+  '/$id/browse/$issueId': typeof workspaceIdBrowseIssueIdRoute
   '/$id/projects/': typeof workspaceIdProjectsIndexRoute
   '/$id/settings/': typeof workspaceIdSettingsIndexRoute
   '/$id/settings/projects/$projectId': typeof workspaceIdSettingsProjectsProjectIdRouteWithChildren
@@ -130,6 +138,7 @@ export interface FileRoutesByTo {
   '/create-workspace': typeof workspaceCreateWorkspaceRoute
   '/ceo': typeof CeoIndexRoute
   '/$id': typeof workspaceIdIndexRoute
+  '/$id/browse/$issueId': typeof workspaceIdBrowseIssueIdRoute
   '/$id/projects': typeof workspaceIdProjectsIndexRoute
   '/$id/settings': typeof workspaceIdSettingsIndexRoute
   '/$id/settings/projects/$projectId': typeof workspaceIdSettingsProjectsProjectIdRouteWithChildren
@@ -148,6 +157,7 @@ export interface FileRoutesById {
   '/ceo/': typeof CeoIndexRoute
   '/(workspace)/$id/projects': typeof workspaceIdProjectsRouteRouteWithChildren
   '/(workspace)/$id/': typeof workspaceIdIndexRoute
+  '/(workspace)/$id/browse/$issueId': typeof workspaceIdBrowseIssueIdRoute
   '/(workspace)/$id/projects/': typeof workspaceIdProjectsIndexRoute
   '/(workspace)/$id/settings/': typeof workspaceIdSettingsIndexRoute
   '/(workspace)/$id/settings/projects/$projectId': typeof workspaceIdSettingsProjectsProjectIdRouteWithChildren
@@ -166,6 +176,7 @@ export interface FileRouteTypes {
     | '/ceo/'
     | '/$id/projects'
     | '/$id/'
+    | '/$id/browse/$issueId'
     | '/$id/projects/'
     | '/$id/settings/'
     | '/$id/settings/projects/$projectId'
@@ -179,6 +190,7 @@ export interface FileRouteTypes {
     | '/create-workspace'
     | '/ceo'
     | '/$id'
+    | '/$id/browse/$issueId'
     | '/$id/projects'
     | '/$id/settings'
     | '/$id/settings/projects/$projectId'
@@ -196,6 +208,7 @@ export interface FileRouteTypes {
     | '/ceo/'
     | '/(workspace)/$id/projects'
     | '/(workspace)/$id/'
+    | '/(workspace)/$id/browse/$issueId'
     | '/(workspace)/$id/projects/'
     | '/(workspace)/$id/settings/'
     | '/(workspace)/$id/settings/projects/$projectId'
@@ -283,6 +296,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof workspaceIdProjectsRouteRouteImport
       parentRoute: typeof workspaceIdRouteRoute
     }
+    '/(workspace)/$id/browse/$issueId': {
+      id: '/(workspace)/$id/browse/$issueId'
+      path: '/browse/$issueId'
+      fullPath: '/$id/browse/$issueId'
+      preLoaderRoute: typeof workspaceIdBrowseIssueIdRouteImport
+      parentRoute: typeof workspaceIdRouteRoute
+    }
     '/(workspace)/$id/projects/': {
       id: '/(workspace)/$id/projects/'
       path: '/'
@@ -356,6 +376,7 @@ const workspaceIdSettingsProjectsProjectIdRouteWithChildren =
 interface workspaceIdRouteRouteChildren {
   workspaceIdProjectsRouteRoute: typeof workspaceIdProjectsRouteRouteWithChildren
   workspaceIdIndexRoute: typeof workspaceIdIndexRoute
+  workspaceIdBrowseIssueIdRoute: typeof workspaceIdBrowseIssueIdRoute
   workspaceIdSettingsIndexRoute: typeof workspaceIdSettingsIndexRoute
   workspaceIdSettingsProjectsProjectIdRoute: typeof workspaceIdSettingsProjectsProjectIdRouteWithChildren
 }
@@ -363,6 +384,7 @@ interface workspaceIdRouteRouteChildren {
 const workspaceIdRouteRouteChildren: workspaceIdRouteRouteChildren = {
   workspaceIdProjectsRouteRoute: workspaceIdProjectsRouteRouteWithChildren,
   workspaceIdIndexRoute: workspaceIdIndexRoute,
+  workspaceIdBrowseIssueIdRoute: workspaceIdBrowseIssueIdRoute,
   workspaceIdSettingsIndexRoute: workspaceIdSettingsIndexRoute,
   workspaceIdSettingsProjectsProjectIdRoute:
     workspaceIdSettingsProjectsProjectIdRouteWithChildren,

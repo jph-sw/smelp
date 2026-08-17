@@ -8,6 +8,7 @@ import {
 import { createFileRoute } from "@tanstack/react-router";
 import { IssueItem } from "#/components/kanban/issue-item";
 import { StateColumn } from "#/components/kanban/state-column";
+import { ProjectHeader } from "#/components/project/project-header";
 import { issuesQueryOptions, updateIssue } from "#/lib/data/issue";
 import { statesQueryOptions } from "#/lib/data/state";
 import { cn } from "#/lib/utils";
@@ -23,7 +24,7 @@ export const Route = createFileRoute("/(workspace)/$id/projects/$projectId/")({
 });
 
 function RouteComponent() {
-	const { projectId } = Route.useParams();
+	const { projectId, id: workspaceId } = Route.useParams();
 
 	const { data: states } = useSuspenseQuery(statesQueryOptions({ projectId }));
 	const { data: issues } = useSuspenseQuery(issuesQueryOptions({ projectId }));
@@ -57,6 +58,7 @@ function RouteComponent() {
 
 	return (
 		<div className="h-full w-full">
+			<ProjectHeader workspaceId={workspaceId} projectId={projectId} />
 			<DragDropProvider
 				onDragEnd={(event) => {
 					if (event.canceled) return;
@@ -81,7 +83,11 @@ function RouteComponent() {
 							{issues
 								.filter((issue) => issue.state === state.id)
 								.map((issue) => (
-									<IssueItem issue={issue} key={issue.id} />
+									<IssueItem
+										issue={issue}
+										key={issue.id}
+										workspaceId={workspaceId}
+									/>
 								))}
 						</StateColumn>
 					))}

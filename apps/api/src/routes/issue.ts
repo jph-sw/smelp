@@ -10,10 +10,10 @@ const sql = new DB().sqlite;
 const auth = new Auth();
 
 export const findIssue = base
-	.input(v.object({ id: v.string() }))
+	.input(v.object({ issueId: v.string() }))
 	.handler(async ({ input }) => {
 		const issue = (
-			await sql`SELECT * FROM issue WHERE id = ${input.id}`
+			await sql`SELECT * FROM issue WHERE id = ${input.issueId}`
 		)[0] as tables["issue"];
 
 		return issue;
@@ -100,7 +100,7 @@ export const createIssue = base
 			}
 		}
 
-		// await sql`UPDATE project_counter SET lastNumber = lastNumber + 1 WHERE projectId = ${project.id}`;
+		await sql`UPDATE project_counter SET lastNumber = lastNumber + 1 WHERE projectId = ${project.id}`;
 
 		return issue;
 	});

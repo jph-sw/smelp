@@ -13,3 +13,12 @@ export const projectsQueryOptions = ({
 			return workspaces;
 		},
 	});
+
+export const projectQueryOptions = ({ projectId }: { projectId: string }) =>
+	queryOptions({
+		queryKey: ["project", projectId],
+		queryFn: async () => {
+			const project = orpc.project.find({ projectId });
+			return project;
+		},
+	});

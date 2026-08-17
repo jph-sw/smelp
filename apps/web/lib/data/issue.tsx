@@ -10,5 +10,14 @@ export const issuesQueryOptions = ({ projectId }: { projectId: string }) =>
 		},
 	});
 
+export const issueQueryOptions = ({ issueId }: { issueId: string }) =>
+	queryOptions({
+		queryKey: ["issue", issueId],
+		queryFn: async () => {
+			const issue = orpc.issue.find({ issueId });
+			return issue;
+		},
+	});
+
 export const updateIssue = ({ id, state }: { id: string; state: string }) =>
 	orpc.issue.update({ id, state });

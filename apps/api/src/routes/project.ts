@@ -115,3 +115,13 @@ export const createProject = base
 
 		return project;
 	});
+
+export const findProject = base
+	.input(v.object({ projectId: v.string() }))
+	.handler(async ({ input }) => {
+		const project = (
+			await sql`SELECT * FROM project WHERE id = ${input.projectId}`
+		)[0] as tables["project"];
+
+		return project;
+	});
