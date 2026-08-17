@@ -9,7 +9,7 @@ import { me } from "./routes/auth/me";
 import { signIn } from "./routes/auth/signin";
 import { signOut } from "./routes/auth/signout";
 import { signUp } from "./routes/auth/signup";
-import { createIssue, findIssue } from "./routes/issue";
+import { createIssue, findIssue, updateIssue } from "./routes/issue";
 import { findIssues } from "./routes/issues";
 import { createProject } from "./routes/project";
 import { findProjects } from "./routes/projects";
@@ -71,6 +71,7 @@ const router = {
 	issue: {
 		find: findIssue,
 		create: createIssue,
+		update: updateIssue,
 	},
 	issues: {
 		find: findIssues,

@@ -19,6 +19,29 @@ export const findIssue = base
 		return issue;
 	});
 
+export const updateIssue = base
+	.input(
+		v.object({
+			id: v.string(),
+			state: v.string(),
+		}),
+	)
+	.handler(async ({ input, context }) => {
+		const token = getCookie(context.headers, "auth_session");
+		if (!token) throw new ORPCError("UNAUTHORIZED");
+
+		const session = await auth.validateAuthSessionToken(token);
+		if (!session) throw new ORPCError("UNAUTHORIZED");
+
+		await sql`UPDATE issue SET state = ${input.state}, updatedAt = ${Date.now()} WHERE id = ${input.id}`;
+
+		const issue = (
+			await sql`SELECT * FROM issue WHERE id = ${input.id}`
+		)[0] as tables["issue"];
+
+		return issue;
+	});
+
 export const createIssue = base
 	.input(
 		v.object({

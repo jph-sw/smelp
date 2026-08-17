@@ -9,3 +9,6 @@ export const issuesQueryOptions = ({ projectId }: { projectId: string }) =>
 			return issues;
 		},
 	});
+
+export const updateIssue = ({ id, state }: { id: string; state: string }) =>
+	orpc.issue.update({ id, state });
