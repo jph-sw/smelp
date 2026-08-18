@@ -19,7 +19,7 @@ function RouteComponent() {
 
 	return (
 		<div className="flex h-full w-full">
-			<SettingsNav>
+			<SettingsNav title="Project Settings">
 				<SettingsNavGroup label="General">
 					<Link
 						to="/$id/settings/projects/$projectId"

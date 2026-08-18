@@ -1,6 +1,13 @@
-export function SettingsNav({ children }: { children: React.ReactNode }) {
+export function SettingsNav({
+	children,
+	title,
+}: {
+	children: React.ReactNode;
+	title: string;
+}) {
 	return (
 		<nav className="flex w-56 shrink-0 flex-col gap-4 border-r py-4">
+			<h3 className="px-3">{title}</h3>
 			{children}
 		</nav>
 	);

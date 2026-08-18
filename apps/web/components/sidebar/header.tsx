@@ -72,7 +72,15 @@ export function SiteHeader({
 												</div>
 											</div>
 											<div className="mt-2 mb-1 flex gap-2">
-												<Button variant={"outline"}>
+												<Button
+													variant={"outline"}
+													render={
+														<Link
+															to="/$id/settings"
+															params={{ id: workspace.id }}
+														/>
+													}
+												>
 													<HugeiconsIcon icon={GearsIcon} /> Settings
 												</Button>
 												<Button variant={"outline"}>
@@ -144,8 +152,8 @@ export function SiteHeader({
 							<DropdownMenuSeparator />
 							<DropdownMenuGroup>
 								<DropdownMenuItem onClick={handleSignOut}>
-								Sign Out
-							</DropdownMenuItem>
+									Sign Out
+								</DropdownMenuItem>
 							</DropdownMenuGroup>
 						</DropdownMenuContent>
 					</DropdownMenu>
