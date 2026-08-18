@@ -2,6 +2,7 @@ import { ORPCError } from "@orpc/server";
 import { getCookie } from "@orpc/server/helpers";
 import { Auth } from "@smelp/auth";
 import { DB, type tables } from "@smelp/db";
+import { eventBus } from "@smelp/events";
 import { SQL } from "bun";
 import * as v from "valibot";
 import { base } from "../orpc";
@@ -33,11 +34,27 @@ export const updateIssue = base
 		const session = await auth.validateAuthSessionToken(token);
 		if (!session) throw new ORPCError("UNAUTHORIZED");
 
+		const oldIssue = (
+			await sql`SELECT * FROM issue WHERE id = ${input.id}`
+		)[0] as tables["issue"];
+
 		await sql`UPDATE issue SET state = ${input.state}, updatedAt = ${Date.now()} WHERE id = ${input.id}`;
 
 		const issue = (
 			await sql`SELECT * FROM issue WHERE id = ${input.id}`
 		)[0] as tables["issue"];
+
+		eventBus.emit({
+			type: "issue.status_changed",
+			entityId: issue.id,
+			workspaceId: issue.workspaceId,
+			actorId: session.userId,
+			payload: {
+				field: "status",
+				oldValue: oldIssue.state,
+				newValue: issue.state,
+			},
+		});
 
 		return issue;
 	});
@@ -101,6 +118,14 @@ export const createIssue = base
 		}
 
 		await sql`UPDATE project_counter SET lastNumber = lastNumber + 1 WHERE projectId = ${project.id}`;
+
+		eventBus.emit({
+			type: "issue.created",
+			entityId: issue.id,
+			actorId: session.userId,
+			workspaceId: issue.workspaceId,
+			payload: { title: issue.title, projectId: issue.projectId },
+		});
 
 		return issue;
 	});
