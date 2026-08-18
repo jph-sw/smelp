@@ -46,6 +46,7 @@ export const DEFAULT_STATES = [
 
 export type state = {
 	id: string;
+	value: string;
 	name: string;
 	color: string;
 	group: string;

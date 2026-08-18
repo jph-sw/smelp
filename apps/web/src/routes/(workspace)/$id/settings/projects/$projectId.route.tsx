@@ -41,7 +41,11 @@ function RouteComponent() {
 					</Link>
 				</SettingsNavGroup>
 			</SettingsNav>
-			<Outlet />
+			<div className="flex justify-center w-full">
+				<div className="w-5xl py-8">
+					<Outlet />
+				</div>
+			</div>
 		</div>
 	);
 }

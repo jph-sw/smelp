@@ -1,6 +1,8 @@
 import { ORPCError } from "@orpc/client";
+import { useQuery } from "@tanstack/react-query";
 import * as v from "valibot";
 import { useAppForm } from "#/hooks/form";
+import { statesQueryOptions } from "#/lib/data/state";
 import { orpc } from "#/lib/orpc";
 import { FieldGroup } from "../ui/field";
 import { toast } from "../ui/toast";
@@ -18,6 +20,11 @@ export function CreateIssueForm({
 	params: CreateIssueDialogParams;
 	onSuccess: () => void;
 }) {
+	const { data: states } = useQuery(
+		statesQueryOptions({ projectId: params.projectId }),
+	);
+	const defaultState = states?.find((state) => state.isDefault);
+
 	const form = useAppForm({
 		defaultValues: {
 			title: "",
@@ -27,11 +34,19 @@ export function CreateIssueForm({
 			onSubmit: CreateIssueSchema,
 		},
 		onSubmit: async ({ value }) => {
+			if (!defaultState) {
+				toast.add({
+					type: "error",
+					description: "No default state found for this project.",
+				});
+				return;
+			}
+
 			try {
 				const res = await orpc.issue.create({
 					title: value.title,
 					description: value.description,
-					state: "backlog",
+					state: defaultState.id,
 					type: "task",
 					parentId: params.parentId,
 					workspaceId: params.workspaceId,

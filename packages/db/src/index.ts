@@ -12,7 +12,7 @@ import type {
 } from "../types/tables/auth";
 import type { issue } from "../types/tables/issue";
 import type { schema_migrations } from "../types/tables/migration";
-import type { project, project_member } from "../types/tables/project";
+import type { project } from "../types/tables/project";
 import type { project_counter } from "../types/tables/project_counter";
 import { STATE_GROUPS, type state } from "../types/tables/state";
 import type { workspace } from "../types/tables/workspace";
@@ -74,7 +74,6 @@ export type tables = {
 	activity_logs: activity_logs;
 	workspace: workspace;
 	project: project;
-	project_member: project_member;
 	project_counter: project_counter;
 	issue: issue;
 	state: state;

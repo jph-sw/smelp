@@ -12,6 +12,7 @@ import { signUp } from "./routes/auth/signup";
 import { createIssue, findIssue, updateIssue } from "./routes/issue";
 import { findIssues } from "./routes/issues";
 import { createProject, findProject } from "./routes/project";
+import { findProjectMembers } from "./routes/project-members";
 import { findProjects } from "./routes/projects";
 import { findStates } from "./routes/states";
 import { createWorkspace, findWorkspace } from "./routes/workspace";
@@ -86,6 +87,9 @@ const router = {
 	project: {
 		find: findProject,
 		create: createProject,
+	},
+	projectMembers: {
+		find: findProjectMembers,
 	},
 	issue: {
 		find: findIssue,

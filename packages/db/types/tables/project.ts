@@ -8,13 +8,8 @@ export type project = {
 	image: string | null;
 	icon: string;
 	workspaceId: string;
+	spaceId: string;
 	createdBy: string;
 	createdAt: number;
 	updatedAt: number;
-};
-
-export type project_member = {
-	id: string;
-	projectId: string;
-	userId: string;
 };

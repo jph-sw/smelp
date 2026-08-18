@@ -28,6 +28,24 @@ export const createProject = base
 		const session = await auth.validateAuthSessionToken(token);
 		if (!session) throw new ORPCError("UNAUTHORIZED");
 
+		const now = Date.now();
+
+		const auth_space: tables["auth_space"] = {
+			id: input.id,
+			name: input.name,
+			ownerId: session.userId,
+			createdAt: now,
+			updatedAt: now,
+		};
+
+		const auth_space_member: tables["auth_space_member"] = {
+			id: crypto.randomUUID(),
+			spaceId: auth_space.id,
+			userId: session.userId,
+			role: "admin",
+			createdAt: now,
+		};
+
 		const project: tables["project"] = {
 			id: input.id,
 			name: input.name,
@@ -36,17 +54,12 @@ export const createProject = base
 			leadUserId: null,
 			defaultAssigneeUserId: null,
 			workspaceId: input.workspaceId,
+			spaceId: auth_space.id,
 			image: null,
 			icon: input.icon,
 			createdBy: session.userId,
-			createdAt: Date.now(),
-			updatedAt: Date.now(),
-		};
-
-		const project_member: tables["project_member"] = {
-			id: crypto.randomUUID(),
-			projectId: project.id,
-			userId: session.userId,
+			createdAt: now,
+			updatedAt: now,
 		};
 
 		const project_counter: tables["project_counter"] = {
@@ -56,7 +69,8 @@ export const createProject = base
 
 		const states: tables["state"][] = [
 			{
-				id: "backlog",
+				id: crypto.randomUUID(),
+				value: "backlog",
 				name: "Backlog",
 				color: "#ffffff",
 				group: "backlog",
@@ -64,7 +78,8 @@ export const createProject = base
 				isDefault: true,
 			},
 			{
-				id: "todo",
+				id: crypto.randomUUID(),
+				value: "todo",
 				name: "Todo",
 				color: "#ffffff",
 				group: "unstarted",
@@ -72,7 +87,8 @@ export const createProject = base
 				isDefault: false,
 			},
 			{
-				id: "in_progress",
+				id: crypto.randomUUID(),
+				value: "in_progress",
 				name: "In Progress",
 				color: "#ffffff",
 				group: "started",
@@ -80,7 +96,8 @@ export const createProject = base
 				isDefault: false,
 			},
 			{
-				id: "done",
+				id: crypto.randomUUID(),
+				value: "done",
 				name: "Done",
 				color: "#ffffff",
 				group: "completed",
@@ -90,8 +107,15 @@ export const createProject = base
 		];
 
 		try {
-			await sql`INSERT INTO project ${sql(project)}`;
+			await sql.begin(async (tx) => {
+				await tx`INSERT INTO auth_space ${tx(auth_space)}`;
+				await tx`INSERT INTO auth_space_member ${tx(auth_space_member)}`;
+				await tx`INSERT INTO project ${tx(project)}`;
+				await tx`INSERT INTO project_counter ${tx(project_counter)}`;
+				await tx`INSERT INTO state ${tx(states)}`;
+			});
 		} catch (e) {
+			console.log(e);
 			if (e instanceof SQL.SQLiteError) {
 				if (e.code === "SQLITE_CONSTRAINT_PRIMARYKEY") {
 					throw new ORPCError("CONFLICT", {
@@ -99,11 +123,8 @@ export const createProject = base
 					});
 				}
 			}
+			throw e;
 		}
-
-		await sql`INSERT INTO project_member ${sql(project_member)}`;
-		await sql`INSERT INTO project_counter ${sql(project_counter)}`;
-		await sql`INSERT INTO state ${sql(states)}`;
 
 		eventBus.emit({
 			type: "project.created",
@@ -118,10 +139,29 @@ export const createProject = base
 
 export const findProject = base
 	.input(v.object({ projectId: v.string() }))
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const token = getCookie(context.headers, "auth_session");
+		if (!token) throw new ORPCError("UNAUTHORIZED");
+
+		const session = await auth.validateAuthSessionToken(token);
+		if (!session) throw new ORPCError("UNAUTHORIZED");
+
 		const project = (
 			await sql`SELECT * FROM project WHERE id = ${input.projectId}`
 		)[0] as tables["project"];
+
+		if (!project) {
+			throw new ORPCError("NOT_FOUND");
+		}
+
+		const allowed = await auth.userHasPermission(
+			session.userId,
+			project.spaceId,
+			"space:read",
+		);
+		if (!allowed) {
+			throw new ORPCError("FORBIDDEN");
+		}
 
 		return project;
 	});
