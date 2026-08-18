@@ -1,5 +1,5 @@
 import { ORPCError } from "@orpc/client";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as v from "valibot";
 import { useAppForm } from "#/hooks/form";
 import { statesQueryOptions } from "#/lib/data/state";
@@ -24,6 +24,7 @@ export function CreateIssueForm({
 		statesQueryOptions({ projectId: params.projectId }),
 	);
 	const defaultState = states?.find((state) => state.isDefault);
+	const queryClient = useQueryClient();
 
 	const form = useAppForm({
 		defaultValues: {
@@ -56,6 +57,9 @@ export function CreateIssueForm({
 					type: "success",
 					description: `Issue "${res.title}" created.`,
 				});
+				queryClient.invalidateQueries({
+					queryKey: ["issues", params.projectId],
+				});
 				onSuccess();
 			} catch (e) {
 				if (e instanceof ORPCError) {
@@ -82,9 +86,7 @@ export function CreateIssueForm({
 				/>
 				<form.AppField
 					name="description"
-					children={(field) => (
-						<field.TextAreaField label="Description" />
-					)}
+					children={(field) => <field.TextAreaField label="Description" />}
 				/>
 			</FieldGroup>
 			<form.AppForm>
