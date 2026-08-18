@@ -14,7 +14,7 @@ export const createInvite = base
 	.input(
 		v.object({
 			workspaceId: v.string(),
-			email: v.pipe(v.string(), v.email()),
+			email: v.pipe(v.string(), v.email(), v.toLowerCase()),
 			role: v.picklist(["guest", "member", "admin"]),
 		}),
 	)
