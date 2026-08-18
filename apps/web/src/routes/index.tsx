@@ -1,34 +1,28 @@
-import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { workspacesQueryOptions } from "#/lib/data/workspace";
 
 export const Route = createFileRoute("/")({
 	component: Home,
-	loader: ({ context: { queryClient, user } }) => {
-		if (user != null) {
-			return queryClient.ensureQueryData(
-				workspacesQueryOptions({ userId: user.id }),
-			);
+	loader: async ({ context: { queryClient, user } }) => {
+		if (user == null) {
+			throw redirect({ to: "/signin" });
 		}
+
+		const workspaces = await queryClient.ensureQueryData(
+			workspacesQueryOptions({ userId: user.id }),
+		);
+
+		if (workspaces && workspaces.length > 0) {
+			throw redirect({ to: "/$id", params: { id: workspaces[0].id } });
+		}
+
+		return workspaces;
 	},
 });
 
 function Home() {
-	const { user } = Route.useRouteContext();
-	const navigate = Route.useNavigate();
-
-	if (user === null) {
-		throw navigate({ to: "/signin" });
-	}
-
-	const { data: workspaces } = useSuspenseQuery(
-		workspacesQueryOptions({ userId: user.id }),
-	);
-
-	if (workspaces && workspaces?.length > 0) {
-		console.log("redirecting");
-		navigate({ to: "/$id", params: { id: workspaces[0].id } });
-	}
+	const workspaces = Route.useLoaderData();
 
 	const { data, isLoading } = useQuery({
 		queryKey: ["status"],
