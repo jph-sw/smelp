@@ -12,8 +12,8 @@ export const findWorkspaces = base
 			const workspaces = (await sql`
 			SELECT workspace.*
 			FROM workspace
-			JOIN workspace_member ON workspace_member.workspaceId = workspace.id
-			WHERE workspace_member.userId = ${input.userId}
+			JOIN auth_space_member ON auth_space_member.spaceId = workspace.spaceId
+			WHERE auth_space_member.userId = ${input.userId}
 		`) as tables["workspace"][];
 
 			return workspaces;

@@ -33,14 +33,6 @@ export type auth_account = {
 	updatedAt: number;
 };
 
-export type auth_permission = {
-	id: string;
-	spaceId: string;
-	userId: string;
-	permission: string | null;
-	effect: "grant" | "deny";
-};
-
 export type auth_space = {
 	id: string;
 	name: string;

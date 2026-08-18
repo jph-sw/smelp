@@ -15,5 +15,3 @@ CREATE TABLE auth_space_member (
 ) STRICT;
 
 CREATE UNIQUE INDEX auth_space_member_space_user ON auth_space_member (spaceId, userId);
-
-ALTER TABLE auth_permission ADD COLUMN effect TEXT NOT NULL DEFAULT 'grant';

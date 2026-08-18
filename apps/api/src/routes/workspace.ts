@@ -13,17 +13,37 @@ const auth = new Auth();
 
 export const findWorkspace = base
 	.input(v.object({ workspaceId: v.string() }))
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const token = getCookie(context.headers, "auth_session");
+		if (!token) throw new ORPCError("UNAUTHORIZED");
+
+		const session = await auth.validateAuthSessionToken(token);
+		if (!session) throw new ORPCError("UNAUTHORIZED");
+
+		let workspace: tables["workspace"];
 		try {
-			const workspace = (
+			workspace = (
 				await sql`SELECT * FROM workspace WHERE id = ${input.workspaceId}`
 			)[0] as tables["workspace"];
-
-			return workspace;
 		} catch (e) {
 			console.log(e);
 			throw new ORPCError("NOT_FOUND");
 		}
+
+		if (!workspace) {
+			throw new ORPCError("NOT_FOUND");
+		}
+
+		const allowed = await auth.userHasPermission(
+			session.userId,
+			workspace.spaceId,
+			"space:read",
+		);
+		if (!allowed) {
+			throw new ORPCError("FORBIDDEN");
+		}
+
+		return workspace;
 	});
 
 export const createWorkspace = base
@@ -40,22 +60,38 @@ export const createWorkspace = base
 		if (!session) throw new ORPCError("UNAUTHORIZED");
 
 		const slug = utils.toSlug(input.name);
+		const now = Date.now();
+
+		const auth_space: tables["auth_space"] = {
+			id: slug,
+			name: input.name,
+			ownerId: session.userId,
+			createdAt: now,
+			updatedAt: now,
+		};
+
+		const auth_space_member: tables["auth_space_member"] = {
+			id: crypto.randomUUID(),
+			spaceId: auth_space.id,
+			userId: session.userId,
+			role: "admin",
+			createdAt: now,
+		};
 
 		const workspace: tables["workspace"] = {
 			id: slug,
 			name: input.name,
 			ownerId: session.userId,
+			spaceId: auth_space.id,
 			image: null,
 		};
 
-		const workspace_member: tables["workspace_member"] = {
-			id: crypto.randomUUID(),
-			workspaceId: workspace.id,
-			userId: session.userId,
-		};
-
 		try {
-			await sql`INSERT INTO workspace ${sql(workspace)}`;
+			await sql.begin(async (tx) => {
+				await tx`INSERT INTO auth_space ${tx(auth_space)}`;
+				await tx`INSERT INTO auth_space_member ${tx(auth_space_member)}`;
+				await tx`INSERT INTO workspace ${tx(workspace)}`;
+			});
 		} catch (e) {
 			if (e instanceof SQL.SQLiteError) {
 				if (e.code === "SQLITE_CONSTRAINT_PRIMARYKEY") {
@@ -64,8 +100,8 @@ export const createWorkspace = base
 					});
 				}
 			}
+			throw e;
 		}
-		await sql`INSERT INTO workspace_member ${sql(workspace_member)}`;
 
 		eventBus.emit({
 			type: "workspace.created",

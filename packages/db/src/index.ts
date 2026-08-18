@@ -4,7 +4,6 @@ import { Logger } from "tslog";
 import type { activity_logs } from "../types/tables/activity";
 import type {
 	auth_account,
-	auth_permission,
 	auth_session,
 	auth_space,
 	auth_space_member,
@@ -15,7 +14,7 @@ import type { schema_migrations } from "../types/tables/migration";
 import type { project, project_member } from "../types/tables/project";
 import type { project_counter } from "../types/tables/project_counter";
 import { STATE_GROUPS, type state } from "../types/tables/state";
-import type { workspace, workspace_member } from "../types/tables/workspace";
+import type { workspace } from "../types/tables/workspace";
 
 export class DB {
 	public sqlite = new SQL("sqlite://database.sqlite");
@@ -68,12 +67,10 @@ export type tables = {
 	auth_session: auth_session;
 	auth_user: auth_user;
 	auth_account: auth_account;
-	auth_permission: auth_permission;
 	auth_space: auth_space;
 	auth_space_member: auth_space_member;
 	activity_logs: activity_logs;
 	workspace: workspace;
-	workspace_member: workspace_member;
 	project: project;
 	project_member: project_member;
 	project_counter: project_counter;

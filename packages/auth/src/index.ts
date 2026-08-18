@@ -5,7 +5,11 @@
 import { DB, type tables, Utils } from "@smelp/db";
 import { eventBus } from "@smelp/events";
 import type { SQL } from "bun";
-import { matchesPermission, permissionsForRole } from "./permission";
+import {
+	matchesPermission,
+	type Permission,
+	permissionsForRole,
+} from "./permission";
 
 const DUMMY_PASSWORD_HASH = Bun.password.hashSync(crypto.randomUUID(), {
 	algorithm: "argon2id",
@@ -24,7 +28,7 @@ export class Auth {
 	async userHasPermission(
 		userId: string,
 		spaceId: string,
-		permission: string,
+		permission: Permission,
 	): Promise<boolean> {
 		const user = (await this
 			.sql`SELECT * FROM auth_user WHERE id = ${userId}`) as tables["auth_user"][];
@@ -35,29 +39,6 @@ export class Auth {
 		const members = (await this
 			.sql`SELECT * FROM auth_space_member WHERE spaceId = ${spaceId} AND userId = ${userId}`) as tables["auth_space_member"][];
 		const member = members[0];
-
-		const overrides = (await this
-			.sql`SELECT * FROM auth_permission WHERE spaceId = ${spaceId} AND userId = ${userId}`) as tables["auth_permission"][];
-
-		const denied = overrides.some(
-			(o) =>
-				o.effect === "deny" &&
-				o.permission != null &&
-				matchesPermission(o.permission, permission),
-		);
-		if (denied) {
-			return false;
-		}
-
-		const granted = overrides.some(
-			(o) =>
-				o.effect === "grant" &&
-				o.permission != null &&
-				matchesPermission(o.permission, permission),
-		);
-		if (granted) {
-			return true;
-		}
 
 		if (member == null) {
 			return false;
