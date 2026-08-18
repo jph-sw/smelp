@@ -3,11 +3,18 @@ import {
 	UserIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { ORPCError } from "@orpc/client";
+import {
+	useMutation,
+	useQueryClient,
+	useSuspenseQuery,
+} from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "#/components/ui/button";
 import { Card, CardContent } from "#/components/ui/card";
-import { projectsQueryOptions } from "#/lib/data/project";
+import { toast } from "#/components/ui/toast";
+import { joinProject, projectsQueryOptions } from "#/lib/data/project";
+import { cn } from "#/lib/utils";
 
 export const Route = createFileRoute("/(workspace)/$id/projects/")({
 	component: RouteComponent,
@@ -21,10 +28,24 @@ export const Route = createFileRoute("/(workspace)/$id/projects/")({
 function RouteComponent() {
 	const navigate = Route.useNavigate();
 	const { id: workspaceId } = Route.useParams();
+	const queryClient = useQueryClient();
 
 	const { data: projects } = useSuspenseQuery(
 		projectsQueryOptions({ workspaceId }),
 	);
+	const projectsQueryKey = projectsQueryOptions({ workspaceId }).queryKey;
+
+	const { mutate: join, isPending: isJoining } = useMutation({
+		mutationFn: joinProject,
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: projectsQueryKey });
+		},
+		onError: (e) => {
+			if (e instanceof ORPCError) {
+				toast.add({ type: "error", description: e.message });
+			}
+		},
+	});
 
 	return (
 		<div className="p-4">
@@ -32,8 +53,13 @@ function RouteComponent() {
 				{projects.map((project) => (
 					<Card
 						key={project.id}
-						className="p-0 hover:cursor-pointer"
+						className={cn(
+							"p-0",
+							project.isMember ? "hover:cursor-pointer" : "opacity-80",
+						)}
 						onClick={() => {
+							if (!project.isMember) return;
+
 							navigate({
 								to: "/$id/projects/$projectId",
 								params: { id: workspaceId, projectId: project.id },
@@ -67,19 +93,33 @@ function RouteComponent() {
 										<HugeiconsIcon icon={UserIcon} className="h-4 w-4" />
 										<HugeiconsIcon icon={UserIcon} className="h-4 w-4" />
 									</span>
-									<Button
-										variant={"secondary"}
-										size={"icon-sm"}
-										onClick={(e) => e.stopPropagation()}
-										render={
-											<Link
-												to="/$id/settings/projects/$projectId"
-												params={{ id: workspaceId, projectId: project.id }}
-											/>
-										}
-									>
-										<HugeiconsIcon icon={Setting07Icon} />
-									</Button>
+									{project.isMember ? (
+										<Button
+											variant={"secondary"}
+											size={"icon-sm"}
+											onClick={(e) => e.stopPropagation()}
+											render={
+												<Link
+													to="/$id/settings/projects/$projectId"
+													params={{ id: workspaceId, projectId: project.id }}
+												/>
+											}
+										>
+											<HugeiconsIcon icon={Setting07Icon} />
+										</Button>
+									) : (
+										<Button
+											variant={"secondary"}
+											size={"sm"}
+											disabled={isJoining}
+											onClick={(e) => {
+												e.stopPropagation();
+												join({ projectId: project.id });
+											}}
+										>
+											Join
+										</Button>
+									)}
 								</div>
 							</div>
 						</CardContent>

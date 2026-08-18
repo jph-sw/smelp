@@ -165,3 +165,50 @@ export const findProject = base
 
 		return project;
 	});
+
+export const joinProject = base
+	.input(v.object({ projectId: v.string() }))
+	.handler(async ({ input, context }) => {
+		const token = getCookie(context.headers, "auth_session");
+		if (!token) throw new ORPCError("UNAUTHORIZED");
+
+		const session = await auth.validateAuthSessionToken(token);
+		if (!session) throw new ORPCError("UNAUTHORIZED");
+
+		const project = (
+			await sql`SELECT * FROM project WHERE id = ${input.projectId}`
+		)[0] as tables["project"];
+
+		if (!project) {
+			throw new ORPCError("NOT_FOUND");
+		}
+
+		if (project.access !== "public") {
+			throw new ORPCError("FORBIDDEN", {
+				message: "This project is private. Ask a member to invite you.",
+			});
+		}
+
+		const member: tables["auth_space_member"] = {
+			id: crypto.randomUUID(),
+			spaceId: project.spaceId,
+			userId: session.userId,
+			role: "member",
+			createdAt: Date.now(),
+		};
+
+		try {
+			await sql`INSERT INTO auth_space_member ${sql(member)}`;
+		} catch (e) {
+			if (e instanceof SQL.SQLiteError) {
+				if (e.code === "SQLITE_CONSTRAINT_UNIQUE") {
+					throw new ORPCError("CONFLICT", {
+						message: "You are already a member of this project",
+					});
+				}
+			}
+			throw e;
+		}
+
+		return member;
+	});

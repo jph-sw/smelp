@@ -11,7 +11,7 @@ import { signOut } from "./routes/auth/signout";
 import { signUp } from "./routes/auth/signup";
 import { createIssue, findIssue, updateIssue } from "./routes/issue";
 import { findIssues } from "./routes/issues";
-import { createProject, findProject } from "./routes/project";
+import { createProject, findProject, joinProject } from "./routes/project";
 import { findProjectMembers } from "./routes/project-members";
 import { findProjects } from "./routes/projects";
 import { findStates } from "./routes/states";
@@ -87,6 +87,7 @@ const router = {
 	project: {
 		find: findProject,
 		create: createProject,
+		join: joinProject,
 	},
 	projectMembers: {
 		find: findProjectMembers,
