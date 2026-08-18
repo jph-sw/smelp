@@ -15,6 +15,14 @@ import { createProject, findProject } from "./routes/project";
 import { findProjects } from "./routes/projects";
 import { findStates } from "./routes/states";
 import { createWorkspace, findWorkspace } from "./routes/workspace";
+import {
+	acceptInvite,
+	cancelInvite,
+	createInvite,
+	findInvites,
+	findMyInvites,
+} from "./routes/workspace-invites";
+import { findWorkspaceMembers } from "./routes/workspace-members";
 import { findWorkspaces } from "./routes/workspaces";
 
 const migrator = new Migrator();
@@ -58,6 +66,16 @@ const router = {
 	workspace: {
 		find: findWorkspace,
 		create: createWorkspace,
+	},
+	workspaceMembers: {
+		find: findWorkspaceMembers,
+	},
+	workspaceInvites: {
+		create: createInvite,
+		find: findInvites,
+		findMine: findMyInvites,
+		cancel: cancelInvite,
+		accept: acceptInvite,
 	},
 	workspaces: {
 		find: findWorkspaces,

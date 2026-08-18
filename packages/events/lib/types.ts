@@ -58,6 +58,20 @@ export type DomainEvent =
 			actorId: string;
 			entityId: string;
 			payload: { name: string };
+	  }
+	| {
+			type: "workspace.member_invited";
+			workspaceId: string;
+			actorId: string;
+			entityId: string;
+			payload: { email: string; role: string };
+	  }
+	| {
+			type: "workspace.member_joined";
+			workspaceId: string;
+			actorId: string;
+			entityId: string;
+			payload: { userId: string; role: string };
 	  };
 
 export type DomainEventType = DomainEvent["type"];

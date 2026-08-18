@@ -76,7 +76,7 @@ export function SiteHeader({
 													variant={"outline"}
 													render={
 														<Link
-															to="/$id/settings"
+															to="/$id/settings/workspace"
 															params={{ id: workspace.id }}
 														/>
 													}

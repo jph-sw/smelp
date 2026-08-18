@@ -1,6 +1,6 @@
 import { People, Setting07Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
 import {
 	SettingsNav,
 	SettingsNavGroup,
@@ -41,6 +41,7 @@ function RouteComponent() {
 					</Link>
 				</SettingsNavGroup>
 			</SettingsNav>
+			<Outlet />
 		</div>
 	);
 }

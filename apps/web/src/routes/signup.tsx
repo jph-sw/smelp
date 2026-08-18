@@ -11,6 +11,7 @@ import {
 import { FieldGroup } from "#/components/ui/field";
 import { toast } from "#/components/ui/toast";
 import { useAppForm } from "#/hooks/form";
+import { orpc } from "#/lib/orpc";
 import { signUp } from "../../lib/auth";
 
 const SignUpSchema = v.object({
@@ -44,7 +45,13 @@ function SignUp() {
 					value.displayName,
 					value.password,
 				);
-				navigate({ to: "/" });
+
+				const invites = await orpc.workspaceInvites.findMine();
+				if (invites.length > 0) {
+					navigate({ to: "/invites" });
+				} else {
+					navigate({ to: "/create-workspace" });
+				}
 			} catch (error) {
 				if (error instanceof ORPCError) {
 					toast.add({ type: "error", description: error.message });

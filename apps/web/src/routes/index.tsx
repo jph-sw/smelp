@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { workspacesQueryOptions } from "#/lib/data/workspace";
 
 export const Route = createFileRoute("/")({
@@ -38,6 +38,9 @@ function Home() {
 			<p>API status: {isLoading ? "..." : data}</p>
 
 			<p>Workspaces: {workspaces.length}</p>
+			<p>
+				<Link to="/invites">View your invites</Link>
+			</p>
 		</div>
 	);
 }

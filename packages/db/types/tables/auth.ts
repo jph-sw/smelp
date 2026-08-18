@@ -50,3 +50,13 @@ export type auth_space_member = {
 	role: SpaceRole;
 	createdAt: number;
 };
+
+export type auth_space_invite = {
+	id: string;
+	spaceId: string;
+	email: string;
+	role: SpaceRole;
+	invitedByUserId: string;
+	createdAt: number;
+	acceptedAt: number | null;
+};

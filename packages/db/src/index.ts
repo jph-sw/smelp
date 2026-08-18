@@ -6,6 +6,7 @@ import type {
 	auth_account,
 	auth_session,
 	auth_space,
+	auth_space_invite,
 	auth_space_member,
 	auth_user,
 } from "../types/tables/auth";
@@ -69,6 +70,7 @@ export type tables = {
 	auth_account: auth_account;
 	auth_space: auth_space;
 	auth_space_member: auth_space_member;
+	auth_space_invite: auth_space_invite;
 	activity_logs: activity_logs;
 	workspace: workspace;
 	project: project;

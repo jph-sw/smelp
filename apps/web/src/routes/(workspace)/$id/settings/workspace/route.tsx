@@ -1,0 +1,48 @@
+import { People, Setting07Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
+import {
+	SettingsNav,
+	SettingsNavGroup,
+	settingsNavLinkClassName,
+} from "#/components/settings/nav";
+
+export const Route = createFileRoute("/(workspace)/$id/settings/workspace")({
+	component: RouteComponent,
+});
+
+function RouteComponent() {
+	const { id: workspaceId } = Route.useParams();
+
+	return (
+		<div className="flex h-full w-full">
+			<SettingsNav title="Workspace Settings">
+				<SettingsNavGroup label="General">
+					<Link
+						to="/$id/settings/workspace"
+						params={{ id: workspaceId }}
+						activeOptions={{ exact: true }}
+						className={settingsNavLinkClassName}
+					>
+						<HugeiconsIcon icon={Setting07Icon} className="size-3.5" />
+						General
+					</Link>
+					<Link
+						to="/$id/settings/workspace/members"
+						params={{ id: workspaceId }}
+						activeOptions={{ exact: true }}
+						className={settingsNavLinkClassName}
+					>
+						<HugeiconsIcon icon={People} className="size-3.5" />
+						Members
+					</Link>
+				</SettingsNavGroup>
+			</SettingsNav>
+			<div className="flex justify-center w-full">
+				<div className="w-5xl py-8">
+					<Outlet />
+				</div>
+			</div>
+		</div>
+	);
+}
