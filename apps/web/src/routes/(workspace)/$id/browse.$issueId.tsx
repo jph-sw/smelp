@@ -5,13 +5,23 @@ import {
 	FilterIcon,
 	HistoryIcon,
 	LayerIcon,
+	Layers01Icon,
+	Layers02Icon,
 	LinkIcon,
 	SmilePlus,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { ProjectHeader } from "#/components/project/project-header";
+import {
+	Breadcrumb,
+	BreadcrumbItem,
+	BreadcrumbLink,
+	BreadcrumbList,
+	BreadcrumbPage,
+	BreadcrumbSeparator,
+} from "#/components/ui/breadcrumb";
 import { Button } from "#/components/ui/button";
 import { issueQueryOptions } from "#/lib/data/issue";
 
@@ -34,8 +44,30 @@ function RouteComponent() {
 	return (
 		<div className="h-full w-full relative overflow-hidden">
 			<ProjectHeader workspaceId={workspaceId} projectId={issue.projectId} />
-			<div className="h-10 w-full border-b flex items-center px-4">
-				<span className="font-medium text-sm tracking-wide">{issue.id}</span>
+
+			<div className="h-10 w-full border-b flex items-center px-5">
+				<Breadcrumb>
+					<BreadcrumbList>
+						<BreadcrumbItem>
+							<BreadcrumbLink
+								render={
+									<Link
+										to="/$id/projects/$projectId"
+										params={{ id: workspaceId, projectId: issue.projectId }}
+										className="flex items-center gap-1"
+									/>
+								}
+							>
+								<HugeiconsIcon icon={Layers02Icon} className="size-4" />
+								Work Items
+							</BreadcrumbLink>
+						</BreadcrumbItem>
+						<BreadcrumbSeparator />
+						<BreadcrumbItem>
+							<BreadcrumbPage>{issue.id}</BreadcrumbPage>
+						</BreadcrumbItem>
+					</BreadcrumbList>
+				</Breadcrumb>
 			</div>
 			<div className="h-full w-full overflow-hidden">
 				<div className="relative w-full h-full overflow-hidden">
