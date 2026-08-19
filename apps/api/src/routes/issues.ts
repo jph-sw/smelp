@@ -8,7 +8,7 @@ export const findIssues = base
 	.input(v.object({ projectId: v.string() }))
 	.handler(async ({ input }) => {
 		const issues =
-			(await sql`SELECT * FROM issue WHERE projectId = ${input.projectId}`) as tables["issue"][];
+			(await sql`SELECT * FROM issue WHERE projectId = ${input.projectId} ORDER BY updatedAt DESC`) as tables["issue"][];
 
 		return issues;
 	});

@@ -48,14 +48,14 @@ function RouteComponent() {
 	}
 
 	return (
-		<div className="[--header-height:calc(--spacing(10))]">
-			<SidebarProvider className="flex flex-col">
+		<div className="h-dvh [--header-height:calc(--spacing(10))]">
+			<SidebarProvider className="flex h-full min-h-0 flex-col">
 				<SiteHeader workspace={workspace} workspaces={workspaces} user={user} />
-				<div className="flex flex-1">
+				<div className="flex flex-1 min-h-0">
 					<AppSidebar workspace={workspace} projects={projects} />
-					<SidebarInset>
-						<div className="flex flex-1 flex-col">
-							<div className="min-h-screen flex-1 rounded-xl bg-muted/50 md:min-h-min">
+					<SidebarInset className="min-h-0">
+						<div className="flex flex-1 min-h-0 flex-col">
+							<div className="flex-1 min-h-0 overflow-y-auto rounded-xl bg-muted/50">
 								<Outlet />
 							</div>
 						</div>

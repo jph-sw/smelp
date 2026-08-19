@@ -41,9 +41,13 @@ function RouteComponent() {
 				queryClient.getQueryData<tables["issue"][]>(issuesQueryKey);
 
 			queryClient.setQueryData<tables["issue"][]>(issuesQueryKey, (current) =>
-				current?.map((issue) =>
-					issue.id === id ? { ...issue, state } : issue,
-				),
+				current
+					?.map((issue) =>
+						issue.id === id
+							? { ...issue, state, updatedAt: Date.now() }
+							: issue,
+					)
+					.sort((a, b) => b.updatedAt - a.updatedAt),
 			);
 
 			return { previousIssues };
@@ -57,7 +61,7 @@ function RouteComponent() {
 	});
 
 	return (
-		<div className="h-full w-full">
+		<div className="flex h-full w-full min-h-0 flex-col overflow-hidden">
 			<ProjectHeader workspaceId={workspaceId} projectId={projectId} />
 			<DragDropProvider
 				onDragEnd={(event) => {
@@ -77,11 +81,16 @@ function RouteComponent() {
 					});
 				}}
 			>
-				<div className={cn("gap-8 h-full w-full flex  p-4")}>
+				<div
+					className={cn(
+						"gap-8 h-full min-h-0 w-full flex flex-1 overflow-x-auto p-4",
+					)}
+				>
 					{states.map((state) => (
 						<StateColumn key={state.id} state={state}>
 							{issues
 								.filter((issue) => issue.state === state.id)
+								.sort((a, b) => b.updatedAt - a.updatedAt)
 								.map((issue) => (
 									<IssueItem
 										issue={issue}

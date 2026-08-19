@@ -19,7 +19,7 @@ export function IssueItem({
 			params={{ id: workspaceId, issueId: issue.id }}
 			id={issue.id}
 			ref={ref}
-			className="w-full block rounded-lg border bg-secondary p-3 outline-[0.5px] transition-all hover:border hover:cursor-pointer"
+			className="w-full block rounded-lg bg-secondary p-3  transition-all  hover:cursor-pointer"
 			key={issue.id}
 		>
 			{issue.title}
