@@ -5,7 +5,6 @@ import {
 	FilterIcon,
 	HistoryIcon,
 	LayerIcon,
-	Layers01Icon,
 	Layers02Icon,
 	LinkIcon,
 	SmilePlus,
