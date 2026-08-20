@@ -1,7 +1,7 @@
 import { Briefcase, EllipsisIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { tables } from "@smelp/db";
-import { Link } from "@tanstack/react-router";
+import { Link, useMatchRoute } from "@tanstack/react-router";
 import {
 	SidebarGroup,
 	SidebarGroupContent,
@@ -16,6 +16,12 @@ export function NavWorkspaces({
 }: {
 	workspace: tables["workspace"];
 }) {
+	const matchRoute = useMatchRoute();
+	const isProjectsActive = !!matchRoute({
+		to: "/$id/projects",
+		params: { id: workspace.id },
+	});
+
 	return (
 		<SidebarGroup>
 			<SidebarGroupLabel>Workspace</SidebarGroupLabel>
@@ -23,6 +29,7 @@ export function NavWorkspaces({
 				<SidebarMenu>
 					<SidebarMenuItem>
 						<SidebarMenuButton
+							isActive={isProjectsActive}
 							render={<Link to="/$id/projects" params={{ id: workspace.id }} />}
 						>
 							<HugeiconsIcon icon={Briefcase} />

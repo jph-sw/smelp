@@ -5,7 +5,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { tables } from "@smelp/db";
-import { Link } from "@tanstack/react-router";
+import { Link, useMatchRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import {
 	SidebarGroup,
@@ -35,6 +35,7 @@ export function NavProjects({
 	projects: tables["project"][];
 }) {
 	const [isOpen, setIsOpen] = useState(true);
+	const matchRoute = useMatchRoute();
 
 	return (
 		<Collapsible open={isOpen} defaultOpen className="group/collapsible">
@@ -61,6 +62,13 @@ export function NavProjects({
 							{projects.map((project) => (
 								<SidebarMenuItem key={project.id}>
 									<SidebarMenuButton
+										isActive={
+											!!matchRoute({
+												to: "/$id/projects/$projectId",
+												params: { id: workspace.id, projectId: project.id },
+												fuzzy: true,
+											})
+										}
 										render={
 											<Link
 												to="/$id/projects/$projectId"

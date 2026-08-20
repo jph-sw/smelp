@@ -13,7 +13,9 @@ import {
 	SidebarMenuButton,
 	SidebarMenuItem,
 } from "#/components/ui/sidebar";
+import { cn } from "#/lib/utils";
 import { openCreateIssueDialog } from "../issue/create-issue-dialog-store";
+import { buttonVariants } from "../ui/button";
 import { NavProjects } from "./nav-projects";
 import { NavWorkspaces } from "./nav-workspaces";
 
@@ -44,7 +46,11 @@ export function AppSidebar({
 											projectId: projects[0].id,
 										})
 									}
-									className="mb-2 bg-secondary text-secondary-foreground duration-200 ease-linear hover:bg-secondary/90 hover:text-secondary-foreground active:bg-secondary/90 active:text-secondary-foreground"
+									className={cn(
+										buttonVariants({ variant: "outline", size: "lg" }),
+										"mb-2",
+									)}
+									// className="mb-2 bg-primary text-primary-foreground duration-200 ease-linear hover:bg-primary/90 hover:text-primary-foreground active:bg-primary/90 active:text-primary-foreground"
 								>
 									<HugeiconsIcon icon={PlusSignIcon} />
 									New work item
