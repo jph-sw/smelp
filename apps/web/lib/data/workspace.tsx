@@ -30,3 +30,6 @@ export const updateWorkspace = ({
 	workspaceId: string;
 	name: string;
 }) => orpc.workspace.update({ workspaceId, name });
+
+export const deleteWorkspace = ({ workspaceId }: { workspaceId: string }) =>
+	orpc.workspace.delete({ workspaceId });

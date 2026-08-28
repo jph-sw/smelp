@@ -11,7 +11,7 @@ CREATE TABLE auth_user (
 
 CREATE TABLE auth_session (
     id TEXT NOT NULL PRIMARY KEY,
-    userId TEXT NOT NULL REFERENCES user(id),
+    userId TEXT NOT NULL REFERENCES auth_user(id) ON DELETE CASCADE,
     secretHash BLOB NOT NULL,
     tokenLastVerifiedAt INTEGER NOT NULL,
     createdAt INTEGER NOT NULL
@@ -19,7 +19,7 @@ CREATE TABLE auth_session (
 
 CREATE TABLE auth_account (
     id TEXT NOT NULL PRIMARY KEY,
-    userId TEXT NOT NULL,
+    userId TEXT NOT NULL REFERENCES auth_user(id) ON DELETE CASCADE,
     accountId TEXT NOT NULL,
     providerId TEXT NOT NULL,
     accessToken TEXT,

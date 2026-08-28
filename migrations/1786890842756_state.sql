@@ -4,6 +4,6 @@ CREATE TABLE state (
     name TEXT NOT NULL,
     color TEXT NOT NULL,
     "group" TEXT NOT NULL,
-    projectId TEXT NOT NULL,
+    projectId TEXT NOT NULL REFERENCES project(id) ON DELETE CASCADE,
     isDefault BOOLEAN DEFAULT FALSE
 );

@@ -19,6 +19,10 @@ import type { workspace } from "../types/tables/workspace";
 
 export class DB {
 	public sqlite = new SQL("sqlite://database.sqlite");
+
+	constructor() {
+		this.sqlite`PRAGMA foreign_keys = ON`;
+	}
 }
 
 export class Utils {

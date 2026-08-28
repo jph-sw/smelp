@@ -8,8 +8,8 @@ CREATE TABLE auth_space (
 
 CREATE TABLE auth_space_member (
     id TEXT NOT NULL PRIMARY KEY,
-    spaceId TEXT NOT NULL REFERENCES auth_space(id),
-    userId TEXT NOT NULL REFERENCES auth_user(id),
+    spaceId TEXT NOT NULL REFERENCES auth_space(id) ON DELETE CASCADE,
+    userId TEXT NOT NULL REFERENCES auth_user(id) ON DELETE CASCADE,
     role TEXT NOT NULL CHECK (role IN ('guest', 'member', 'admin')),
     createdAt INTEGER NOT NULL
 ) STRICT;

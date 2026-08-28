@@ -84,6 +84,49 @@ export const updateWorkspace = base
 		)[0] as tables["workspace"];
 	});
 
+export const deleteWorkspace = base
+	.input(v.object({ workspaceId: v.string() }))
+	.handler(async ({ input, context }) => {
+		const token = getCookie(context.headers, "auth_session");
+		if (!token) throw new ORPCError("UNAUTHORIZED");
+
+		const session = await auth.validateAuthSessionToken(token);
+		if (!session) throw new ORPCError("UNAUTHORIZED");
+
+		const workspace = (
+			await sql`SELECT * FROM workspace WHERE id = ${input.workspaceId}`
+		)[0] as tables["workspace"];
+
+		if (!workspace) {
+			throw new ORPCError("NOT_FOUND");
+		}
+
+		const allowed = await auth.userHasPermission(
+			session.userId,
+			workspace.spaceId,
+			"space:delete",
+		);
+		if (!allowed) {
+			throw new ORPCError("FORBIDDEN");
+		}
+		// remember: (IDK if this is the best way to handle this, i thought this would be better instead of manually deleting each thing)
+		// deleting the space cascades to workspace, project, issue, state,
+		// project_counter, activity_logs, auth_space_member, and auth_space_invite
+		await sql`DELETE FROM auth_space WHERE id = ${workspace.spaceId}`;
+
+		eventBus.emit({
+			type: "workspace.deleted",
+			workspaceId: workspace.id,
+			actorId: session.userId,
+			entityId: "",
+			payload: {
+				name: workspace.name,
+			},
+		});
+
+		return { success: true };
+	});
+
 export const createWorkspace = base
 	.input(
 		v.object({

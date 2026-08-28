@@ -6,8 +6,8 @@ CREATE TABLE issue (
     description TEXT NOT NULL,
     type TEXT NOT NULL,
     parentId TEXT,
-    workspaceId TEXT NOT NULL,
-    projectId TEXT NOT NULL,
+    workspaceId TEXT NOT NULL REFERENCES workspace(id) ON DELETE CASCADE,
+    projectId TEXT NOT NULL REFERENCES project(id) ON DELETE CASCADE,
     createdAt INTEGER NOT NULL,
     updatedAt INTEGER NOT NULL
 );

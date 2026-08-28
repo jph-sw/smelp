@@ -17,6 +17,7 @@ import { findProjects } from "./routes/projects";
 import { findStates } from "./routes/states";
 import {
 	createWorkspace,
+	deleteWorkspace,
 	findWorkspace,
 	updateWorkspace,
 } from "./routes/workspace";
@@ -72,6 +73,7 @@ const router = {
 		find: findWorkspace,
 		create: createWorkspace,
 		update: updateWorkspace,
+		delete: deleteWorkspace,
 	},
 	workspaceMembers: {
 		find: findWorkspaceMembers,

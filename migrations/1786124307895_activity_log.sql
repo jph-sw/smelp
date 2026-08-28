@@ -1,6 +1,6 @@
 CREATE TABLE activity_logs (
     id           TEXT NOT NULL PRIMARY KEY,
-    workspaceId  TEXT NOT NULL,
+    workspaceId  TEXT NOT NULL REFERENCES workspace(id) ON DELETE CASCADE,
     entityType   TEXT NOT NULL,
     entityId     TEXT NOT NULL,
     action       TEXT NOT NULL,

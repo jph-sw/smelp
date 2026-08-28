@@ -7,14 +7,9 @@ CREATE TABLE project (
     defaultAssigneeUserId TEXT,
     image TEXT,
     icon TEXT NOT NULL,
-    workspaceId TEXT NOT NULL,
+    workspaceId TEXT NOT NULL REFERENCES workspace(id) ON DELETE CASCADE,
+    spaceId TEXT NOT NULL REFERENCES auth_space(id) ON DELETE CASCADE,
     createdBy TEXT NOT NULL,
     createdAt INTEGER NOT NULL,
     updatedAt INTEGER NOT NULL
-);
-
-CREATE TABLE project_member (
-    id TEXT NOT NULL PRIMARY KEY,
-    projectId TEXT NOT NULL,
-    userId TEXT NOT NULL
 );
