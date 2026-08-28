@@ -6,14 +6,16 @@ import * as v from "valibot";
 import { Button } from "#/components/ui/button";
 import { Card, CardContent } from "#/components/ui/card";
 import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-	DialogTrigger,
-} from "#/components/ui/dialog";
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+	AlertDialogTrigger,
+} from "#/components/ui/alert-dialog";
 import { toast } from "#/components/ui/toast";
 import { useAppForm } from "#/hooks/form";
 import {
@@ -124,29 +126,32 @@ function RouteComponent() {
 								</p>
 							</div>
 							<div className="items-center flex">
-								<Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
-									<DialogTrigger render={<Button variant={"destructive"} />}>
+								<AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+									<AlertDialogTrigger render={<Button variant={"destructive"} />}>
 										Delete
-									</DialogTrigger>
-									<DialogContent>
-										<DialogHeader>
-											<DialogTitle>Delete "{workspace.name}"?</DialogTitle>
-											<DialogDescription>
+									</AlertDialogTrigger>
+									<AlertDialogContent>
+										<AlertDialogHeader>
+											<AlertDialogTitle>Delete "{workspace.name}"?</AlertDialogTitle>
+											<AlertDialogDescription>
 												This will permanently delete the workspace and all of
 												its data and resources. This action cannot be undone.
-											</DialogDescription>
-										</DialogHeader>
-										<DialogFooter showCloseButton>
-											<Button
+											</AlertDialogDescription>
+										</AlertDialogHeader>
+										<AlertDialogFooter>
+											<AlertDialogCancel disabled={isDeleting}>
+												Cancel
+											</AlertDialogCancel>
+											<AlertDialogAction
 												variant={"destructive"}
 												disabled={isDeleting}
 												onClick={handleDelete}
 											>
 												Delete workspace
-											</Button>
-										</DialogFooter>
-									</DialogContent>
-								</Dialog>
+											</AlertDialogAction>
+										</AlertDialogFooter>
+									</AlertDialogContent>
+								</AlertDialog>
 							</div>
 						</div>
 					</CardContent>
