@@ -22,3 +22,11 @@ export const workspaceQueryOptions = ({
 			return workspace;
 		},
 	});
+
+export const updateWorkspace = ({
+	workspaceId,
+	name,
+}: {
+	workspaceId: string;
+	name: string;
+}) => orpc.workspace.update({ workspaceId, name });

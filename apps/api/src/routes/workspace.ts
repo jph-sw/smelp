@@ -46,6 +46,44 @@ export const findWorkspace = base
 		return workspace;
 	});
 
+export const updateWorkspace = base
+	.input(
+		v.object({
+			workspaceId: v.string(),
+			name: v.pipe(v.string(), v.minLength(6), v.maxLength(32)),
+		}),
+	)
+	.handler(async ({ input, context }) => {
+		const token = getCookie(context.headers, "auth_session");
+		if (!token) throw new ORPCError("UNAUTHORIZED");
+
+		const session = await auth.validateAuthSessionToken(token);
+		if (!session) throw new ORPCError("UNAUTHORIZED");
+
+		const workspace = (
+			await sql`SELECT * FROM workspace WHERE id = ${input.workspaceId}`
+		)[0] as tables["workspace"];
+
+		if (!workspace) {
+			throw new ORPCError("NOT_FOUND");
+		}
+
+		const allowed = await auth.userHasPermission(
+			session.userId,
+			workspace.spaceId,
+			"space:update",
+		);
+		if (!allowed) {
+			throw new ORPCError("FORBIDDEN");
+		}
+
+		await sql`UPDATE workspace SET name = ${input.name} WHERE id = ${input.workspaceId}`;
+
+		return (
+			await sql`SELECT * FROM workspace WHERE id = ${input.workspaceId}`
+		)[0] as tables["workspace"];
+	});
+
 export const createWorkspace = base
 	.input(
 		v.object({

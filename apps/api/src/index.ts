@@ -15,7 +15,11 @@ import { createProject, findProject, joinProject } from "./routes/project";
 import { findProjectMembers } from "./routes/project-members";
 import { findProjects } from "./routes/projects";
 import { findStates } from "./routes/states";
-import { createWorkspace, findWorkspace } from "./routes/workspace";
+import {
+	createWorkspace,
+	findWorkspace,
+	updateWorkspace,
+} from "./routes/workspace";
 import {
 	acceptInvite,
 	cancelInvite,
@@ -67,6 +71,7 @@ const router = {
 	workspace: {
 		find: findWorkspace,
 		create: createWorkspace,
+		update: updateWorkspace,
 	},
 	workspaceMembers: {
 		find: findWorkspaceMembers,

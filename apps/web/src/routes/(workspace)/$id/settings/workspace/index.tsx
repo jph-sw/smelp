@@ -1,19 +1,55 @@
-import { useForm } from "@tanstack/react-form";
+import { ORPCError } from "@orpc/client";
+import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
+import * as v from "valibot";
 import { Button } from "#/components/ui/button";
 import { Card, CardContent } from "#/components/ui/card";
+import { toast } from "#/components/ui/toast";
 import { useAppForm } from "#/hooks/form";
+import { updateWorkspace, workspaceQueryOptions } from "#/lib/data/workspace";
+
+const UpdateWorkspaceSchema = v.object({
+	name: v.pipe(v.string(), v.minLength(6), v.maxLength(32)),
+});
 
 export const Route = createFileRoute("/(workspace)/$id/settings/workspace/")({
 	component: RouteComponent,
 });
 
 function RouteComponent() {
+	const { id: workspaceId } = Route.useParams();
+	const queryClient = useQueryClient();
+	const workspaceQuery = workspaceQueryOptions({ workspaceId });
+	const { data: workspace } = useSuspenseQuery(workspaceQuery);
+
 	const form = useAppForm({
 		defaultValues: {
-			name: "",
+			name: workspace.name,
+		},
+		validators: {
+			onSubmit: UpdateWorkspaceSchema,
+		},
+		onSubmit: async ({ value }) => {
+			try {
+				await updateWorkspace({ workspaceId, name: value.name });
+				await queryClient.invalidateQueries({
+					queryKey: workspaceQuery.queryKey,
+				});
+				toast.add({
+					type: "success",
+					description: "Workspace updated.",
+				});
+			} catch (e) {
+				if (e instanceof ORPCError) {
+					toast.add({
+						type: "error",
+						description: e.message,
+					});
+				}
+			}
 		},
 	});
+
 	return (
 		<div className="flex justify-center w-full">
 			<div className="w-5xl py-8 space-y-6">
@@ -36,7 +72,7 @@ function RouteComponent() {
 						</form.AppForm>
 					</div>
 				</div>
-				<Card>
+				<Card className="mt-48">
 					<CardContent>
 						<div className="w-full flex justify-between">
 							<div>
