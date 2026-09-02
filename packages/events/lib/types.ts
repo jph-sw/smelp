@@ -67,6 +67,13 @@ export type DomainEvent =
 			payload: { name: string };
 	  }
 	| {
+			type: "project.deleted";
+			workspaceId: string;
+			actorId: string;
+			entityId: string;
+			payload: { name: string };
+	  }
+	| {
 			type: "workspace.member_invited";
 			workspaceId: string;
 			actorId: string;

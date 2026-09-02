@@ -11,7 +11,12 @@ import { signOut } from "./routes/auth/signout";
 import { signUp } from "./routes/auth/signup";
 import { createIssue, findIssue, updateIssue } from "./routes/issue";
 import { findIssues } from "./routes/issues";
-import { createProject, findProject, joinProject } from "./routes/project";
+import {
+	createProject,
+	deleteProject,
+	findProject,
+	joinProject,
+} from "./routes/project";
 import { findProjectMembers } from "./routes/project-members";
 import { findProjects } from "./routes/projects";
 import { findStates } from "./routes/states";
@@ -36,8 +41,6 @@ const auth = new Auth();
 const utils = new Utils();
 
 await migrator.up();
-
-await auth.createAuthSession("test_user");
 
 function bunRequestHandler<T extends Context>(
 	handler: RPCHandler<T>,
@@ -94,6 +97,7 @@ const router = {
 	project: {
 		find: findProject,
 		create: createProject,
+		delete: deleteProject,
 		join: joinProject,
 	},
 	projectMembers: {

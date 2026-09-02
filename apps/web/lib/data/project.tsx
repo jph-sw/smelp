@@ -25,3 +25,6 @@ export const projectQueryOptions = ({ projectId }: { projectId: string }) =>
 
 export const joinProject = ({ projectId }: { projectId: string }) =>
 	orpc.project.join({ projectId });
+
+export const deleteProject = ({ projectId }: { projectId: string }) =>
+	orpc.project.delete({ projectId });

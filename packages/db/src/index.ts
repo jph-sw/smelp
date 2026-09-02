@@ -21,7 +21,7 @@ export class DB {
 	public sqlite = new SQL("sqlite://database.sqlite");
 
 	constructor() {
-		this.sqlite`PRAGMA foreign_keys = ON`;
+		this.sqlite`PRAGMA foreign_keys = ON`.execute();
 	}
 }
 

@@ -1,7 +1,23 @@
+import { ORPCError } from "@orpc/client";
+import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+	AlertDialogTrigger,
+} from "#/components/ui/alert-dialog";
 import { Button } from "#/components/ui/button";
 import { Card, CardContent } from "#/components/ui/card";
 import { Separator } from "#/components/ui/separator";
+import { toast } from "#/components/ui/toast";
+import { deleteProject, projectQueryOptions } from "#/lib/data/project";
 
 export const Route = createFileRoute(
 	"/(workspace)/$id/settings/projects/$projectId/",
@@ -10,6 +26,39 @@ export const Route = createFileRoute(
 });
 
 function RouteComponent() {
+	const { id: workspaceId, projectId } = Route.useParams();
+	const navigate = Route.useNavigate();
+	const queryClient = useQueryClient();
+	const projectQuery = projectQueryOptions({ projectId });
+	const { data: project } = useSuspenseQuery(projectQuery);
+	const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+	const [isDeleting, setIsDeleting] = useState(false);
+
+	const handleDelete = async () => {
+		setIsDeleting(true);
+		try {
+			await deleteProject({ projectId });
+			await queryClient.invalidateQueries({
+				queryKey: ["projects", workspaceId],
+			});
+			toast.add({
+				type: "success",
+				description: "Project deleted.",
+			});
+			navigate({ to: "/$id", params: { id: workspaceId } });
+		} catch (e) {
+			if (e instanceof ORPCError) {
+				toast.add({
+					type: "error",
+					description: e.message,
+				});
+			}
+		} finally {
+			setIsDeleting(false);
+			setIsDeleteOpen(false);
+		}
+	};
+
 	return (
 		<div>
 			{" "}
@@ -40,7 +89,32 @@ function RouteComponent() {
 							</p>
 						</div>
 						<div className="items-center flex ms-auto">
-							<Button variant={"destructive"}>Delete</Button>
+							<AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+								<AlertDialogTrigger render={<Button variant={"destructive"} />}>
+									Delete
+								</AlertDialogTrigger>
+								<AlertDialogContent>
+									<AlertDialogHeader>
+										<AlertDialogTitle>Delete "{project.name}"?</AlertDialogTitle>
+										<AlertDialogDescription>
+											This will permanently delete the project and all of its
+											data and resources. This action cannot be undone.
+										</AlertDialogDescription>
+									</AlertDialogHeader>
+									<AlertDialogFooter>
+										<AlertDialogCancel disabled={isDeleting}>
+											Cancel
+										</AlertDialogCancel>
+										<AlertDialogAction
+											variant={"destructive"}
+											disabled={isDeleting}
+											onClick={handleDelete}
+										>
+											Delete project
+										</AlertDialogAction>
+									</AlertDialogFooter>
+								</AlertDialogContent>
+							</AlertDialog>
 						</div>
 					</div>
 				</CardContent>

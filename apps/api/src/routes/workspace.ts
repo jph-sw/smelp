@@ -109,10 +109,19 @@ export const deleteWorkspace = base
 		if (!allowed) {
 			throw new ORPCError("FORBIDDEN");
 		}
-		// remember: (IDK if this is the best way to handle this, i thought this would be better instead of manually deleting each thing)
-		// deleting the space cascades to workspace, project, issue, state,
-		// project_counter, activity_logs, auth_space_member, and auth_space_invite
-		await sql`DELETE FROM auth_space WHERE id = ${workspace.spaceId}`;
+		const projects = (await sql`
+			SELECT id, spaceId FROM project WHERE workspaceId = ${workspace.id}
+		`) as tables["project"][];
+
+		await sql.begin(async (tx) => {
+			for (const project of projects) {
+				await tx`DELETE FROM auth_space WHERE id = ${project.spaceId}`;
+			}
+
+			// deleting the workspace's space cascades to workspace, activity_logs,
+			// auth_space_member, and auth_space_invite
+			await tx`DELETE FROM auth_space WHERE id = ${workspace.spaceId}`;
+		});
 
 		eventBus.emit({
 			type: "workspace.deleted",

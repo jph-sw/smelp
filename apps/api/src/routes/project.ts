@@ -166,6 +166,49 @@ export const findProject = base
 		return project;
 	});
 
+export const deleteProject = base
+	.input(v.object({ projectId: v.string() }))
+	.handler(async ({ input, context }) => {
+		const token = getCookie(context.headers, "auth_session");
+		if (!token) throw new ORPCError("UNAUTHORIZED");
+
+		const session = await auth.validateAuthSessionToken(token);
+		if (!session) throw new ORPCError("UNAUTHORIZED");
+
+		const project = (
+			await sql`SELECT * FROM project WHERE id = ${input.projectId}`
+		)[0] as tables["project"];
+
+		if (!project) {
+			throw new ORPCError("NOT_FOUND");
+		}
+
+		const allowed = await auth.userHasPermission(
+			session.userId,
+			project.spaceId,
+			"space:delete",
+		);
+		if (!allowed) {
+			throw new ORPCError("FORBIDDEN");
+		}
+
+		// deleting the space cascades to project, issue, state, project_counter,
+		// auth_space_member, and auth_space_invite
+		await sql`DELETE FROM auth_space WHERE id = ${project.spaceId}`;
+
+		eventBus.emit({
+			type: "project.deleted",
+			workspaceId: project.workspaceId,
+			actorId: session.userId,
+			entityId: project.id,
+			payload: {
+				name: project.name,
+			},
+		});
+
+		return { success: true };
+	});
+
 export const joinProject = base
 	.input(v.object({ projectId: v.string() }))
 	.handler(async ({ input, context }) => {
