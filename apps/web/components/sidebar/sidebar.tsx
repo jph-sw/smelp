@@ -1,7 +1,7 @@
 import { HomeIcon, PlusSignIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { tables } from "@smelp/db";
-import { Link } from "@tanstack/react-router";
+import { Link, useMatchRoute } from "@tanstack/react-router";
 import {
 	Sidebar,
 	SidebarContent,
@@ -26,6 +26,8 @@ export function AppSidebar({
 	workspace: tables["workspace"];
 	projects: tables["project"][];
 }) {
+	const matchRoute = useMatchRoute();
+
 	return (
 		<Sidebar
 			variant={"inset"}
@@ -59,6 +61,13 @@ export function AppSidebar({
 							<SidebarMenuItem>
 								<SidebarMenuButton
 									render={<Link to="/$id" params={{ id: workspace.id }} />}
+									isActive={
+										!!matchRoute({
+											to: "/$id",
+											params: { id: workspace.id },
+											fuzzy: false,
+										})
+									}
 								>
 									<HugeiconsIcon icon={HomeIcon} />
 									Home

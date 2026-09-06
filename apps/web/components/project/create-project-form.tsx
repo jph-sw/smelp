@@ -1,5 +1,6 @@
 import { ORPCError } from "@orpc/client";
 import type { tables } from "@smelp/db";
+import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import * as v from "valibot";
 import { useAppForm } from "#/hooks/form";
@@ -26,6 +27,7 @@ export function CreateProjectForm({
 	onSuccess: () => void;
 }) {
 	const [selectedIcon, setSelectedIcon] = useState<string>("AppWindowIcon");
+	const queryClient = useQueryClient();
 
 	const form = useAppForm({
 		defaultValues: {
@@ -52,6 +54,7 @@ export function CreateProjectForm({
 					description: `Project "${res.name}" created.`,
 				});
 				onSuccess();
+				queryClient.invalidateQueries({ queryKey: ["projects"] });
 			} catch (e) {
 				if (e instanceof ORPCError) {
 					toast.add({
