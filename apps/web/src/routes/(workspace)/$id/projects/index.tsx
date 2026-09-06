@@ -1,7 +1,4 @@
-import {
-	Setting07Icon,
-	UserIcon,
-} from "@hugeicons/core-free-icons";
+import { Setting07Icon, UserIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ORPCError } from "@orpc/client";
 import {

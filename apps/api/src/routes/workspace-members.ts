@@ -9,10 +9,7 @@ const sql = new DB().sqlite;
 const auth = new Auth();
 
 type WorkspaceMember = tables["auth_space_member"] &
-	Pick<
-		tables["auth_user"],
-		"fullName" | "displayName" | "email" | "image"
-	>;
+	Pick<tables["auth_user"], "fullName" | "displayName" | "email" | "image">;
 
 export const findWorkspaceMembers = base
 	.input(v.object({ workspaceId: v.string() }))

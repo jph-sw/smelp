@@ -1,10 +1,17 @@
 import { ORPCError } from "@orpc/client";
-import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import {
+	useMutation,
+	useQueryClient,
+	useSuspenseQuery,
+} from "@tanstack/react-query";
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { Button } from "#/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "#/components/ui/card";
 import { toast } from "#/components/ui/toast";
-import { acceptInvite, myInvitesQueryOptions } from "#/lib/data/workspace-invites";
+import {
+	acceptInvite,
+	myInvitesQueryOptions,
+} from "#/lib/data/workspace-invites";
 
 export const Route = createFileRoute("/invites")({
 	component: RouteComponent,
@@ -25,7 +32,9 @@ function RouteComponent() {
 	const { mutate: accept, isPending } = useMutation({
 		mutationFn: acceptInvite,
 		onSuccess: async (result) => {
-			await queryClient.invalidateQueries({ queryKey: myInvitesQueryOptions.queryKey });
+			await queryClient.invalidateQueries({
+				queryKey: myInvitesQueryOptions.queryKey,
+			});
 			await queryClient.invalidateQueries({ queryKey: ["workspaces"] });
 
 			if (result.workspaceId) {

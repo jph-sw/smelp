@@ -29,8 +29,12 @@ export const Route = createFileRoute(
 	component: RouteComponent,
 	loader: async ({ context: { queryClient }, params: { id } }) => {
 		await Promise.all([
-			queryClient.ensureQueryData(workspaceMembersQueryOptions({ workspaceId: id })),
-			queryClient.ensureQueryData(workspaceInvitesQueryOptions({ workspaceId: id })),
+			queryClient.ensureQueryData(
+				workspaceMembersQueryOptions({ workspaceId: id }),
+			),
+			queryClient.ensureQueryData(
+				workspaceInvitesQueryOptions({ workspaceId: id }),
+			),
 		]);
 	},
 });
@@ -45,7 +49,9 @@ function RouteComponent() {
 	const { data: invites } = useSuspenseQuery(
 		workspaceInvitesQueryOptions({ workspaceId }),
 	);
-	const invitesQueryKey = workspaceInvitesQueryOptions({ workspaceId }).queryKey;
+	const invitesQueryKey = workspaceInvitesQueryOptions({
+		workspaceId,
+	}).queryKey;
 
 	const form = useAppForm({
 		defaultValues: {

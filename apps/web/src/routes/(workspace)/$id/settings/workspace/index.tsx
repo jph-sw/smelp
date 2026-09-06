@@ -3,8 +3,6 @@ import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import * as v from "valibot";
-import { Button } from "#/components/ui/button";
-import { Card, CardContent } from "#/components/ui/card";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -16,6 +14,8 @@ import {
 	AlertDialogTitle,
 	AlertDialogTrigger,
 } from "#/components/ui/alert-dialog";
+import { Button } from "#/components/ui/button";
+import { Card, CardContent } from "#/components/ui/card";
 import { toast } from "#/components/ui/toast";
 import { useAppForm } from "#/hooks/form";
 import {
@@ -127,12 +127,16 @@ function RouteComponent() {
 							</div>
 							<div className="items-center flex">
 								<AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
-									<AlertDialogTrigger render={<Button variant={"destructive"} />}>
+									<AlertDialogTrigger
+										render={<Button variant={"destructive"} />}
+									>
 										Delete
 									</AlertDialogTrigger>
 									<AlertDialogContent>
 										<AlertDialogHeader>
-											<AlertDialogTitle>Delete "{workspace.name}"?</AlertDialogTitle>
+											<AlertDialogTitle>
+												Delete "{workspace.name}"?
+											</AlertDialogTitle>
 											<AlertDialogDescription>
 												This will permanently delete the workspace and all of
 												its data and resources. This action cannot be undone.

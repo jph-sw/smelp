@@ -95,7 +95,9 @@ function RouteComponent() {
 								</AlertDialogTrigger>
 								<AlertDialogContent>
 									<AlertDialogHeader>
-										<AlertDialogTitle>Delete "{project.name}"?</AlertDialogTitle>
+										<AlertDialogTitle>
+											Delete "{project.name}"?
+										</AlertDialogTitle>
 										<AlertDialogDescription>
 											This will permanently delete the project and all of its
 											data and resources. This action cannot be undone.
