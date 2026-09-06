@@ -1,15 +1,12 @@
 import { ORPCError } from "@orpc/server";
 import { getCookie } from "@orpc/server/helpers";
 import { Auth } from "@smelp/auth";
-import { DB, type tables } from "@smelp/db";
+import { DB, type ProjectMember, type tables } from "@smelp/db";
 import * as v from "valibot";
 import { base } from "../orpc";
 
 const sql = new DB().sqlite;
 const auth = new Auth();
-
-type ProjectMember = tables["auth_space_member"] &
-	Pick<tables["auth_user"], "fullName" | "displayName" | "email" | "image">;
 
 export const findProjectMembers = base
 	.input(v.object({ projectId: v.string() }))

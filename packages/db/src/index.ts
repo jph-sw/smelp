@@ -86,3 +86,6 @@ export type tables = {
 export const DEFAULTS = {
 	STATE_GROUPS: STATE_GROUPS,
 };
+
+export type ProjectMember = tables["auth_space_member"] &
+	Pick<tables["auth_user"], "fullName" | "displayName" | "email" | "image">;

@@ -2,7 +2,6 @@ import { type Context, onError } from "@orpc/server";
 import { RPCHandler } from "@orpc/server/fetch";
 import { CORSPlugin, ResponseHeadersPlugin } from "@orpc/server/plugins";
 import type { FriendlyStandardHandleOptions } from "@orpc/server/standard";
-import { Auth } from "@smelp/auth";
 import { Utils } from "@smelp/db";
 import { Migrator } from "@smelp/migrate";
 import { me } from "./routes/auth/me";
@@ -37,7 +36,6 @@ import { findWorkspaceMembers } from "./routes/workspace-members";
 import { findWorkspaces } from "./routes/workspaces";
 
 const migrator = new Migrator();
-const auth = new Auth();
 const utils = new Utils();
 
 await migrator.up();
