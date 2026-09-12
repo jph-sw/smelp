@@ -230,7 +230,7 @@ export const acceptInvite = base
 			if (e instanceof SQL.SQLiteError) {
 				if (e.code === "SQLITE_CONSTRAINT_UNIQUE") {
 					throw new ORPCError("CONFLICT", {
-						message: "You are already a member of this workspace",
+						message: "You are already a member",
 					});
 				}
 			}

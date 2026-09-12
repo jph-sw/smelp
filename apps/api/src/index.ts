@@ -16,7 +16,12 @@ import {
 	findProject,
 	joinProject,
 } from "./routes/project";
-import { findProjectMembers } from "./routes/project-members";
+import {
+	addProjectMember,
+	findAvailableProjectMembers,
+	findProjectMembers,
+	removeProjectMember,
+} from "./routes/project-members";
 import { findProjects } from "./routes/projects";
 import { findStates } from "./routes/states";
 import {
@@ -100,6 +105,9 @@ const router = {
 	},
 	projectMembers: {
 		find: findProjectMembers,
+		findAvailable: findAvailableProjectMembers,
+		add: addProjectMember,
+		remove: removeProjectMember,
 	},
 	issue: {
 		find: findIssue,

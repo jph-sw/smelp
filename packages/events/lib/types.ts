@@ -86,6 +86,13 @@ export type DomainEvent =
 			actorId: string;
 			entityId: string;
 			payload: { userId: string; role: string };
+	  }
+	| {
+			type: "workspace.member_removed";
+			workspaceId: string;
+			actorId: string;
+			entityId: string;
+			payload: { userId: string; role: string };
 	  };
 
 export type DomainEventType = DomainEvent["type"];

@@ -12,6 +12,10 @@ const ACTION_MAP: Record<string, string> = {
 };
 
 eventBus.onAny(async (event) => {
+	if (!event.workspaceId) {
+		return;
+	}
+
 	const [entityType] = event.type.split(".") as [string, string];
 
 	const log: tables["activity_logs"] = {
