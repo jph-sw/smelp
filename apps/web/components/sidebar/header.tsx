@@ -9,9 +9,9 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { tables } from "@smelp/db";
 import { useQueryClient } from "@tanstack/react-query";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate, useRouter } from "@tanstack/react-router";
 import { Button } from "#/components/ui/button";
-import { type AuthUser, signOut } from "#/lib/auth";
+import { currentUserQueryOptions, type AuthUser, signOut } from "#/lib/auth";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import {
 	DropdownMenu,
@@ -34,11 +34,13 @@ export function SiteHeader({
 	user: AuthUser;
 }) {
 	const navigate = useNavigate();
+	const router = useRouter();
 	const queryClient = useQueryClient();
 
 	const handleSignOut = async () => {
 		await signOut();
-		await queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
+		await queryClient.fetchQuery(currentUserQueryOptions);
+		await router.invalidate();
 		navigate({ to: "/signin" });
 	};
 
