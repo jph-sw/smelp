@@ -5,7 +5,6 @@ import {
 	Link,
 	redirect,
 	useNavigate,
-	useRouter,
 } from "@tanstack/react-router";
 import * as v from "valibot";
 import {
@@ -19,7 +18,7 @@ import { FieldGroup } from "#/components/ui/field";
 import { toast } from "#/components/ui/toast";
 import { useAppForm } from "#/hooks/form";
 import { orpc } from "#/lib/orpc";
-import { currentUserQueryOptions, signUp } from "../../lib/auth";
+import { signUp, startSession } from "../../lib/auth";
 
 const SignUpSchema = v.object({
 	email: v.pipe(v.string(), v.trim(), v.toLowerCase(), v.email()),
@@ -39,7 +38,6 @@ export const Route = createFileRoute("/signup")({
 
 function SignUp() {
 	const navigate = useNavigate();
-	const router = useRouter();
 	const queryClient = useQueryClient();
 	const form = useAppForm({
 		defaultValues: {
@@ -59,8 +57,7 @@ function SignUp() {
 					value.displayName,
 					value.password,
 				);
-				await queryClient.fetchQuery(currentUserQueryOptions);
-				await router.invalidate();
+				await startSession(queryClient);
 
 				const invites = await orpc.workspaceInvites.findMine();
 				if (invites.length > 0) {

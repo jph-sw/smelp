@@ -5,7 +5,6 @@ import {
 	Link,
 	redirect,
 	useNavigate,
-	useRouter,
 } from "@tanstack/react-router";
 import * as v from "valibot";
 import {
@@ -18,7 +17,7 @@ import {
 import { FieldGroup } from "#/components/ui/field";
 import { toast } from "#/components/ui/toast";
 import { useAppForm } from "#/hooks/form";
-import { currentUserQueryOptions, signIn } from "../../lib/auth";
+import { signIn, startSession } from "../../lib/auth";
 
 const SignInSchema = v.object({
 	email: v.pipe(v.string(), v.email()),
@@ -36,7 +35,6 @@ export const Route = createFileRoute("/signin")({
 
 function SignIn() {
 	const navigate = useNavigate();
-	const router = useRouter();
 	const queryClient = useQueryClient();
 	const form = useAppForm({
 		defaultValues: {
@@ -49,8 +47,7 @@ function SignIn() {
 		onSubmit: async ({ value }) => {
 			try {
 				await signIn(value.email, value.password);
-				await queryClient.fetchQuery(currentUserQueryOptions);
-				await router.invalidate();
+				await startSession(queryClient);
 				navigate({ to: "/" });
 			} catch (error) {
 				if (error instanceof ORPCError) {

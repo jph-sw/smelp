@@ -1,6 +1,6 @@
 import { ORPCError, safe } from "@orpc/client";
 import type { tables } from "@smelp/db";
-import { queryOptions } from "@tanstack/react-query";
+import { type QueryClient, queryOptions } from "@tanstack/react-query";
 import { orpc } from "./orpc";
 
 export type AuthUser = tables["auth_user"];
@@ -48,3 +48,23 @@ export const currentUserQueryOptions = queryOptions({
 	queryKey: ["auth", "me"],
 	queryFn: getCurrentUser,
 });
+
+// Call after sign-in/sign-up, before navigating: drops anything cached for a
+// previous user and loads the new one.
+export async function startSession(queryClient: QueryClient) {
+	queryClient.clear();
+	await queryClient.fetchQuery(currentUserQueryOptions);
+}
+
+// Call after sign-out. Other queries are only dropped once navigation finishes,
+// since mounted routes would refetch them without a session.
+export async function endSession(
+	queryClient: QueryClient,
+	redirectToSignIn: () => Promise<void>,
+) {
+	queryClient.setQueryData(currentUserQueryOptions.queryKey, null);
+	await redirectToSignIn();
+	queryClient.removeQueries({
+		predicate: (query) => query.queryKey[0] !== "auth",
+	});
+}
