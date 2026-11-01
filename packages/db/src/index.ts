@@ -10,6 +10,7 @@ import type {
 	auth_space_member,
 	auth_user,
 } from "../types/tables/auth";
+import type { comment } from "../types/tables/comment";
 import type { issue } from "../types/tables/issue";
 import type { schema_migrations } from "../types/tables/migration";
 import type { project } from "../types/tables/project";
@@ -17,10 +18,12 @@ import type { project_counter } from "../types/tables/project_counter";
 import { STATE_GROUPS, type state } from "../types/tables/state";
 import type { workspace } from "../types/tables/workspace";
 
+export function databasePath() {
+	return process.env.DATABASE_PATH ?? "database.sqlite";
+}
+
 export class DB {
-	public sqlite = new SQL(
-		`sqlite://${process.env.DATABASE_PATH ?? "database.sqlite"}`,
-	);
+	public sqlite = new SQL(`sqlite://${databasePath()}`);
 
 	constructor() {
 		this.sqlite`PRAGMA foreign_keys = ON`.execute();
@@ -83,6 +86,7 @@ export type tables = {
 	project_counter: project_counter;
 	issue: issue;
 	state: state;
+	comment: comment;
 };
 
 export const DEFAULTS = {
