@@ -46,9 +46,12 @@
     --radius-2xl: calc(var(--radius) * 1.8);
     --radius-3xl: calc(var(--radius) * 2.2);
     --radius-4xl: calc(var(--radius) * 2.6);
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 :root {
+  color-scheme: light;
   --background: oklch(1 0 0);
   --foreground: oklch(0.148 0.004 228.8);
   --card: oklch(1 0 0);
@@ -60,7 +63,7 @@
   --secondary: oklch(0.963 0.002 197.1);
   --secondary-foreground: oklch(0.218 0.008 223.9);
   --muted: oklch(0.963 0.002 197.1);
-  --muted-foreground: oklch(0.56 0.021 213.5);
+  --muted-foreground: oklch(0.52 0.021 213.5);
   --accent: oklch(0.963 0.002 197.1);
   --accent-foreground: oklch(0.218 0.008 223.9);
   --destructive: oklch(0.577 0.245 27.325);
@@ -84,6 +87,7 @@
 }
 
 .dark {
+  color-scheme: dark;
   --background: oklch(0.148 0.004 228.8);
   --foreground: oklch(0.987 0.002 197.1);
   --card: oklch(0.218 0.008 223.9);
@@ -130,4 +134,26 @@
   html {
     @apply font-sans;
     }
+}
+
+/* Reduced motion keeps fades and color changes but removes movement. */
+@media (prefers-reduced-motion: reduce) {
+  [data-slot] {
+    --tw-enter-scale: 1 !important;
+    --tw-enter-translate-x: 0 !important;
+    --tw-enter-translate-y: 0 !important;
+    --tw-exit-scale: 1 !important;
+    --tw-exit-translate-x: 0 !important;
+    --tw-exit-translate-y: 0 !important;
+  }
+  [data-slot="button"]:active {
+    scale: none !important;
+  }
+  [data-slot="toast"],
+  [data-slot="sheet-content"] {
+    transition-property: opacity !important;
+  }
+  [data-slot="collapsible-content"] {
+    transition: none !important;
+  }
 }
