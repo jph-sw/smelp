@@ -19,7 +19,8 @@ import { orpc } from "#/lib/orpc";
 const CreateWorkspaceSchema = v.object({
 	name: v.pipe(
 		v.string(),
-		v.minLength(6, "Use at least 6 characters."),
+		v.trim(),
+		v.minLength(2, "Use at least 2 characters."),
 		v.maxLength(32, "Use at most 32 characters."),
 	),
 });

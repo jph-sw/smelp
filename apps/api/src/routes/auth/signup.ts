@@ -9,8 +9,8 @@ const auth = new Auth();
 
 const Params = v.object({
 	email: v.pipe(v.string(), v.trim(), v.toLowerCase(), v.email()),
-	fullName: v.pipe(v.string()),
-	displayName: v.pipe(v.string()),
+	fullName: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(80)),
+	displayName: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(40)),
 	password: v.pipe(v.string(), v.minLength(10), v.maxLength(64)),
 });
 
