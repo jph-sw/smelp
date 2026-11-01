@@ -96,7 +96,7 @@ export type DomainEvent =
 			workspaceId: string;
 			actorId: string;
 			entityId: string;
-			payload: { email: string; role: string };
+			payload: { email: string | null; role: string };
 	  }
 	| {
 			type: "workspace.member_joined";

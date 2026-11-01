@@ -18,6 +18,14 @@ export async function requireSession(headers: Headers) {
 	return session;
 }
 
+export async function requireInstanceAdmin(headers: Headers) {
+	const session = await requireSession(headers);
+	if (!(await auth.isInstanceAdmin(session.userId))) {
+		throw new ORPCError("FORBIDDEN");
+	}
+	return session;
+}
+
 export async function requireProjectPermission(
 	headers: Headers,
 	projectId: string,

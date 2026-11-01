@@ -8,6 +8,11 @@ import { signOut } from "./routes/auth/signout";
 import { signUp } from "./routes/auth/signup";
 import { createComment, deleteComment, findComments } from "./routes/comment";
 import {
+	findInstanceStatus,
+	findInstanceUsers,
+	updateInstance,
+} from "./routes/instance";
+import {
 	createIssue,
 	deleteIssue,
 	findIssue,
@@ -46,12 +51,17 @@ import {
 	cancelInvite,
 	createInvite,
 	findInvites,
-	findMyInvites,
+	previewInvite,
 } from "./routes/workspace-invites";
 import { findWorkspaceMembers } from "./routes/workspace-members";
 import { findWorkspaces } from "./routes/workspaces";
 
 export const router = {
+	instance: {
+		status: findInstanceStatus,
+		update: updateInstance,
+		users: findInstanceUsers,
+	},
 	auth: {
 		signIn,
 		signUp,
@@ -70,7 +80,7 @@ export const router = {
 	workspaceInvites: {
 		create: createInvite,
 		find: findInvites,
-		findMine: findMyInvites,
+		preview: previewInvite,
 		cancel: cancelInvite,
 		accept: acceptInvite,
 	},

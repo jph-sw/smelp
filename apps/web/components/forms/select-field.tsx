@@ -30,7 +30,7 @@ export default function SelectField({
 				value={field.state.value}
 				onValueChange={field.handleChange}
 			>
-				<SelectTrigger id={id} aria-invalid={isInvalid}>
+				<SelectTrigger id={id} aria-invalid={isInvalid} className="w-full">
 					<SelectValue />
 				</SelectTrigger>
 				<SelectContent>

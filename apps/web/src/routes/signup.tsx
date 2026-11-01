@@ -1,5 +1,5 @@
 import { ORPCError } from "@orpc/client";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import {
 	createFileRoute,
 	Link,
@@ -10,14 +10,15 @@ import * as v from "valibot";
 import {
 	Card,
 	CardContent,
+	CardDescription,
 	CardFooter,
 	CardHeader,
 	CardTitle,
 } from "#/components/ui/card";
 import { FieldGroup } from "#/components/ui/field";
 import { useAppForm } from "#/hooks/form";
+import { instanceStatusQueryOptions } from "#/lib/data/instance";
 import { toastError } from "#/lib/errors";
-import { orpc } from "#/lib/orpc";
 import { signUp, startSession } from "../../lib/auth";
 
 const SignUpSchema = v.object({
@@ -47,15 +48,55 @@ const SignUpSchema = v.object({
 });
 
 export const Route = createFileRoute("/signup")({
-	beforeLoad: ({ context }) => {
+	validateSearch: (search: Record<string, unknown>): { invite?: string } => ({
+		invite: typeof search.invite === "string" ? search.invite : undefined,
+	}),
+	beforeLoad: ({ context, search }) => {
 		if (context.user != null) {
-			throw redirect({ to: "/" });
+			throw search.invite
+				? redirect({ to: "/invite/$token", params: { token: search.invite } })
+				: redirect({ to: "/" });
 		}
 	},
+	loader: ({ context: { queryClient } }) =>
+		queryClient.ensureQueryData(instanceStatusQueryOptions),
 	component: SignUp,
 });
 
 function SignUp() {
+	const { invite } = Route.useSearch();
+	const { data: status } = useSuspenseQuery(instanceStatusQueryOptions);
+
+	if (!status.needsSetup && !status.signupOpen && !invite) {
+		return (
+			<div className="flex min-h-dvh w-full items-center justify-center p-4">
+				<Card className="w-full max-w-sm">
+					<CardHeader>
+						<CardTitle>Sign-ups are closed</CardTitle>
+						<CardDescription>
+							Ask a workspace admin on this instance for an invite link.
+						</CardDescription>
+					</CardHeader>
+					<CardFooter>
+						<Link to="/signin" className="underline underline-offset-3">
+							Sign in instead
+						</Link>
+					</CardFooter>
+				</Card>
+			</div>
+		);
+	}
+
+	return <SignUpForm invite={invite} needsSetup={status.needsSetup} />;
+}
+
+function SignUpForm({
+	invite,
+	needsSetup,
+}: {
+	invite?: string;
+	needsSetup: boolean;
+}) {
 	const navigate = useNavigate();
 	const queryClient = useQueryClient();
 	const form = useAppForm({
@@ -75,12 +116,15 @@ function SignUp() {
 					value.fullName,
 					value.displayName,
 					value.password,
+					invite,
 				);
+				queryClient.removeQueries({
+					queryKey: instanceStatusQueryOptions.queryKey,
+				});
 				await startSession(queryClient);
 
-				const invites = await orpc.workspaceInvites.findMine();
-				if (invites.length > 0) {
-					navigate({ to: "/invites" });
+				if (invite) {
+					navigate({ to: "/invite/$token", params: { token: invite } });
 				} else {
 					navigate({ to: "/create-workspace" });
 				}
@@ -104,7 +148,12 @@ function SignUp() {
 		<div className="flex min-h-dvh w-full items-center justify-center p-4">
 			<Card className="w-full max-w-sm">
 				<CardHeader>
-					<CardTitle>Sign up</CardTitle>
+					<CardTitle>{needsSetup ? "Set up smelp" : "Sign up"}</CardTitle>
+					{needsSetup && (
+						<CardDescription>
+							This first account will be the admin for this instance.
+						</CardDescription>
+					)}
 				</CardHeader>
 				<CardContent>
 					<form
@@ -151,18 +200,27 @@ function SignUp() {
 							/>
 						</FieldGroup>
 						<form.AppForm>
-							<form.SubscribeButton label="Sign up" className="w-full" />
+							<form.SubscribeButton
+								label={needsSetup ? "Create admin account" : "Sign up"}
+								className="w-full"
+							/>
 						</form.AppForm>
 					</form>
 				</CardContent>
-				<CardFooter>
-					<p>
-						Already have an account?{" "}
-						<Link to="/signin" className="underline underline-offset-3">
-							Sign in
-						</Link>
-					</p>
-				</CardFooter>
+				{!needsSetup && (
+					<CardFooter>
+						<p>
+							Already have an account?{" "}
+							<Link
+								to="/signin"
+								search={{ invite }}
+								className="underline underline-offset-3"
+							>
+								Sign in
+							</Link>
+						</p>
+					</CardFooter>
+				)}
 			</Card>
 		</div>
 	);
