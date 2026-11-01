@@ -25,14 +25,18 @@ export class Auth {
 		this.utils = new Utils();
 	}
 
+	async isInstanceAdmin(userId: string): Promise<boolean> {
+		const user = (await this
+			.sql`SELECT * FROM auth_user WHERE id = ${userId}`) as tables["auth_user"][];
+		return user[0]?.role === "admin";
+	}
+
 	async userHasPermission(
 		userId: string,
 		spaceId: string,
 		permission: Permission,
 	): Promise<boolean> {
-		const user = (await this
-			.sql`SELECT * FROM auth_user WHERE id = ${userId}`) as tables["auth_user"][];
-		if (user[0]?.role === "admin") {
+		if (await this.isInstanceAdmin(userId)) {
 			return true;
 		}
 

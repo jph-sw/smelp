@@ -3,9 +3,12 @@ import { setCookie } from "@orpc/server/helpers";
 import { Auth } from "@smelp/auth";
 import { SQL } from "bun";
 import * as v from "valibot";
+import { enforceRateLimit, RateLimiter } from "../../lib/rate-limit";
 import { base } from "../../orpc";
 
 const auth = new Auth();
+
+const signUpsByIp = new RateLimiter(10, 60 * 60 * 1000);
 
 const Params = v.object({
 	email: v.pipe(v.string(), v.trim(), v.toLowerCase(), v.email()),
@@ -15,6 +18,8 @@ const Params = v.object({
 });
 
 export const signUp = base.input(Params).handler(async ({ input, context }) => {
+	enforceRateLimit(signUpsByIp, context.ip);
+
 	try {
 		const { session, user } = await auth.signUp(
 			input.email,
