@@ -14,6 +14,7 @@ const auth = new Auth();
 // Workspace ids are slugs of the name and live at the top level of the URL, so
 // they can't take a path the app or its backend already uses.
 const RESERVED_WORKSPACE_IDS = new Set([
+	"account",
 	"api",
 	"ceo",
 	"create_workspace",

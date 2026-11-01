@@ -5,12 +5,8 @@ import { eventBus } from "@smelp/events";
 import { SQL } from "bun";
 import * as v from "valibot";
 import { requireSession, requireWorkspacePermission } from "../lib/access";
-import {
-	createInviteToken,
-	findUsableInvite,
-	hashInviteToken,
-	INVITE_LIFETIME_MS,
-} from "../lib/invites";
+import { findUsableInvite, INVITE_LIFETIME_MS } from "../lib/invites";
+import { createSecretToken, hashSecretToken } from "../lib/tokens";
 import { base } from "../orpc";
 
 const sql = new DB().sqlite;
@@ -51,7 +47,7 @@ export const createInvite = base
 			}
 		}
 
-		const token = createInviteToken();
+		const token = createSecretToken();
 		const now = Date.now();
 		const invite: tables["auth_space_invite"] = {
 			id: crypto.randomUUID(),
@@ -61,7 +57,7 @@ export const createInvite = base
 			invitedByUserId: session.userId,
 			createdAt: now,
 			acceptedAt: null,
-			tokenHash: hashInviteToken(token),
+			tokenHash: hashSecretToken(token),
 			expiresAt: now + INVITE_LIFETIME_MS,
 		};
 		await sql`INSERT INTO auth_space_invite ${sql(invite)}`;

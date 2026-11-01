@@ -4,10 +4,14 @@ import {
 	useSuspenseQuery,
 } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState } from "react";
+import { CopyLink } from "#/components/copy-link";
 import { Avatar, AvatarFallback, AvatarImage } from "#/components/ui/avatar";
+import { Button } from "#/components/ui/button";
 import { Card, CardContent } from "#/components/ui/card";
 import { Switch } from "#/components/ui/switch";
 import {
+	createPasswordReset,
 	instanceStatusQueryOptions,
 	instanceUsersQueryOptions,
 	updateInstance,
@@ -26,6 +30,10 @@ export const Route = createFileRoute("/ceo/")({
 
 function RouteComponent() {
 	const queryClient = useQueryClient();
+	const [resetLink, setResetLink] = useState<{
+		displayName: string;
+		link: string;
+	} | null>(null);
 	const { data: status } = useSuspenseQuery(instanceStatusQueryOptions);
 	const { data: users } = useSuspenseQuery(instanceUsersQueryOptions);
 
@@ -36,6 +44,16 @@ function RouteComponent() {
 			queryClient.invalidateQueries({
 				queryKey: instanceStatusQueryOptions.queryKey,
 			}),
+	});
+
+	const { mutate: createReset, isPending: isCreatingReset } = useMutation({
+		mutationFn: createPasswordReset,
+		onSuccess: ({ token }, { displayName }) =>
+			setResetLink({
+				displayName,
+				link: `${window.location.origin}/reset-password/${token}`,
+			}),
+		onError: (e) => toastError(e),
 	});
 
 	return (
@@ -65,6 +83,13 @@ function RouteComponent() {
 					/>
 				</CardContent>
 			</Card>
+			{resetLink && (
+				<CopyLink
+					title={`Send this password reset link to ${resetLink.displayName}`}
+					hint="It works once and expires in 24 hours. It won't be shown again, so copy it now."
+					link={resetLink.link}
+				/>
+			)}
 			<section className="flex flex-col gap-1" aria-labelledby="users-label">
 				<h2
 					id="users-label"
@@ -92,6 +117,21 @@ function RouteComponent() {
 						>
 							{user.role === "admin" ? "Instance admin" : "User"}
 						</span>
+						<Button
+							variant="ghost"
+							size="sm"
+							className="shrink-0"
+							disabled={isCreatingReset}
+							aria-label={`Create a password reset link for ${user.displayName}`}
+							onClick={() =>
+								createReset({
+									userId: user.id,
+									displayName: user.displayName,
+								})
+							}
+						>
+							Reset password
+						</Button>
 					</div>
 				))}
 			</section>

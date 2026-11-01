@@ -67,6 +67,7 @@ const newInvite = (role: "guest" | "member" | "admin" = "member") =>
 beforeAll(async () => {
 	// Other test files share this database, and these tests need a fresh install.
 	await sql`DELETE FROM auth_space_invite`;
+	await sql`DELETE FROM auth_space`;
 	await sql`DELETE FROM auth_user`;
 	await sql`UPDATE instance_setting SET value = 'false' WHERE key = 'signupOpen'`;
 });
