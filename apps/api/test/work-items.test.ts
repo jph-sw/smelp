@@ -218,8 +218,24 @@ describe("comments", () => {
 			"BAD_REQUEST",
 		));
 
-	test("guests and outsiders can't comment", async () => {
-		for (const user of [guest, outsider, wsMember]) {
+	test("guests can comment and delete their own comments", async () => {
+		const comment = await guest.client.comments.create({
+			issueId,
+			body: "A guest's view",
+		});
+		expect(comment.authorId).toBe(guest.id);
+
+		await guest.client.comments.delete({ id: comment.id });
+	});
+
+	test("guests are still read-only for the work item itself", () =>
+		expectCode(
+			guest.client.issue.update({ id: issueId, title: "Nope" }),
+			"FORBIDDEN",
+		));
+
+	test("people outside the project can't comment", async () => {
+		for (const user of [outsider, wsMember]) {
 			await expectCode(
 				user.client.comments.create({ issueId, body: "Hi" }),
 				"FORBIDDEN",

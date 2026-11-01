@@ -237,7 +237,6 @@ function RouteComponent() {
 						userId={user?.id}
 						states={states}
 						members={members}
-						canWrite={canWrite}
 						canManage={canManage}
 					/>
 				</div>

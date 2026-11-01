@@ -118,14 +118,12 @@ export function IssueActivity({
 	userId,
 	states,
 	members,
-	canWrite,
 	canManage,
 }: {
 	issueId: string;
 	userId: string | undefined;
 	states: tables["state"][];
 	members: ProjectMember[];
-	canWrite: boolean;
 	canManage: boolean;
 }) {
 	const queryClient = useQueryClient();
@@ -213,31 +211,29 @@ export function IssueActivity({
 					),
 				)}
 			</ol>
-			{canWrite && (
-				<form
-					className="space-y-2"
-					onSubmit={(event) => {
-						event.preventDefault();
-						submit();
+			<form
+				className="space-y-2"
+				onSubmit={(event) => {
+					event.preventDefault();
+					submit();
+				}}
+			>
+				<Textarea
+					aria-label="Add a comment"
+					placeholder="Add a comment"
+					value={draft}
+					onChange={(event) => setDraft(event.target.value)}
+					onKeyDown={(event) => {
+						if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+							event.preventDefault();
+							submit();
+						}
 					}}
-				>
-					<Textarea
-						aria-label="Add a comment"
-						placeholder="Add a comment"
-						value={draft}
-						onChange={(event) => setDraft(event.target.value)}
-						onKeyDown={(event) => {
-							if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
-								event.preventDefault();
-								submit();
-							}
-						}}
-					/>
-					<Button type="submit" disabled={!draft.trim() || isAdding}>
-						Comment
-					</Button>
-				</form>
-			)}
+				/>
+				<Button type="submit" disabled={!draft.trim() || isAdding}>
+					Comment
+				</Button>
+			</form>
 		</section>
 	);
 }

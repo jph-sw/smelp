@@ -53,10 +53,11 @@ export const createComment = base
 	.handler(async ({ input, context }) => {
 		const session = await requireSession(context.headers);
 		const issue = await findIssueOrThrow(input.issueId);
+		// Anyone in the project can join the discussion, including read-only guests.
 		await requireProjectPermission(
 			context.headers,
 			issue.projectId,
-			"content:write",
+			"space:read",
 		);
 
 		const comment: tables["comment"] = {
