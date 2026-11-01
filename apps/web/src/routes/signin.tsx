@@ -1,5 +1,11 @@
 import { ORPCError } from "@orpc/client";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+	createFileRoute,
+	Link,
+	redirect,
+	useNavigate,
+} from "@tanstack/react-router";
 import * as v from "valibot";
 import {
 	Card,
@@ -11,7 +17,7 @@ import {
 import { FieldGroup } from "#/components/ui/field";
 import { toast } from "#/components/ui/toast";
 import { useAppForm } from "#/hooks/form";
-import { signIn } from "../../lib/auth";
+import { signIn, startSession } from "../../lib/auth";
 
 const SignInSchema = v.object({
 	email: v.pipe(v.string(), v.email()),
@@ -19,11 +25,17 @@ const SignInSchema = v.object({
 });
 
 export const Route = createFileRoute("/signin")({
+	beforeLoad: ({ context }) => {
+		if (context.user != null) {
+			throw redirect({ to: "/" });
+		}
+	},
 	component: SignIn,
 });
 
 function SignIn() {
 	const navigate = useNavigate();
+	const queryClient = useQueryClient();
 	const form = useAppForm({
 		defaultValues: {
 			email: "",
@@ -35,6 +47,7 @@ function SignIn() {
 		onSubmit: async ({ value }) => {
 			try {
 				await signIn(value.email, value.password);
+				await startSession(queryClient);
 				navigate({ to: "/" });
 			} catch (error) {
 				if (error instanceof ORPCError) {
@@ -45,6 +58,8 @@ function SignIn() {
 							fields: { email: "", password: "" },
 						},
 					});
+				} else {
+					console.error("Unexpected sign-in error: ", error);
 				}
 			}
 		},

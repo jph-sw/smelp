@@ -6,6 +6,8 @@ import type { AppRouter } from "@smelp/api";
 const link = new RPCLink({
 	url: `${window.location.origin}/rpc`,
 	headers: { Authorization: "Bearer token" },
+	fetch: (request, init) =>
+		globalThis.fetch(request, { ...init, credentials: "include" }),
 });
 
 export const orpc: RouterClient<AppRouter> = createORPCClient(link);

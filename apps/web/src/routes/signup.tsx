@@ -1,5 +1,11 @@
 import { ORPCError } from "@orpc/client";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+	createFileRoute,
+	Link,
+	redirect,
+	useNavigate,
+} from "@tanstack/react-router";
 import * as v from "valibot";
 import {
 	Card,
@@ -12,7 +18,7 @@ import { FieldGroup } from "#/components/ui/field";
 import { toast } from "#/components/ui/toast";
 import { useAppForm } from "#/hooks/form";
 import { orpc } from "#/lib/orpc";
-import { signUp } from "../../lib/auth";
+import { signUp, startSession } from "../../lib/auth";
 
 const SignUpSchema = v.object({
 	email: v.pipe(v.string(), v.trim(), v.toLowerCase(), v.email()),
@@ -22,11 +28,17 @@ const SignUpSchema = v.object({
 });
 
 export const Route = createFileRoute("/signup")({
+	beforeLoad: ({ context }) => {
+		if (context.user != null) {
+			throw redirect({ to: "/" });
+		}
+	},
 	component: SignUp,
 });
 
 function SignUp() {
 	const navigate = useNavigate();
+	const queryClient = useQueryClient();
 	const form = useAppForm({
 		defaultValues: {
 			email: "",
@@ -45,6 +57,7 @@ function SignUp() {
 					value.displayName,
 					value.password,
 				);
+				await startSession(queryClient);
 
 				const invites = await orpc.workspaceInvites.findMine();
 				if (invites.length > 0) {

@@ -11,7 +11,7 @@ import type { tables } from "@smelp/db";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Button } from "#/components/ui/button";
-import { type AuthUser, signOut } from "#/lib/auth";
+import { type AuthUser, endSession, signOut } from "#/lib/auth";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import {
 	DropdownMenu,
@@ -38,8 +38,7 @@ export function SiteHeader({
 
 	const handleSignOut = async () => {
 		await signOut();
-		await queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
-		navigate({ to: "/signin" });
+		await endSession(queryClient, () => navigate({ to: "/signin" }));
 	};
 
 	return (
