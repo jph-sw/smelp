@@ -11,6 +11,7 @@ import { StateColumn } from "#/components/kanban/state-column";
 import { ProjectHeader } from "#/components/project/project-header";
 import { issuesQueryOptions, updateIssue } from "#/lib/data/issue";
 import { statesQueryOptions } from "#/lib/data/state";
+import { toastError } from "#/lib/errors";
 import { cn } from "#/lib/utils";
 
 export const Route = createFileRoute("/(workspace)/$id/projects/$projectId/")({
@@ -53,7 +54,7 @@ function RouteComponent() {
 			return { previousIssues };
 		},
 		onError: (error, _variables, context) => {
-			console.error("Failed to update issue state", error);
+			toastError(error, "Couldn't move the work item. Please try again.");
 			if (context?.previousIssues) {
 				queryClient.setQueryData(issuesQueryKey, context.previousIssues);
 			}

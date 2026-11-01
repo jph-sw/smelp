@@ -3,6 +3,7 @@ import { People } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { tables } from "@smelp/db";
 import { Link } from "@tanstack/react-router";
+import { cn } from "#/lib/utils";
 import { Button } from "../ui/button";
 
 export function IssueItem({
@@ -12,34 +13,33 @@ export function IssueItem({
 	issue: tables["issue"];
 	workspaceId: string;
 }) {
-	const { ref } = useDraggable({
+	const { ref, isDragging } = useDraggable({
 		id: issue.id,
 	});
 
 	return (
-		<Link
-			to="/$id/browse/$issueId"
-			params={{ id: workspaceId, issueId: issue.id }}
-			id={issue.id}
-			ref={ref}
-			className="w-full block rounded-lg bg-secondary p-3  transition-all  hover:cursor-pointer"
-			key={issue.id}
-		>
-			<div className="w-full flex items-center mb-1">
-				<span className="text-xs font-semibold text-foreground/70">
+		<div className="relative w-full">
+			<Link
+				to="/$id/browse/$issueId"
+				params={{ id: workspaceId, issueId: issue.id }}
+				id={issue.id}
+				ref={ref}
+				className="block w-full rounded-lg bg-secondary p-3 pb-10 outline-none transition-colors duration-150 hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)] focus-visible:ring-2 focus-visible:ring-ring"
+			>
+				<div className="mb-1 text-xs font-semibold text-foreground/70">
 					{issue.id}
-				</span>
-			</div>
-			{issue.title}
-			<div className="w-full flex items-center gap-1 pt-2">
-				<Button
-					variant={"outline"}
-					size={"icon-xs"}
-					onClick={(e) => e.stopPropagation()}
-				>
-					<HugeiconsIcon icon={People} />
-				</Button>
-			</div>
-		</Link>
+				</div>
+				<div className="text-sm [overflow-wrap:anywhere]">{issue.title}</div>
+			</Link>
+			{/* A sibling of the link, since a button can't be nested inside an anchor. */}
+			<Button
+				variant={"outline"}
+				size={"icon-xs"}
+				className={cn("absolute bottom-3 left-3", isDragging && "invisible")}
+				aria-label="Assign work item"
+			>
+				<HugeiconsIcon icon={People} />
+			</Button>
+		</div>
 	);
 }

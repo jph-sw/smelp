@@ -23,6 +23,7 @@ import {
 } from "#/components/ui/breadcrumb";
 import { Button } from "#/components/ui/button";
 import { issueQueryOptions } from "#/lib/data/issue";
+import { formatDate, formatRelativeTime } from "#/lib/utils";
 
 export const Route = createFileRoute("/(workspace)/$id/browse/$issueId")({
 	component: RouteComponent,
@@ -41,10 +42,10 @@ function RouteComponent() {
 	const { data: issue } = useSuspenseQuery(issueQueryOptions({ issueId }));
 
 	return (
-		<div className="h-full w-full relative overflow-hidden">
+		<div className="flex h-full min-h-0 w-full flex-col overflow-hidden">
 			<ProjectHeader workspaceId={workspaceId} projectId={issue.projectId} />
 
-			<div className="h-10 w-full border-b flex items-center px-5">
+			<div className="flex h-10 w-full shrink-0 items-center border-b px-4 sm:px-5">
 				<Breadcrumb>
 					<BreadcrumbList>
 						<BreadcrumbItem>
@@ -68,83 +69,74 @@ function RouteComponent() {
 					</BreadcrumbList>
 				</Breadcrumb>
 			</div>
-			<div className="h-full w-full overflow-hidden">
-				<div className="relative w-full h-full overflow-hidden">
-					<div className="flex h-full w-full overflow-hidden">
-						<div className="h-full w-full space-y-6 overflow-y-auto px-9 py-5">
-							<div className="space-y-4 rounded-lg">
-								<div className="mb-2.5 flex items-center justify-between gap-4">
-									<div className="flex shrink-0 items-center space-x-2">
-										<button
-											type="button"
-											className="font-medium whitespace-nowrap cursor-pointer text-foreground/60 text-sm"
-										>
-											{issue.id}
-										</button>
-									</div>
-									<div className="flex items-center gap-3">
-										<div className="flex items-center gap-x-2 transition-all duration-300 fade-out">
-											<div className="hidden">Saved</div>
-										</div>
-									</div>
-								</div>
-								<div className="flex flex-col gap-1.5">
-									<div className="relative -ml-3">
-										<span className="px-3 py-0 font-semibold rounded-sm w-full block text-xl">
-											{issue.title}
-										</span>
-									</div>
-								</div>
-								<div className="text-lg w-full max-w-full relative pb-3 pl-3 -ml-6 p-0! pl-6!">
-									{issue.description}
-								</div>
-								<div className="flex items-center justify-between gap-2">
-									<div className="relative mt-4 shrink-0">
-										<Button variant={"ghost"} size={"icon-lg"}>
-											<HugeiconsIcon icon={SmilePlus} />
-										</Button>
-									</div>
-									<div className="shrink-0">
-										<div className="relative w-min text-left">
-											<Button variant={"ghost"} size={"sm"}>
-												<HugeiconsIcon icon={HistoryIcon} />
-												Last edited by jph-bsw 2 days ago
-											</Button>
-										</div>
-									</div>
-								</div>
-							</div>
-							<div className="flex gap-2">
-								<Button variant={"outline"}>
-									<HugeiconsIcon icon={LayerIcon} /> Add sub-work item
-								</Button>
-								<Button variant={"outline"}>
-									<HugeiconsIcon icon={ChartRelationshipIcon} /> Add relation
-								</Button>
-								<Button variant={"outline"}>
-									<HugeiconsIcon icon={LinkIcon} /> Add link
-								</Button>
-								<Button variant={"outline"}>
-									<HugeiconsIcon icon={AttachmentIcon} /> Attach
-								</Button>
-							</div>
-							<div className="space-y-4">
-								<div className="flex items-center justify-between">
-									<div className="text-lg font-semibold">Activity</div>
-									<div className="flex items-center gap-2">
-										<Button variant={"secondary"} size={"icon"}>
-											<HugeiconsIcon icon={ArrowUpNarrowWideIcon} />
-										</Button>
-										<Button variant={"secondary"} size={"icon"}>
-											<HugeiconsIcon icon={FilterIcon} />
-										</Button>
-									</div>
-								</div>
-							</div>
+			<div className="flex min-h-0 flex-1">
+				<div className="min-w-0 flex-1 space-y-6 overflow-y-auto px-4 py-5 sm:px-9">
+					<div className="space-y-4">
+						<div className="text-sm font-medium text-foreground/60">
+							{issue.id}
 						</div>
-						<div className="h-full w-full min-w-[300px] shrink-0 border-l border-subtle sm:w-1/2 md:w-1/4 lg:min-w-80 xl:min-w-96"></div>
+						<h1 className="text-xl font-semibold [overflow-wrap:anywhere]">
+							{issue.title}
+						</h1>
+						{issue.description ? (
+							<p className="max-w-prose text-sm/relaxed whitespace-pre-wrap [overflow-wrap:anywhere]">
+								{issue.description}
+							</p>
+						) : (
+							<p className="text-sm text-muted-foreground">No description.</p>
+						)}
+						<div className="flex items-center justify-between gap-2">
+							<Button
+								variant={"ghost"}
+								size={"icon-lg"}
+								aria-label="Add reaction"
+							>
+								<HugeiconsIcon icon={SmilePlus} />
+							</Button>
+							<span
+								className="flex items-center gap-1 text-xs text-muted-foreground"
+								title={formatDate(issue.updatedAt)}
+							>
+								<HugeiconsIcon icon={HistoryIcon} className="size-3.5" />
+								Updated {formatRelativeTime(issue.updatedAt)}
+							</span>
+						</div>
+					</div>
+					<div className="flex flex-wrap gap-2">
+						<Button variant={"outline"}>
+							<HugeiconsIcon icon={LayerIcon} /> Add sub-work item
+						</Button>
+						<Button variant={"outline"}>
+							<HugeiconsIcon icon={ChartRelationshipIcon} /> Add relation
+						</Button>
+						<Button variant={"outline"}>
+							<HugeiconsIcon icon={LinkIcon} /> Add link
+						</Button>
+						<Button variant={"outline"}>
+							<HugeiconsIcon icon={AttachmentIcon} /> Attach
+						</Button>
+					</div>
+					<div className="flex items-center justify-between">
+						<h2 className="text-lg font-semibold">Activity</h2>
+						<div className="flex items-center gap-2">
+							<Button
+								variant={"secondary"}
+								size={"icon"}
+								aria-label="Sort activity"
+							>
+								<HugeiconsIcon icon={ArrowUpNarrowWideIcon} />
+							</Button>
+							<Button
+								variant={"secondary"}
+								size={"icon"}
+								aria-label="Filter activity"
+							>
+								<HugeiconsIcon icon={FilterIcon} />
+							</Button>
+						</div>
 					</div>
 				</div>
+				<aside className="hidden w-80 shrink-0 border-l lg:block xl:w-96" />
 			</div>
 		</div>
 	);

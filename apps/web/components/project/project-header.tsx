@@ -16,18 +16,20 @@ export function ProjectHeader({
 	);
 
 	return (
-		<div className="w-full flex h-12 border-b items-center gap-2 px-4">
+		<div className="flex h-12 w-full shrink-0 items-center gap-2 overflow-x-auto border-b px-4">
 			<Link
-				className="flex items-center gap-2 group"
+				className="group flex min-w-0 items-center gap-2"
 				to="/$id/projects/$projectId"
 				params={{ projectId: project.id, id: workspaceId }}
 			>
-				<div className="flex items-center justify-center bg-secondary p-1.5 rounded-sm">
+				<div className="flex shrink-0 items-center justify-center rounded-sm bg-secondary p-1.5">
 					<DynamicIcon name={project.icon} className="size-4" />
 				</div>
-				<h3 className="font-medium group-hover:underline">{project.name}</h3>
+				<h3 className="max-w-48 truncate font-medium group-hover:underline sm:max-w-none sm:whitespace-nowrap">
+					{project.name}
+				</h3>
 			</Link>
-			<div className="ms-4 flex gap-2 items-center">
+			<div className="ms-2 flex shrink-0 items-center gap-2 sm:ms-4">
 				<Button
 					render={
 						<Link

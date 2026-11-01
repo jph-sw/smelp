@@ -1,9 +1,69 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { useSuspenseQuery } from "@tanstack/react-query";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { DynamicIcon } from "#/components/dynamic-icon";
+import { projectsQueryOptions } from "#/lib/data/project";
+import { workspaceQueryOptions } from "#/lib/data/workspace";
 
 export const Route = createFileRoute("/(workspace)/$id/")({
 	component: RouteComponent,
 });
 
 function RouteComponent() {
-	return <div>test</div>;
+	const { id: workspaceId } = Route.useParams();
+	const { data: workspace } = useSuspenseQuery(
+		workspaceQueryOptions({ workspaceId }),
+	);
+	const { data: projects } = useSuspenseQuery(
+		projectsQueryOptions({ workspaceId }),
+	);
+	const myProjects = projects.filter((project) => project.isMember);
+
+	return (
+		<div className="mx-auto w-full max-w-3xl space-y-6 p-4 sm:p-8">
+			<h1 className="text-xl font-medium [overflow-wrap:anywhere]">
+				{workspace.name}
+			</h1>
+			{myProjects.length === 0 ? (
+				<p className="text-sm text-muted-foreground">
+					You aren't in any projects yet. Create one from the sidebar, or{" "}
+					<Link
+						to="/$id/projects"
+						params={{ id: workspaceId }}
+						className="underline underline-offset-3"
+					>
+						browse this workspace's projects
+					</Link>
+					.
+				</p>
+			) : (
+				<div className="space-y-1">
+					<h2 className="text-xs font-medium text-muted-foreground">
+						Your projects
+					</h2>
+					{myProjects.map((project) => (
+						<Link
+							key={project.id}
+							to="/$id/projects/$projectId"
+							params={{ id: workspaceId, projectId: project.id }}
+							className="flex items-center gap-3 rounded-md p-2 transition-colors duration-150 hover:bg-muted"
+						>
+							<span className="flex shrink-0 rounded-sm bg-secondary p-1.5">
+								<DynamicIcon name={project.icon} className="size-4" />
+							</span>
+							<span className="min-w-0">
+								<span className="block truncate text-sm font-medium">
+									{project.name}
+								</span>
+								{project.description && (
+									<span className="block truncate text-xs text-muted-foreground">
+										{project.description}
+									</span>
+								)}
+							</span>
+						</Link>
+					))}
+				</div>
+			)}
+		</div>
+	);
 }
