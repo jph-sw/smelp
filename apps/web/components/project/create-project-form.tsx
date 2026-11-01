@@ -1,9 +1,9 @@
-import { ORPCError } from "@orpc/client";
 import type { tables } from "@smelp/db";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import * as v from "valibot";
 import { useAppForm } from "#/hooks/form";
+import { toastError } from "#/lib/errors";
 import { orpc } from "#/lib/orpc";
 import { DynamicIcon } from "../dynamic-icon";
 import { Button } from "../ui/button";
@@ -13,8 +13,17 @@ import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { toast } from "../ui/toast";
 
 const CreateProjectSchema = v.object({
-	id: v.pipe(v.string(), v.minLength(2), v.maxLength(5)),
-	name: v.pipe(v.string(), v.minLength(6), v.maxLength(32)),
+	id: v.pipe(
+		v.string(),
+		v.minLength(2, "Use at least 2 characters."),
+		v.maxLength(5, "Use at most 5 characters."),
+	),
+	name: v.pipe(
+		v.string(),
+		v.trim(),
+		v.minLength(2, "Use at least 2 characters."),
+		v.maxLength(32, "Use at most 32 characters."),
+	),
 	description: v.string(),
 	access: v.picklist(["public", "private"]),
 });
@@ -56,12 +65,7 @@ export function CreateProjectForm({
 				onSuccess();
 				queryClient.invalidateQueries({ queryKey: ["projects"] });
 			} catch (e) {
-				if (e instanceof ORPCError) {
-					toast.add({
-						type: "error",
-						description: e.message,
-					});
-				}
+				toastError(e);
 			}
 		},
 	});
@@ -76,6 +80,7 @@ export function CreateProjectForm({
 				<Popover>
 					<PopoverTrigger
 						className={"border col-span-4"}
+						aria-label="Choose project icon"
 						render={<Button className={"h-12 w-12"} variant={"secondary"} />}
 					>
 						<DynamicIcon className="size-8" name={selectedIcon} />
@@ -91,13 +96,19 @@ export function CreateProjectForm({
 				<form.AppField
 					name="name"
 					children={(field) => (
-						<field.TextField className="col-span-2" label="Project name" />
+						<field.TextField
+							className="col-span-4 sm:col-span-2"
+							label="Project name"
+						/>
 					)}
 				/>
 				<form.AppField
 					name="id"
 					children={(field) => (
-						<field.TextField className="col-span-2" label="Project id" />
+						<field.TextField
+							className="col-span-4 sm:col-span-2"
+							label="Project ID (2–5 characters)"
+						/>
 					)}
 				/>
 				<form.AppField
@@ -110,8 +121,8 @@ export function CreateProjectForm({
 					name="access"
 					children={(field) => (
 						<field.SelectField
-							className="col-span-1"
-							label="Description"
+							className="col-span-4 sm:col-span-2"
+							label="Access"
 							items={[
 								{ value: "public", label: "Public" },
 								{ value: "private", label: "Private" },

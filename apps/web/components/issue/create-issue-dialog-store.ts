@@ -4,6 +4,7 @@ import { useSyncExternalStore } from "react";
 export type CreateIssueDialogParams = {
 	workspaceId: string;
 	projectId: string;
+	projectName: string;
 	parentId?: string;
 };
 

@@ -1,17 +1,17 @@
-import { Setting07Icon, UserIcon } from "@hugeicons/core-free-icons";
+import { Setting07Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ORPCError } from "@orpc/client";
 import {
 	useMutation,
 	useQueryClient,
 	useSuspenseQuery,
 } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { DynamicIcon } from "#/components/dynamic-icon";
 import { Button } from "#/components/ui/button";
-import { Card, CardContent } from "#/components/ui/card";
-import { toast } from "#/components/ui/toast";
+import { Card } from "#/components/ui/card";
 import { joinProject, projectsQueryOptions } from "#/lib/data/project";
-import { cn } from "#/lib/utils";
+import { toastError } from "#/lib/errors";
+import { cn, formatDate } from "#/lib/utils";
 
 export const Route = createFileRoute("/(workspace)/$id/projects/")({
 	component: RouteComponent,
@@ -23,7 +23,6 @@ export const Route = createFileRoute("/(workspace)/$id/projects/")({
 });
 
 function RouteComponent() {
-	const navigate = Route.useNavigate();
 	const { id: workspaceId } = Route.useParams();
 	const queryClient = useQueryClient();
 
@@ -37,89 +36,99 @@ function RouteComponent() {
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: projectsQueryKey });
 		},
-		onError: (e) => {
-			if (e instanceof ORPCError) {
-				toast.add({ type: "error", description: e.message });
-			}
-		},
+		onError: (e) => toastError(e),
 	});
+
+	if (projects.length === 0) {
+		return (
+			<div className="p-4 text-sm text-muted-foreground sm:p-8">
+				No projects yet. Create one from the sidebar.
+			</div>
+		);
+	}
 
 	return (
 		<div className="p-4">
-			<div className="w-full grid md:grid-cols-3 xl:grid-cols-4 gap-4">
+			<div className="grid w-full gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
 				{projects.map((project) => (
 					<Card
 						key={project.id}
 						className={cn(
-							"p-0",
-							project.isMember ? "hover:cursor-pointer" : "opacity-80",
+							"relative gap-0 p-0 transition-shadow duration-150",
+							project.isMember &&
+								"hover:ring-1 hover:ring-foreground/20 has-[a:focus-visible]:ring-2 has-[a:focus-visible]:ring-ring",
 						)}
-						onClick={() => {
-							if (!project.isMember) return;
-
-							navigate({
-								to: "/$id/projects/$projectId",
-								params: { id: workspaceId, projectId: project.id },
-							});
-						}}
 					>
-						<CardContent className="p-0">
-							<div className=" h-25 relative">
-								<div className="w-full inset-0 z-1 bg-linear-to-t from-card/60 to-background/50 absolute" />
+						<div className="relative flex h-20 shrink-0 items-center justify-center bg-muted">
+							{project.image ? (
 								<img
-									aria-label="a"
-									className="w-full absolute top-0 left-0 object-cover h-full"
-									src="https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fimages.pexels.com%2Fphotos%2F20211127%2Fpexels-photo-20211127.jpeg%3Fcs%3Dsrgb%26dl%3Dpexels-robert-clark-504241532-20211127.jpg%26fm%3Djpg"
+									alt=""
+									className="absolute inset-0 size-full object-cover"
+									src={project.image}
 								/>
-								<div className="absolute bottom-0 z-1 flex  h-10 w-full items-center justify-between gap-3 px-4">
-									<div className="flex grow items-center gap-2 truncate">
-										<div className="w-full flex flex-col justify-between gap-0.5 truncate">
-											<h3 className="truncate font-semibold">{project.name}</h3>
-										</div>
-									</div>
-									<div className="flex h-full shrink-0 items-center gap-2"></div>
-								</div>
+							) : (
+								<DynamicIcon
+									name={project.icon}
+									className="size-6 text-muted-foreground"
+								/>
+							)}
+						</div>
+						<div className="flex flex-1 flex-col gap-1 p-4">
+							{project.isMember ? (
+								<Link
+									to="/$id/projects/$projectId"
+									params={{ id: workspaceId, projectId: project.id }}
+									title={project.name}
+									className="truncate text-sm font-semibold outline-none after:absolute after:inset-0"
+								>
+									{project.name}
+								</Link>
+							) : (
+								<h3
+									className="truncate text-sm font-semibold"
+									title={project.name}
+								>
+									{project.name}
+								</h3>
+							)}
+							<p
+								className="line-clamp-2 text-card-foreground/80"
+								title={project.description || undefined}
+							>
+								{project.description ||
+									`Created ${formatDate(project.createdAt)}`}
+							</p>
+							<div className="mt-auto flex items-center justify-between pt-3">
+								<span className="text-muted-foreground capitalize">
+									{project.access}
+								</span>
+								{project.isMember ? (
+									<Button
+										variant={"secondary"}
+										size={"icon-sm"}
+										className="relative z-1"
+										aria-label={`${project.name} settings`}
+										render={
+											<Link
+												to="/$id/settings/projects/$projectId"
+												params={{ id: workspaceId, projectId: project.id }}
+											/>
+										}
+									>
+										<HugeiconsIcon icon={Setting07Icon} />
+									</Button>
+								) : (
+									<Button
+										variant={"secondary"}
+										size={"sm"}
+										disabled={isJoining}
+										onClick={() => join({ projectId: project.id })}
+									>
+										Join
+									</Button>
+								)}
 							</div>
-							<div className="bg-card w-full flex-col justify-between p-4">
-								<p className="text-card-foreground/80">
-									{project.description ||
-										`Project created on ${new Date(project.createdAt).toLocaleDateString()}`}
-								</p>
-								<div className="pt-2 items-center flex justify-between">
-									<span className="flex gap-1">
-										<HugeiconsIcon icon={UserIcon} className="h-4 w-4" />
-										<HugeiconsIcon icon={UserIcon} className="h-4 w-4" />
-									</span>
-									{project.isMember ? (
-										<Button
-											variant={"secondary"}
-											size={"icon-sm"}
-											onClick={(e) => e.stopPropagation()}
-											render={
-												<Link
-													to="/$id/settings/projects/$projectId"
-													params={{ id: workspaceId, projectId: project.id }}
-												/>
-											}
-										>
-											<HugeiconsIcon icon={Setting07Icon} />
-										</Button>
-									) : (
-										<Button
-											variant={"secondary"}
-											size={"sm"}
-											disabled={isJoining}
-											onClick={(e) => {
-												e.stopPropagation();
-												join({ projectId: project.id });
-											}}
-										>
-											Join
-										</Button>
-									)}
-								</div>
-							</div>
-						</CardContent>
+						</div>
 					</Card>
 				))}
 			</div>

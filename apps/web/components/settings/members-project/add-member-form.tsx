@@ -1,10 +1,10 @@
-import { ORPCError } from "@orpc/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import {
 	addProjectMember,
 	availableProjectMembersQueryOptions,
 } from "#/lib/data/project-members";
+import { toastError } from "#/lib/errors";
 import { Button } from "../../ui/button";
 import { FieldGroup, FieldLabel } from "../../ui/field";
 import {
@@ -51,9 +51,7 @@ export function AddMemberForm({
 			});
 			onSuccess();
 		} catch (e) {
-			if (e instanceof ORPCError) {
-				toast.add({ type: "error", description: e.message });
-			}
+			toastError(e);
 		} finally {
 			setIsSubmitting(false);
 		}
@@ -107,7 +105,7 @@ export function AddMemberForm({
 			</FieldGroup>
 			<Button
 				type="submit"
-				className="mt-2"
+				className="mt-4"
 				disabled={!selectedUserId || isSubmitting}
 			>
 				Add member

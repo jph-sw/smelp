@@ -1,3 +1,4 @@
+import { useId } from "react";
 import { useFieldContext } from "#/hooks/form-context";
 import { Field, FieldError, FieldLabel } from "../ui/field";
 import { Textarea } from "../ui/textarea";
@@ -13,7 +14,7 @@ export default function TextAreaField({
 	disabled?: boolean;
 	className?: React.ComponentProps<"textarea">["className"];
 }) {
-	const id = `${label}-${crypto.randomUUID()}`;
+	const id = useId();
 	const field = useFieldContext<string>();
 	const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
 

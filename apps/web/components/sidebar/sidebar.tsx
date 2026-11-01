@@ -1,14 +1,12 @@
 import { HomeIcon, PlusSignIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { tables } from "@smelp/db";
-import { Link, useMatchRoute } from "@tanstack/react-router";
+import { Link, useMatchRoute, useParams } from "@tanstack/react-router";
 import {
 	Sidebar,
 	SidebarContent,
-	SidebarFooter,
 	SidebarGroup,
 	SidebarGroupContent,
-	SidebarHeader,
 	SidebarMenu,
 	SidebarMenuButton,
 	SidebarMenuItem,
@@ -27,32 +25,37 @@ export function AppSidebar({
 	projects: tables["project"][];
 }) {
 	const matchRoute = useMatchRoute();
+	const params = useParams({ strict: false });
+
+	// New work items go into the project on screen. Issue ids are "<projectId>-<n>".
+	const currentProjectId =
+		params.projectId ?? params.issueId?.replace(/-\d+$/, "");
+	const targetProject =
+		projects.find((project) => project.id === currentProjectId) ?? projects[0];
 
 	return (
 		<Sidebar
 			variant={"inset"}
 			className="top-(--header-height) h-[calc(100svh-var(--header-height))]!"
 		>
-			<SidebarHeader>
-				<span>Projects</span>
-			</SidebarHeader>
 			<SidebarContent>
 				<SidebarGroup>
 					<SidebarGroupContent>
 						<SidebarMenu>
 							<SidebarMenuItem>
 								<SidebarMenuButton
+									disabled={!targetProject}
 									onClick={() =>
 										openCreateIssueDialog({
 											workspaceId: workspace.id,
-											projectId: projects[0].id,
+											projectId: targetProject.id,
+											projectName: targetProject.name,
 										})
 									}
 									className={cn(
 										buttonVariants({ variant: "outline", size: "lg" }),
 										"mb-2",
 									)}
-									// className="mb-2 bg-primary text-primary-foreground duration-200 ease-linear hover:bg-primary/90 hover:text-primary-foreground active:bg-primary/90 active:text-primary-foreground"
 								>
 									<HugeiconsIcon icon={PlusSignIcon} />
 									New work item
@@ -79,7 +82,6 @@ export function AppSidebar({
 				<NavWorkspaces workspace={workspace} />
 				<NavProjects workspace={workspace} projects={projects} />
 			</SidebarContent>
-			<SidebarFooter></SidebarFooter>
 		</Sidebar>
 	);
 }

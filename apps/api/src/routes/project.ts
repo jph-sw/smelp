@@ -14,7 +14,7 @@ export const createProject = base
 	.input(
 		v.object({
 			id: v.pipe(v.string(), v.minLength(2), v.maxLength(5)),
-			name: v.pipe(v.string(), v.minLength(6), v.maxLength(32)),
+			name: v.pipe(v.string(), v.trim(), v.minLength(2), v.maxLength(32)),
 			description: v.string(),
 			access: v.picklist(["public", "private"]),
 			icon: v.string(),

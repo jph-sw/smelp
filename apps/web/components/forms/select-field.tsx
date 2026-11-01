@@ -1,3 +1,4 @@
+import { useId } from "react";
 import { useFieldContext } from "#/hooks/form-context";
 import { Field, FieldError, FieldLabel } from "../ui/field";
 import {
@@ -17,7 +18,7 @@ export default function SelectField({
 	items: { label: string; value: string }[];
 	className?: React.ComponentProps<"select">["className"];
 }) {
-	const id = `${label}-${crypto.randomUUID()}`;
+	const id = useId();
 	const field = useFieldContext();
 	const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
 
@@ -29,7 +30,7 @@ export default function SelectField({
 				value={field.state.value}
 				onValueChange={field.handleChange}
 			>
-				<SelectTrigger aria-invalid={isInvalid}>
+				<SelectTrigger id={id} aria-invalid={isInvalid}>
 					<SelectValue />
 				</SelectTrigger>
 				<SelectContent>

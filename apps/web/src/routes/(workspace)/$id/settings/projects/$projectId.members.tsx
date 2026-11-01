@@ -64,7 +64,7 @@ function RouteComponent() {
 	return (
 		<div className="flex flex-col gap-1">
 			<div className="mb-4 flex items-center justify-between">
-				<h1 className="text-2xl">Members</h1>
+				<h1 className="text-lg font-medium">Members</h1>
 				{canManageMembers && <AddMemberDialog projectId={projectId} />}
 			</div>
 			<DataTable columns={columns} data={members} />

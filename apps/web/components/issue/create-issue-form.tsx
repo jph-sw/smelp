@@ -1,15 +1,19 @@
-import { ORPCError } from "@orpc/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as v from "valibot";
 import { useAppForm } from "#/hooks/form";
 import { statesQueryOptions } from "#/lib/data/state";
+import { toastError } from "#/lib/errors";
 import { orpc } from "#/lib/orpc";
 import { FieldGroup } from "../ui/field";
 import { toast } from "../ui/toast";
 import type { CreateIssueDialogParams } from "./create-issue-dialog-store";
 
 const CreateIssueSchema = v.object({
-	title: v.pipe(v.string(), v.minLength(1), v.maxLength(120)),
+	title: v.pipe(
+		v.string(),
+		v.minLength(1, "Enter a title."),
+		v.maxLength(120, "Use at most 120 characters."),
+	),
 	description: v.string(),
 });
 
@@ -55,19 +59,14 @@ export function CreateIssueForm({
 				});
 				toast.add({
 					type: "success",
-					description: `Issue "${res.title}" created.`,
+					description: `Work item "${res.title}" created.`,
 				});
 				queryClient.invalidateQueries({
 					queryKey: ["issues", params.projectId],
 				});
 				onSuccess();
 			} catch (e) {
-				if (e instanceof ORPCError) {
-					toast.add({
-						type: "error",
-						description: e.message,
-					});
-				}
+				toastError(e);
 			}
 		},
 	});
@@ -90,7 +89,7 @@ export function CreateIssueForm({
 				/>
 			</FieldGroup>
 			<form.AppForm>
-				<form.SubscribeButton label="Create issue" />
+				<form.SubscribeButton label="Create work item" />
 			</form.AppForm>
 		</form>
 	);

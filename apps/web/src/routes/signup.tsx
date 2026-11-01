@@ -15,16 +15,35 @@ import {
 	CardTitle,
 } from "#/components/ui/card";
 import { FieldGroup } from "#/components/ui/field";
-import { toast } from "#/components/ui/toast";
 import { useAppForm } from "#/hooks/form";
+import { toastError } from "#/lib/errors";
 import { orpc } from "#/lib/orpc";
 import { signUp, startSession } from "../../lib/auth";
 
 const SignUpSchema = v.object({
-	email: v.pipe(v.string(), v.trim(), v.toLowerCase(), v.email()),
-	fullName: v.pipe(v.string()),
-	displayName: v.pipe(v.string()),
-	password: v.pipe(v.string(), v.minLength(10), v.maxLength(64)),
+	email: v.pipe(
+		v.string(),
+		v.trim(),
+		v.toLowerCase(),
+		v.email("Enter a valid email address."),
+	),
+	fullName: v.pipe(
+		v.string(),
+		v.trim(),
+		v.minLength(1, "Enter your full name."),
+		v.maxLength(80, "Use at most 80 characters."),
+	),
+	displayName: v.pipe(
+		v.string(),
+		v.trim(),
+		v.minLength(1, "Enter a display name."),
+		v.maxLength(40, "Use at most 40 characters."),
+	),
+	password: v.pipe(
+		v.string(),
+		v.minLength(10, "Use at least 10 characters."),
+		v.maxLength(64, "Use at most 64 characters."),
+	),
 });
 
 export const Route = createFileRoute("/signup")({
@@ -66,25 +85,24 @@ function SignUp() {
 					navigate({ to: "/create-workspace" });
 				}
 			} catch (error) {
-				if (error instanceof ORPCError) {
-					toast.add({ type: "error", description: error.message });
-					if (error.code === "CONFLICT") {
-						form.setErrorMap({
-							onSubmit: {
-								fields: {
-									email: "",
-								},
+				toastError(error);
+				if (error instanceof ORPCError && error.code === "CONFLICT") {
+					const { field } = error.data as { field: "email" | "displayName" };
+					form.setErrorMap({
+						onSubmit: {
+							fields: {
+								[field]: "",
 							},
-						});
-					}
+						},
+					});
 				}
 			}
 		},
 	});
 
 	return (
-		<div className="w-full h-dvh flex justify-center items-center">
-			<Card className="w-xl">
+		<div className="flex min-h-dvh w-full items-center justify-center p-4">
+			<Card className="w-full max-w-sm">
 				<CardHeader>
 					<CardTitle>Sign up</CardTitle>
 				</CardHeader>
@@ -99,32 +117,50 @@ function SignUp() {
 							<form.AppField
 								name="email"
 								children={(field) => (
-									<field.TextField label="Email" type="email" />
+									<field.TextField
+										label="Email"
+										type="email"
+										autoComplete="email"
+									/>
 								)}
 							/>
 							<form.AppField
 								name="fullName"
-								children={(field) => <field.TextField label="Fullname" />}
+								children={(field) => (
+									<field.TextField label="Full name" autoComplete="name" />
+								)}
 							/>
 							<form.AppField
 								name="displayName"
-								children={(field) => <field.TextField label="Displayname" />}
+								children={(field) => (
+									<field.TextField
+										label="Display name"
+										autoComplete="nickname"
+									/>
+								)}
 							/>
 							<form.AppField
 								name="password"
 								children={(field) => (
-									<field.TextField label="Password" type="password" />
+									<field.TextField
+										label="Password"
+										type="password"
+										autoComplete="new-password"
+									/>
 								)}
 							/>
 						</FieldGroup>
 						<form.AppForm>
-							<form.SubscribeButton label="Sign Up" />
+							<form.SubscribeButton label="Sign up" className="w-full" />
 						</form.AppForm>
 					</form>
 				</CardContent>
 				<CardFooter>
 					<p>
-						Already have an account? <Link to="/signin">Sign in</Link>
+						Already have an account?{" "}
+						<Link to="/signin" className="underline underline-offset-3">
+							Sign in
+						</Link>
 					</p>
 				</CardFooter>
 			</Card>

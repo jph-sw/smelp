@@ -11,6 +11,18 @@ const sql = new DB().sqlite;
 const utils = new Utils();
 const auth = new Auth();
 
+// Workspace ids are slugs of the name and live at the top level of the URL, so
+// they can't take a path the app or its backend already uses.
+const RESERVED_WORKSPACE_IDS = new Set([
+	"api",
+	"ceo",
+	"create_workspace",
+	"invites",
+	"rpc",
+	"signin",
+	"signup",
+]);
+
 export const findWorkspace = base
 	.input(v.object({ workspaceId: v.string() }))
 	.handler(async ({ input, context }) => {
@@ -50,7 +62,7 @@ export const updateWorkspace = base
 	.input(
 		v.object({
 			workspaceId: v.string(),
-			name: v.pipe(v.string(), v.minLength(6), v.maxLength(32)),
+			name: v.pipe(v.string(), v.trim(), v.minLength(2), v.maxLength(32)),
 		}),
 	)
 	.handler(async ({ input, context }) => {
@@ -139,7 +151,7 @@ export const deleteWorkspace = base
 export const createWorkspace = base
 	.input(
 		v.object({
-			name: v.pipe(v.string(), v.minLength(6), v.maxLength(32)),
+			name: v.pipe(v.string(), v.trim(), v.minLength(2), v.maxLength(32)),
 		}),
 	)
 	.handler(async ({ input, context }) => {
@@ -150,6 +162,18 @@ export const createWorkspace = base
 		if (!session) throw new ORPCError("UNAUTHORIZED");
 
 		const slug = utils.toSlug(input.name);
+		if (!slug) {
+			throw new ORPCError("BAD_REQUEST", {
+				message:
+					"Workspace names need at least one letter or number (a-z, 0-9).",
+			});
+		}
+		if (RESERVED_WORKSPACE_IDS.has(slug)) {
+			throw new ORPCError("BAD_REQUEST", {
+				message: "This workspace name isn't available.",
+			});
+		}
+
 		const now = Date.now();
 
 		const auth_space: tables["auth_space"] = {

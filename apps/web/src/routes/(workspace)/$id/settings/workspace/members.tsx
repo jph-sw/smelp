@@ -1,4 +1,3 @@
-import { ORPCError } from "@orpc/client";
 import {
 	useMutation,
 	useQueryClient,
@@ -17,9 +16,11 @@ import {
 	workspaceInvitesQueryOptions,
 } from "#/lib/data/workspace-invites";
 import { workspaceMembersQueryOptions } from "#/lib/data/workspace-members";
+import { toastError } from "#/lib/errors";
+import { initials } from "#/lib/utils";
 
 const InviteMemberSchema = v.object({
-	email: v.pipe(v.string(), v.email()),
+	email: v.pipe(v.string(), v.email("Enter a valid email address.")),
 	role: v.picklist(["guest", "member", "admin"]),
 });
 
@@ -75,9 +76,7 @@ function RouteComponent() {
 				});
 				formApi.reset();
 			} catch (e) {
-				if (e instanceof ORPCError) {
-					toast.add({ type: "error", description: e.message });
-				}
+				toastError(e);
 			}
 		},
 	});
@@ -87,6 +86,7 @@ function RouteComponent() {
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: invitesQueryKey });
 		},
+		onError: (e) => toastError(e),
 	});
 
 	return (
@@ -97,11 +97,11 @@ function RouteComponent() {
 					form.handleSubmit();
 				}}
 			>
-				<FieldGroup className="flex items-end gap-2">
+				<FieldGroup className="gap-2 sm:flex-row sm:items-end">
 					<form.AppField
 						name="email"
 						children={(field) => (
-							<field.TextField label="Email" className="flex-1" />
+							<field.TextField label="Email" type="email" className="flex-1" />
 						)}
 					/>
 					<form.AppField
@@ -118,7 +118,7 @@ function RouteComponent() {
 						)}
 					/>
 					<form.AppForm>
-						<form.SubscribeButton label="Invite" />
+						<form.SubscribeButton label="Invite" className="sm:mt-0" />
 					</form.AppForm>
 				</FieldGroup>
 			</form>
@@ -133,8 +133,10 @@ function RouteComponent() {
 							key={invite.id}
 							className="flex items-center gap-3 rounded-md px-2 py-2"
 						>
-							<div className="flex flex-col">
-								<span className="text-sm font-medium">{invite.email}</span>
+							<div className="flex min-w-0 flex-col">
+								<span className="text-sm font-medium [overflow-wrap:anywhere]">
+									{invite.email}
+								</span>
 								<span className="text-xs text-muted-foreground capitalize">
 									{invite.role}
 								</span>
@@ -142,7 +144,7 @@ function RouteComponent() {
 							<Button
 								variant="ghost"
 								size="sm"
-								className="ml-auto"
+								className="ml-auto shrink-0"
 								onClick={() => revokeInvite({ inviteId: invite.id })}
 							>
 								Revoke
@@ -163,17 +165,15 @@ function RouteComponent() {
 					>
 						<Avatar size="sm">
 							<AvatarImage src={member.image ?? undefined} />
-							<AvatarFallback>
-								{member.displayName.slice(0, 2).toUpperCase()}
-							</AvatarFallback>
+							<AvatarFallback>{initials(member.displayName)}</AvatarFallback>
 						</Avatar>
-						<div className="flex flex-col">
+						<div className="flex min-w-0 flex-col">
 							<span className="text-sm font-medium">{member.displayName}</span>
-							<span className="text-xs text-muted-foreground">
+							<span className="text-xs text-muted-foreground [overflow-wrap:anywhere]">
 								{member.email}
 							</span>
 						</div>
-						<span className="ml-auto text-xs text-muted-foreground capitalize">
+						<span className="ml-auto shrink-0 text-xs text-muted-foreground capitalize">
 							{member.role}
 						</span>
 					</div>

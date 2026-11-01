@@ -15,7 +15,7 @@ function RouteComponent() {
 	const { id: workspaceId } = Route.useParams();
 
 	return (
-		<div className="flex h-full w-full">
+		<div className="flex h-full w-full flex-col md:flex-row">
 			<SettingsNav title="Workspace Settings">
 				<SettingsNavGroup label="General">
 					<Link
@@ -38,8 +38,8 @@ function RouteComponent() {
 					</Link>
 				</SettingsNavGroup>
 			</SettingsNav>
-			<div className="flex justify-center w-full">
-				<div className="w-5xl py-8">
+			<div className="flex min-w-0 flex-1 justify-center overflow-y-auto">
+				<div className="w-full max-w-5xl px-4 py-8 sm:px-8">
 					<Outlet />
 				</div>
 			</div>
