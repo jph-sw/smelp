@@ -1,4 +1,3 @@
-import { ORPCError } from "@orpc/client";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import {
 	createFileRoute,
@@ -130,16 +129,6 @@ function SignUpForm({
 				}
 			} catch (error) {
 				toastError(error);
-				if (error instanceof ORPCError && error.code === "CONFLICT") {
-					const { field } = error.data as { field: "email" | "displayName" };
-					form.setErrorMap({
-						onSubmit: {
-							fields: {
-								[field]: "",
-							},
-						},
-					});
-				}
 			}
 		},
 	});
