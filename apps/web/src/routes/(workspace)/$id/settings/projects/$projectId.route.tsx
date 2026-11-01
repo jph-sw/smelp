@@ -1,4 +1,4 @@
-import { People, Setting07Icon } from "@hugeicons/core-free-icons";
+import { LayerIcon, People, Setting07Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
 import {
@@ -38,6 +38,15 @@ function RouteComponent() {
 					>
 						<HugeiconsIcon icon={People} className="size-3.5" />
 						Members
+					</Link>
+					<Link
+						to="/$id/settings/projects/$projectId/states"
+						params={params}
+						activeOptions={{ exact: true }}
+						className={settingsNavLinkClassName}
+					>
+						<HugeiconsIcon icon={LayerIcon} className="size-3.5" />
+						States
 					</Link>
 				</SettingsNavGroup>
 			</SettingsNav>

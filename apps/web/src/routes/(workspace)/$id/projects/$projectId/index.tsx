@@ -6,29 +6,66 @@ import {
 	useSuspenseQuery,
 } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
+import {
+	BoardFilterBar,
+	type BoardFilters,
+	UNASSIGNED,
+} from "#/components/kanban/board-filters";
 import { IssueItem } from "#/components/kanban/issue-item";
 import { StateColumn } from "#/components/kanban/state-column";
 import { ProjectHeader } from "#/components/project/project-header";
 import { issuesQueryOptions, updateIssue } from "#/lib/data/issue";
+import { projectMembersQueryOptions } from "#/lib/data/project-members";
 import { statesQueryOptions } from "#/lib/data/state";
 import { toastError } from "#/lib/errors";
-import { cn } from "#/lib/utils";
+
+const asString = (value: unknown) =>
+	typeof value === "string" || typeof value === "number"
+		? String(value)
+		: undefined;
 
 export const Route = createFileRoute("/(workspace)/$id/projects/$projectId/")({
 	component: RouteComponent,
+	validateSearch: (search: Record<string, unknown>): BoardFilters => ({
+		q: asString(search.q),
+		assignee: asString(search.assignee),
+		state: asString(search.state),
+	}),
 	loader: async ({ context: { queryClient }, params: { projectId } }) => {
 		await Promise.all([
 			queryClient.ensureQueryData(statesQueryOptions({ projectId })),
 			queryClient.ensureQueryData(issuesQueryOptions({ projectId })),
+			queryClient.ensureQueryData(projectMembersQueryOptions({ projectId })),
 		]);
 	},
 });
 
+function matchesFilters(issue: tables["issue"], filters: BoardFilters) {
+	if (filters.q) {
+		const query = filters.q.toLowerCase();
+		const matches =
+			issue.title.toLowerCase().includes(query) ||
+			issue.id.toLowerCase().includes(query);
+		if (!matches) return false;
+	}
+	if (filters.assignee === UNASSIGNED) {
+		if (issue.assignee) return false;
+	} else if (filters.assignee && issue.assignee !== filters.assignee) {
+		return false;
+	}
+	return true;
+}
+
 function RouteComponent() {
 	const { projectId, id: workspaceId } = Route.useParams();
+	const filters = Route.useSearch();
+	const navigate = Route.useNavigate();
 
 	const { data: states } = useSuspenseQuery(statesQueryOptions({ projectId }));
 	const { data: issues } = useSuspenseQuery(issuesQueryOptions({ projectId }));
+	const { data: members } = useSuspenseQuery(
+		projectMembersQueryOptions({ projectId }),
+	);
 
 	const queryClient = useQueryClient();
 	const issuesQueryKey = issuesQueryOptions({ projectId }).queryKey;
@@ -38,13 +75,12 @@ function RouteComponent() {
 		onMutate: async ({ id, state }) => {
 			await queryClient.cancelQueries({ queryKey: issuesQueryKey });
 
-			const previousIssues =
-				queryClient.getQueryData<tables["issue"][]>(issuesQueryKey);
+			const previousIssues = queryClient.getQueryData(issuesQueryKey);
 
-			queryClient.setQueryData<tables["issue"][]>(issuesQueryKey, (current) =>
+			queryClient.setQueryData(issuesQueryKey, (current) =>
 				current
 					?.map((issue) =>
-						issue.id === id
+						issue.id === id && state
 							? { ...issue, state, updatedAt: Date.now() }
 							: issue,
 					)
@@ -61,9 +97,31 @@ function RouteComponent() {
 		},
 	});
 
+	const visibleIssues = issues.filter((issue) =>
+		matchesFilters(issue, filters),
+	);
+	const visibleStates = filters.state
+		? states.filter((state) => state.id === filters.state)
+		: states;
+	const shownCount = visibleIssues.filter((issue) =>
+		visibleStates.some((state) => state.id === issue.state),
+	).length;
+	const isFiltered = Boolean(filters.q || filters.assignee || filters.state);
+
 	return (
 		<div className="flex h-full w-full min-h-0 flex-col overflow-hidden">
 			<ProjectHeader workspaceId={workspaceId} projectId={projectId} />
+			<BoardFilterBar
+				filters={filters}
+				onChange={(next) => navigate({ search: next, replace: true })}
+				members={members}
+				states={states}
+			/>
+			{isFiltered && shownCount === 0 && (
+				<p className="px-4 pt-3 text-sm text-muted-foreground">
+					No work items match these filters.
+				</p>
+			)}
 			<DragDropProvider
 				onDragEnd={(event) => {
 					if (event.canceled) return;
@@ -82,14 +140,10 @@ function RouteComponent() {
 					});
 				}}
 			>
-				<div
-					className={cn(
-						"gap-8 h-full min-h-0 w-full flex flex-1 overflow-x-auto p-4",
-					)}
-				>
-					{states.map((state) => (
+				<div className="flex h-full min-h-0 w-full flex-1 gap-8 overflow-x-auto p-4">
+					{visibleStates.map((state) => (
 						<StateColumn key={state.id} state={state}>
-							{issues
+							{visibleIssues
 								.filter((issue) => issue.state === state.id)
 								.sort((a, b) => b.updatedAt - a.updatedAt)
 								.map((issue) => (
@@ -97,6 +151,9 @@ function RouteComponent() {
 										issue={issue}
 										key={issue.id}
 										workspaceId={workspaceId}
+										assignee={members.find(
+											(member) => member.userId === issue.assignee,
+										)}
 									/>
 								))}
 						</StateColumn>

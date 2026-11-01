@@ -28,3 +28,11 @@ export const joinProject = ({ projectId }: { projectId: string }) =>
 
 export const deleteProject = ({ projectId }: { projectId: string }) =>
 	orpc.project.delete({ projectId });
+
+export const updateProject = (input: {
+	projectId: string;
+	name?: string;
+	description?: string;
+	icon?: string;
+	access?: "public" | "private";
+}) => orpc.project.update(input);

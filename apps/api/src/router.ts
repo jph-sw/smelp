@@ -1,17 +1,25 @@
 import { onError } from "@orpc/server";
 import { RPCHandler } from "@orpc/server/fetch";
 import { CORSPlugin, ResponseHeadersPlugin } from "@orpc/server/plugins";
+import { findIssueActivity } from "./routes/activity";
 import { me } from "./routes/auth/me";
 import { signIn } from "./routes/auth/signin";
 import { signOut } from "./routes/auth/signout";
 import { signUp } from "./routes/auth/signup";
-import { createIssue, findIssue, updateIssue } from "./routes/issue";
-import { findIssues } from "./routes/issues";
+import { createComment, deleteComment, findComments } from "./routes/comment";
+import {
+	createIssue,
+	deleteIssue,
+	findIssue,
+	updateIssue,
+} from "./routes/issue";
+import { findIssues, findMyIssues } from "./routes/issues";
 import {
 	createProject,
 	deleteProject,
 	findProject,
 	joinProject,
+	updateProject,
 } from "./routes/project";
 import {
 	addProjectMember,
@@ -20,6 +28,12 @@ import {
 	removeProjectMember,
 } from "./routes/project-members";
 import { findProjects } from "./routes/projects";
+import {
+	createState,
+	deleteState,
+	reorderStates,
+	updateState,
+} from "./routes/state";
 import { findStates } from "./routes/states";
 import {
 	createWorkspace,
@@ -71,6 +85,7 @@ export const router = {
 		create: createProject,
 		delete: deleteProject,
 		join: joinProject,
+		update: updateProject,
 	},
 	projectMembers: {
 		find: findProjectMembers,
@@ -82,12 +97,28 @@ export const router = {
 		find: findIssue,
 		create: createIssue,
 		update: updateIssue,
+		delete: deleteIssue,
 	},
 	issues: {
 		find: findIssues,
+		findMine: findMyIssues,
+	},
+	comments: {
+		find: findComments,
+		create: createComment,
+		delete: deleteComment,
+	},
+	activity: {
+		findForIssue: findIssueActivity,
 	},
 	states: {
 		find: findStates,
+	},
+	state: {
+		create: createState,
+		update: updateState,
+		delete: deleteState,
+		reorder: reorderStates,
 	},
 };
 
