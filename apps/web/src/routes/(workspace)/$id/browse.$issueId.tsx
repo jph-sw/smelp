@@ -1,14 +1,4 @@
-import {
-	ArrowUpNarrowWideIcon,
-	AttachmentIcon,
-	ChartRelationshipIcon,
-	FilterIcon,
-	HistoryIcon,
-	LayerIcon,
-	Layers02Icon,
-	LinkIcon,
-	SmilePlus,
-} from "@hugeicons/core-free-icons";
+import { HistoryIcon, Layers02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
@@ -21,7 +11,6 @@ import {
 	BreadcrumbPage,
 	BreadcrumbSeparator,
 } from "#/components/ui/breadcrumb";
-import { Button } from "#/components/ui/button";
 import { issueQueryOptions } from "#/lib/data/issue";
 import { formatDate, formatRelativeTime } from "#/lib/utils";
 
@@ -85,55 +74,13 @@ function RouteComponent() {
 						) : (
 							<p className="text-sm text-muted-foreground">No description.</p>
 						)}
-						<div className="flex items-center justify-between gap-2">
-							<Button
-								variant={"ghost"}
-								size={"icon-lg"}
-								aria-label="Add reaction"
-							>
-								<HugeiconsIcon icon={SmilePlus} />
-							</Button>
-							<span
-								className="flex items-center gap-1 text-xs text-muted-foreground"
-								title={formatDate(issue.updatedAt)}
-							>
-								<HugeiconsIcon icon={HistoryIcon} className="size-3.5" />
-								Updated {formatRelativeTime(issue.updatedAt)}
-							</span>
-						</div>
-					</div>
-					<div className="flex flex-wrap gap-2">
-						<Button variant={"outline"}>
-							<HugeiconsIcon icon={LayerIcon} /> Add sub-work item
-						</Button>
-						<Button variant={"outline"}>
-							<HugeiconsIcon icon={ChartRelationshipIcon} /> Add relation
-						</Button>
-						<Button variant={"outline"}>
-							<HugeiconsIcon icon={LinkIcon} /> Add link
-						</Button>
-						<Button variant={"outline"}>
-							<HugeiconsIcon icon={AttachmentIcon} /> Attach
-						</Button>
-					</div>
-					<div className="flex items-center justify-between">
-						<h2 className="text-lg font-semibold">Activity</h2>
-						<div className="flex items-center gap-2">
-							<Button
-								variant={"secondary"}
-								size={"icon"}
-								aria-label="Sort activity"
-							>
-								<HugeiconsIcon icon={ArrowUpNarrowWideIcon} />
-							</Button>
-							<Button
-								variant={"secondary"}
-								size={"icon"}
-								aria-label="Filter activity"
-							>
-								<HugeiconsIcon icon={FilterIcon} />
-							</Button>
-						</div>
+						<span
+							className="flex items-center gap-1 text-xs text-muted-foreground"
+							title={formatDate(issue.updatedAt)}
+						>
+							<HugeiconsIcon icon={HistoryIcon} className="size-3.5" />
+							Updated {formatRelativeTime(issue.updatedAt)}
+						</span>
 					</div>
 				</div>
 				<aside className="hidden w-80 shrink-0 border-l lg:block xl:w-96" />

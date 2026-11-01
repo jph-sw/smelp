@@ -1,9 +1,4 @@
-import {
-	ChevronDown,
-	GearsIcon,
-	SearchIcon,
-	UserPlus,
-} from "@hugeicons/core-free-icons";
+import { ChevronDown, GearsIcon, UserPlus } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { tables } from "@smelp/db";
 import { useQueryClient } from "@tanstack/react-query";
@@ -153,13 +148,7 @@ export function SiteHeader({
 						</PopoverContent>
 					</Popover>
 				</div>
-				<div className="hidden min-w-0 flex-1 justify-center sm:flex">
-					<Button variant={"outline"} className="w-full max-w-96 shrink">
-						<HugeiconsIcon icon={SearchIcon} />
-						Search...
-					</Button>
-				</div>
-				<div className="flex shrink-0 items-center justify-end sm:flex-1">
+				<div className="flex shrink-0 items-center justify-end">
 					<DropdownMenu>
 						<DropdownMenuTrigger
 							aria-label="Account menu"
@@ -179,8 +168,6 @@ export function SiteHeader({
 						<DropdownMenuContent align="end" className="w-auto min-w-40">
 							<DropdownMenuGroup>
 								<DropdownMenuLabel>{user.displayName}</DropdownMenuLabel>
-								<DropdownMenuItem>Settings</DropdownMenuItem>
-								<DropdownMenuItem>Preferences</DropdownMenuItem>
 							</DropdownMenuGroup>
 							<DropdownMenuSeparator />
 							<DropdownMenuGroup>

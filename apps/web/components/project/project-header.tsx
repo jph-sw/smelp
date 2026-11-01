@@ -42,30 +42,6 @@ export function ProjectHeader({
 				>
 					Work items
 				</Button>
-				<Button
-					render={
-						<Link
-							to="/$id/projects/$projectId"
-							params={{ id: workspaceId, projectId }}
-						/>
-					}
-					size={"lg"}
-					variant={"secondary"}
-				>
-					Cycles
-				</Button>
-				<Button
-					render={
-						<Link
-							to="/$id/projects/$projectId"
-							params={{ id: workspaceId, projectId }}
-						/>
-					}
-					size={"lg"}
-					variant={"secondary"}
-				>
-					Modules
-				</Button>
 			</div>
 		</div>
 	);

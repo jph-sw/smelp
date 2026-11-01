@@ -14,7 +14,6 @@ import {
 } from "#/components/ui/alert-dialog";
 import { Button } from "#/components/ui/button";
 import { Card, CardContent } from "#/components/ui/card";
-import { Separator } from "#/components/ui/separator";
 import { toast } from "#/components/ui/toast";
 import { deleteProject, projectQueryOptions } from "#/lib/data/project";
 import { toastError } from "#/lib/errors";
@@ -58,23 +57,6 @@ function RouteComponent() {
 		<div>
 			<Card>
 				<CardContent>
-					<div className="flex w-full flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-						<div>
-							<h3 className="text-sm font-semibold">Archive</h3>
-							<p className="text-card-foreground/70">
-								Archiving a project will unlist your project from your side
-								navigation although you will still be able to access it from
-								your projects page. You can restore the project or delete it
-								whenever you want.
-							</p>
-						</div>
-						<div className="shrink-0">
-							<Button variant={"outline"} disabled>
-								Archive
-							</Button>
-						</div>
-					</div>
-					<Separator className={"my-4"} />
 					<div className="flex w-full flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 						<div>
 							<h3 className="text-sm font-semibold">Delete this project</h3>

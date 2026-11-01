@@ -1,10 +1,7 @@
 import { useDragDropMonitor, useDroppable } from "@dnd-kit/react";
-import { FullScreenIcon } from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react";
 import type { tables } from "@smelp/db";
 import { Children, useState } from "react";
 import { cn } from "#/lib/utils";
-import { Button } from "../ui/button";
 
 export function StateColumn({
 	state,
@@ -47,13 +44,6 @@ export function StateColumn({
 							{Children.count(props.children)}
 						</div>
 					</div>
-					<Button
-						variant={"ghost"}
-						size={"icon-sm"}
-						aria-label={`Expand ${state.name}`}
-					>
-						<HugeiconsIcon icon={FullScreenIcon} />
-					</Button>
 				</div>
 			</div>
 			<div

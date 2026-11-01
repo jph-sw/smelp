@@ -1,4 +1,4 @@
-import { Briefcase, EllipsisIcon } from "@hugeicons/core-free-icons";
+import { Briefcase } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { tables } from "@smelp/db";
 import { Link, useMatchRoute } from "@tanstack/react-router";
@@ -34,12 +34,6 @@ export function NavWorkspaces({
 						>
 							<HugeiconsIcon icon={Briefcase} />
 							Projects
-						</SidebarMenuButton>
-					</SidebarMenuItem>
-					<SidebarMenuItem>
-						<SidebarMenuButton>
-							<HugeiconsIcon icon={EllipsisIcon} />
-							More
 						</SidebarMenuButton>
 					</SidebarMenuItem>
 				</SidebarMenu>
