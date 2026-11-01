@@ -52,4 +52,5 @@ export type state = {
 	group: string;
 	projectId: string;
 	isDefault: boolean;
+	position: number;
 };

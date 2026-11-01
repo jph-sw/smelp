@@ -5,7 +5,10 @@ import { DB, type tables } from "@smelp/db";
 import { eventBus } from "@smelp/events";
 import { SQL } from "bun";
 import * as v from "valibot";
-import { requireWorkspacePermission } from "../lib/access";
+import {
+	requireProjectPermission,
+	requireWorkspacePermission,
+} from "../lib/access";
 import { base } from "../orpc";
 
 const sql = new DB().sqlite;
@@ -77,6 +80,7 @@ export const createProject = base
 				group: "backlog",
 				projectId: project.id,
 				isDefault: true,
+				position: 0,
 			},
 			{
 				id: crypto.randomUUID(),
@@ -86,6 +90,7 @@ export const createProject = base
 				group: "unstarted",
 				projectId: project.id,
 				isDefault: false,
+				position: 1,
 			},
 			{
 				id: crypto.randomUUID(),
@@ -95,6 +100,7 @@ export const createProject = base
 				group: "started",
 				projectId: project.id,
 				isDefault: false,
+				position: 2,
 			},
 			{
 				id: crypto.randomUUID(),
@@ -104,6 +110,7 @@ export const createProject = base
 				group: "completed",
 				projectId: project.id,
 				isDefault: false,
+				position: 3,
 			},
 		];
 
@@ -165,6 +172,40 @@ export const findProject = base
 		}
 
 		return project;
+	});
+
+export const updateProject = base
+	.input(
+		v.object({
+			projectId: v.string(),
+			name: v.optional(
+				v.pipe(v.string(), v.trim(), v.minLength(2), v.maxLength(32)),
+			),
+			description: v.optional(v.pipe(v.string(), v.maxLength(2000))),
+			icon: v.optional(v.string()),
+			access: v.optional(v.picklist(["public", "private"])),
+		}),
+	)
+	.handler(async ({ input, context }) => {
+		const { project } = await requireProjectPermission(
+			context.headers,
+			input.projectId,
+			"space:update",
+		);
+
+		await sql`
+			UPDATE project SET
+				name = ${input.name ?? project.name},
+				description = ${input.description ?? project.description},
+				icon = ${input.icon ?? project.icon},
+				access = ${input.access ?? project.access},
+				updatedAt = ${Date.now()}
+			WHERE id = ${project.id}
+		`;
+
+		return (
+			await sql`SELECT * FROM project WHERE id = ${project.id}`
+		)[0] as tables["project"];
 	});
 
 export const deleteProject = base

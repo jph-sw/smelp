@@ -15,7 +15,7 @@ export const findStates = base
 		);
 
 		const states =
-			(await sql`SELECT * FROM state WHERE projectId = ${input.projectId}`) as tables["state"][];
+			(await sql`SELECT * FROM state WHERE projectId = ${input.projectId} ORDER BY position, rowid`) as tables["state"][];
 
 		return states;
 	});

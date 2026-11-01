@@ -21,15 +21,33 @@ export type DomainEvent =
 			payload: {
 				field: "assignee";
 				oldValue: string | null;
-				newValue: string;
+				newValue: string | null;
 			};
+	  }
+	| {
+			type: "issue.updated";
+			workspaceId: string;
+			actorId: string;
+			entityId: string;
+			payload: {
+				field: "title" | "description";
+				oldValue: string | null;
+				newValue: string | null;
+			};
+	  }
+	| {
+			type: "issue.deleted";
+			workspaceId: string;
+			actorId: string;
+			entityId: string;
+			payload: { title: string; projectId: string };
 	  }
 	| {
 			type: "comment.created";
 			workspaceId: string;
 			actorId: string;
 			entityId: string;
-			payload: { issueId: string; body: string };
+			payload: { issueId: string };
 	  }
 	| {
 			type: "auth.signin";

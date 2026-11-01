@@ -1,17 +1,50 @@
+import { Database } from "bun:sqlite";
 import { readdir } from "node:fs/promises";
 import path from "node:path";
-import { DB, type tables, Utils } from "@smelp/db";
-import { SQL } from "bun";
+import { DB, databasePath, type tables, Utils } from "@smelp/db";
+import type { BunFile, SQL } from "bun";
 
 export class Migrator {
 	private sql: SQL;
 	private migrations_folder: string;
 	private utils: Utils;
 
-	constructor() {
+	constructor(migrationsFolder = "./migrations/") {
 		this.sql = new DB().sqlite;
-		this.migrations_folder = "./migrations/";
+		this.migrations_folder = migrationsFolder;
 		this.utils = new Utils();
+	}
+
+	// Runs through bun:sqlite because SQL.file() can stop after a file's first
+	// statement and still report success. A failure rolls the whole file back and
+	// stops the boot, so a half-applied migration is never recorded as done.
+	private async apply(
+		file: BunFile,
+		schemaMigration: tables["schema_migrations"],
+	) {
+		const contents = await file.text();
+		const db = new Database(databasePath());
+
+		try {
+			db.run("BEGIN");
+			db.run(contents);
+			db.query(
+				"INSERT INTO schema_migrations (id, name, checksum, applied_at, execution_ms) VALUES (?, ?, ?, ?, ?)",
+			).run(
+				schemaMigration.id,
+				schemaMigration.name,
+				schemaMigration.checksum,
+				schemaMigration.applied_at,
+				schemaMigration.execution_ms,
+			);
+			db.run("COMMIT");
+		} catch (error) {
+			if (db.inTransaction) db.run("ROLLBACK");
+			this.utils.logger.fatal(`Migration ${schemaMigration.name} failed`);
+			throw error;
+		} finally {
+			db.close();
+		}
 	}
 
 	async up() {
@@ -57,24 +90,7 @@ export class Migrator {
 				execution_ms: 0,
 			};
 
-			try {
-				await this.sql.file(path.join(this.migrations_folder, fileName));
-			} catch (error) {
-				if (error instanceof SQL.SQLiteError) {
-					this.utils.logger.fatal(error);
-				}
-			}
-
-			try {
-				await this.sql`
-          INSERT INTO schema_migrations ${this.sql(schemaMigration)}
-          RETURNING *
-          `.values();
-			} catch (error) {
-				if (error instanceof SQL.SQLiteError) {
-					this.utils.logger.fatal(error);
-				}
-			}
+			await this.apply(file, schemaMigration);
 		}
 	}
 

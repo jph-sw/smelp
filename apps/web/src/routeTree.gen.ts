@@ -29,6 +29,7 @@ import { Route as workspaceIdSettingsWorkspaceIndexRouteImport } from './routes/
 import { Route as workspaceIdSettingsWorkspaceMembersRouteImport } from './routes/(workspace)/$id/settings/workspace/members'
 import { Route as workspaceIdSettingsProjectsProjectIdIndexRouteImport } from './routes/(workspace)/$id/settings/projects/$projectId.index'
 import { Route as workspaceIdSettingsProjectsProjectIdMembersRouteImport } from './routes/(workspace)/$id/settings/projects/$projectId.members'
+import { Route as workspaceIdSettingsProjectsProjectIdStatesRouteImport } from './routes/(workspace)/$id/settings/projects/$projectId.states'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -140,6 +141,12 @@ const workspaceIdSettingsProjectsProjectIdMembersRoute =
     path: '/members',
     getParentRoute: () => workspaceIdSettingsProjectsProjectIdRouteRoute,
   } as any)
+const workspaceIdSettingsProjectsProjectIdStatesRoute =
+  workspaceIdSettingsProjectsProjectIdStatesRouteImport.update({
+    id: '/states',
+    path: '/states',
+    getParentRoute: () => workspaceIdSettingsProjectsProjectIdRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -160,6 +167,7 @@ export interface FileRoutesByFullPath {
   '/$id/projects/$projectId/': typeof workspaceIdProjectsProjectIdIndexRoute
   '/$id/settings/workspace/': typeof workspaceIdSettingsWorkspaceIndexRoute
   '/$id/settings/projects/$projectId/members': typeof workspaceIdSettingsProjectsProjectIdMembersRoute
+  '/$id/settings/projects/$projectId/states': typeof workspaceIdSettingsProjectsProjectIdStatesRoute
   '/$id/settings/projects/$projectId/': typeof workspaceIdSettingsProjectsProjectIdIndexRoute
 }
 export interface FileRoutesByTo {
@@ -176,6 +184,7 @@ export interface FileRoutesByTo {
   '/$id/projects/$projectId': typeof workspaceIdProjectsProjectIdIndexRoute
   '/$id/settings/workspace': typeof workspaceIdSettingsWorkspaceIndexRoute
   '/$id/settings/projects/$projectId/members': typeof workspaceIdSettingsProjectsProjectIdMembersRoute
+  '/$id/settings/projects/$projectId/states': typeof workspaceIdSettingsProjectsProjectIdStatesRoute
   '/$id/settings/projects/$projectId': typeof workspaceIdSettingsProjectsProjectIdIndexRoute
 }
 export interface FileRoutesById {
@@ -199,6 +208,7 @@ export interface FileRoutesById {
   '/(workspace)/$id/projects/$projectId/': typeof workspaceIdProjectsProjectIdIndexRoute
   '/(workspace)/$id/settings/workspace/': typeof workspaceIdSettingsWorkspaceIndexRoute
   '/(workspace)/$id/settings/projects/$projectId/members': typeof workspaceIdSettingsProjectsProjectIdMembersRoute
+  '/(workspace)/$id/settings/projects/$projectId/states': typeof workspaceIdSettingsProjectsProjectIdStatesRoute
   '/(workspace)/$id/settings/projects/$projectId/': typeof workspaceIdSettingsProjectsProjectIdIndexRoute
 }
 export interface FileRouteTypes {
@@ -222,6 +232,7 @@ export interface FileRouteTypes {
     | '/$id/projects/$projectId/'
     | '/$id/settings/workspace/'
     | '/$id/settings/projects/$projectId/members'
+    | '/$id/settings/projects/$projectId/states'
     | '/$id/settings/projects/$projectId/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -238,6 +249,7 @@ export interface FileRouteTypes {
     | '/$id/projects/$projectId'
     | '/$id/settings/workspace'
     | '/$id/settings/projects/$projectId/members'
+    | '/$id/settings/projects/$projectId/states'
     | '/$id/settings/projects/$projectId'
   id:
     | '__root__'
@@ -260,6 +272,7 @@ export interface FileRouteTypes {
     | '/(workspace)/$id/projects/$projectId/'
     | '/(workspace)/$id/settings/workspace/'
     | '/(workspace)/$id/settings/projects/$projectId/members'
+    | '/(workspace)/$id/settings/projects/$projectId/states'
     | '/(workspace)/$id/settings/projects/$projectId/'
   fileRoutesById: FileRoutesById
 }
@@ -414,6 +427,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof workspaceIdSettingsProjectsProjectIdMembersRouteImport
       parentRoute: typeof workspaceIdSettingsProjectsProjectIdRouteRoute
     }
+    '/(workspace)/$id/settings/projects/$projectId/states': {
+      id: '/(workspace)/$id/settings/projects/$projectId/states'
+      path: '/states'
+      fullPath: '/$id/settings/projects/$projectId/states'
+      preLoaderRoute: typeof workspaceIdSettingsProjectsProjectIdStatesRouteImport
+      parentRoute: typeof workspaceIdSettingsProjectsProjectIdRouteRoute
+    }
   }
 }
 
@@ -454,6 +474,7 @@ const workspaceIdSettingsWorkspaceRouteRouteWithChildren =
 
 interface workspaceIdSettingsProjectsProjectIdRouteRouteChildren {
   workspaceIdSettingsProjectsProjectIdMembersRoute: typeof workspaceIdSettingsProjectsProjectIdMembersRoute
+  workspaceIdSettingsProjectsProjectIdStatesRoute: typeof workspaceIdSettingsProjectsProjectIdStatesRoute
   workspaceIdSettingsProjectsProjectIdIndexRoute: typeof workspaceIdSettingsProjectsProjectIdIndexRoute
 }
 
@@ -461,6 +482,8 @@ const workspaceIdSettingsProjectsProjectIdRouteRouteChildren: workspaceIdSetting
   {
     workspaceIdSettingsProjectsProjectIdMembersRoute:
       workspaceIdSettingsProjectsProjectIdMembersRoute,
+    workspaceIdSettingsProjectsProjectIdStatesRoute:
+      workspaceIdSettingsProjectsProjectIdStatesRoute,
     workspaceIdSettingsProjectsProjectIdIndexRoute:
       workspaceIdSettingsProjectsProjectIdIndexRoute,
   }
