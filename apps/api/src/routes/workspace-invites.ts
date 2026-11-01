@@ -1,83 +1,70 @@
 import { ORPCError } from "@orpc/server";
-import { getCookie } from "@orpc/server/helpers";
 import { Auth } from "@smelp/auth";
 import { DB, type tables } from "@smelp/db";
 import { eventBus } from "@smelp/events";
 import { SQL } from "bun";
 import * as v from "valibot";
+import { requireSession, requireWorkspacePermission } from "../lib/access";
+import {
+	createInviteToken,
+	findUsableInvite,
+	hashInviteToken,
+	INVITE_LIFETIME_MS,
+} from "../lib/invites";
 import { base } from "../orpc";
 
 const sql = new DB().sqlite;
 const auth = new Auth();
 
+const invalidLink = () =>
+	new ORPCError("NOT_FOUND", {
+		message: "This invite link is invalid or has expired.",
+	});
+
 export const createInvite = base
 	.input(
 		v.object({
 			workspaceId: v.string(),
-			email: v.pipe(v.string(), v.email(), v.toLowerCase()),
+			email: v.optional(v.pipe(v.string(), v.email(), v.toLowerCase())),
 			role: v.picklist(["guest", "member", "admin"]),
 		}),
 	)
 	.handler(async ({ input, context }) => {
-		const token = getCookie(context.headers, "auth_session");
-		if (!token) throw new ORPCError("UNAUTHORIZED");
-
-		const session = await auth.validateAuthSessionToken(token);
-		if (!session) throw new ORPCError("UNAUTHORIZED");
-
-		const workspace = (
-			await sql`SELECT * FROM workspace WHERE id = ${input.workspaceId}`
-		)[0] as tables["workspace"];
-
-		if (!workspace) {
-			throw new ORPCError("NOT_FOUND");
-		}
-
-		const allowed = await auth.userHasPermission(
-			session.userId,
-			workspace.spaceId,
+		const { session, workspace } = await requireWorkspacePermission(
+			context.headers,
+			input.workspaceId,
 			"members:invite",
 		);
-		if (!allowed) {
-			throw new ORPCError("FORBIDDEN");
+
+		if (input.email) {
+			const existingMembers = await sql`
+				SELECT auth_space_member.id
+				FROM auth_space_member
+				JOIN auth_user ON auth_user.id = auth_space_member.userId
+				WHERE auth_space_member.spaceId = ${workspace.spaceId}
+					AND auth_user.email = ${input.email}
+			`;
+			if (existingMembers[0]) {
+				throw new ORPCError("CONFLICT", {
+					message: "This user is already a member of the workspace",
+				});
+			}
 		}
 
-		const existingMembers = (await sql`
-			SELECT auth_space_member.*
-			FROM auth_space_member
-			JOIN auth_user ON auth_user.id = auth_space_member.userId
-			WHERE auth_space_member.spaceId = ${workspace.spaceId}
-				AND auth_user.email = ${input.email}
-		`) as tables["auth_space_member"][];
-
-		if (existingMembers[0]) {
-			throw new ORPCError("CONFLICT", {
-				message: "This user is already a member of the workspace",
-			});
-		}
-
+		const token = createInviteToken();
+		const now = Date.now();
 		const invite: tables["auth_space_invite"] = {
 			id: crypto.randomUUID(),
 			spaceId: workspace.spaceId,
-			email: input.email,
+			email: input.email ?? null,
 			role: input.role,
 			invitedByUserId: session.userId,
-			createdAt: Date.now(),
+			createdAt: now,
 			acceptedAt: null,
+			tokenHash: hashInviteToken(token),
+			expiresAt: now + INVITE_LIFETIME_MS,
 		};
-
-		try {
-			await sql`INSERT INTO auth_space_invite ${sql(invite)}`;
-		} catch (e) {
-			if (e instanceof SQL.SQLiteError) {
-				if (e.code === "SQLITE_CONSTRAINT_UNIQUE") {
-					throw new ORPCError("CONFLICT", {
-						message: "This email already has a pending invite",
-					});
-				}
-			}
-			throw e;
-		}
+		await sql`INSERT INTO auth_space_invite ${sql(invite)}`;
 
 		eventBus.emit({
 			type: "workspace.member_invited",
@@ -87,132 +74,85 @@ export const createInvite = base
 			payload: { email: invite.email, role: invite.role },
 		});
 
-		return invite;
+		// Only the hash is stored, so this response is the one chance to see the token.
+		return {
+			id: invite.id,
+			email: invite.email,
+			role: invite.role,
+			expiresAt: invite.expiresAt,
+			token,
+		};
 	});
 
 export const findInvites = base
 	.input(v.object({ workspaceId: v.string() }))
 	.handler(async ({ input, context }) => {
-		const token = getCookie(context.headers, "auth_session");
-		if (!token) throw new ORPCError("UNAUTHORIZED");
-
-		const session = await auth.validateAuthSessionToken(token);
-		if (!session) throw new ORPCError("UNAUTHORIZED");
-
-		const workspace = (
-			await sql`SELECT * FROM workspace WHERE id = ${input.workspaceId}`
-		)[0] as tables["workspace"];
-
-		if (!workspace) {
-			throw new ORPCError("NOT_FOUND");
-		}
-
-		const allowed = await auth.userHasPermission(
-			session.userId,
-			workspace.spaceId,
+		const { workspace } = await requireWorkspacePermission(
+			context.headers,
+			input.workspaceId,
 			"members:invite",
 		);
-		if (!allowed) {
-			throw new ORPCError("FORBIDDEN");
-		}
 
-		const invites = (await sql`
-			SELECT * FROM auth_space_invite
-			WHERE spaceId = ${workspace.spaceId} AND acceptedAt IS NULL
+		return (await sql`
+			SELECT id, email, role, createdAt, expiresAt
+			FROM auth_space_invite
+			WHERE spaceId = ${workspace.spaceId}
+				AND acceptedAt IS NULL
+				AND expiresAt > ${Date.now()}
 			ORDER BY createdAt DESC
-		`) as tables["auth_space_invite"][];
-
-		return invites;
+		`) as Pick<
+			tables["auth_space_invite"],
+			"id" | "email" | "role" | "createdAt" | "expiresAt"
+		>[];
 	});
 
 export const cancelInvite = base
 	.input(v.object({ inviteId: v.string() }))
 	.handler(async ({ input, context }) => {
-		const token = getCookie(context.headers, "auth_session");
-		if (!token) throw new ORPCError("UNAUTHORIZED");
-
-		const session = await auth.validateAuthSessionToken(token);
-		if (!session) throw new ORPCError("UNAUTHORIZED");
+		const session = await requireSession(context.headers);
 
 		const invite = (
-			await sql`SELECT * FROM auth_space_invite WHERE id = ${input.inviteId}`
-		)[0] as tables["auth_space_invite"];
-
-		if (!invite) {
-			throw new ORPCError("NOT_FOUND");
-		}
+			await sql`SELECT spaceId FROM auth_space_invite WHERE id = ${input.inviteId}`
+		)[0] as Pick<tables["auth_space_invite"], "spaceId"> | undefined;
+		if (!invite) throw new ORPCError("NOT_FOUND");
 
 		const allowed = await auth.userHasPermission(
 			session.userId,
 			invite.spaceId,
 			"members:invite",
 		);
-		if (!allowed) {
-			throw new ORPCError("FORBIDDEN");
-		}
+		if (!allowed) throw new ORPCError("FORBIDDEN");
 
-		await sql`DELETE FROM auth_space_invite WHERE id = ${invite.id}`;
+		await sql`DELETE FROM auth_space_invite WHERE id = ${input.inviteId}`;
 
-		return { id: invite.id };
+		return { id: input.inviteId };
 	});
 
-export const findMyInvites = base.handler(async ({ context }) => {
-	const token = getCookie(context.headers, "auth_session");
-	if (!token) throw new ORPCError("UNAUTHORIZED");
+// Public: whoever holds the link needs to see what they're joining before they
+// have an account. The token is the access control, and it only reveals these two.
+export const previewInvite = base
+	.input(v.object({ token: v.string() }))
+	.handler(async ({ input }) => {
+		const invite = await findUsableInvite(input.token);
+		if (!invite) throw invalidLink();
 
-	const session = await auth.validateAuthSessionToken(token);
-	if (!session) throw new ORPCError("UNAUTHORIZED");
+		const workspace = (
+			await sql`SELECT name FROM workspace WHERE spaceId = ${invite.spaceId}`
+		)[0] as Pick<tables["workspace"], "name"> | undefined;
+		if (!workspace) throw invalidLink();
 
-	const user = (
-		await sql`SELECT * FROM auth_user WHERE id = ${session.userId}`
-	)[0] as tables["auth_user"];
-
-	const invites = (await sql`
-		SELECT
-			auth_space_invite.*,
-			workspace.id as workspaceId,
-			workspace.name as workspaceName
-		FROM auth_space_invite
-		JOIN workspace ON workspace.spaceId = auth_space_invite.spaceId
-		WHERE auth_space_invite.email = ${user.email} AND auth_space_invite.acceptedAt IS NULL
-		ORDER BY auth_space_invite.createdAt DESC
-	`) as (tables["auth_space_invite"] & {
-		workspaceId: string;
-		workspaceName: string;
-	})[];
-
-	return invites;
-});
+		return { workspaceName: workspace.name, role: invite.role };
+	});
 
 export const acceptInvite = base
-	.input(v.object({ inviteId: v.string() }))
+	.input(v.object({ token: v.string() }))
 	.handler(async ({ input, context }) => {
-		const token = getCookie(context.headers, "auth_session");
-		if (!token) throw new ORPCError("UNAUTHORIZED");
+		const session = await requireSession(context.headers);
 
-		const session = await auth.validateAuthSessionToken(token);
-		if (!session) throw new ORPCError("UNAUTHORIZED");
-
-		const invite = (
-			await sql`SELECT * FROM auth_space_invite WHERE id = ${input.inviteId}`
-		)[0] as tables["auth_space_invite"];
-
-		if (!invite || invite.acceptedAt != null) {
-			throw new ORPCError("NOT_FOUND");
-		}
-
-		const user = (
-			await sql`SELECT * FROM auth_user WHERE id = ${session.userId}`
-		)[0] as tables["auth_user"];
-
-		if (user.email !== invite.email) {
-			throw new ORPCError("FORBIDDEN", {
-				message: "This invite was sent to a different email address",
-			});
-		}
+		const invite = await findUsableInvite(input.token);
+		if (!invite) throw invalidLink();
 
 		const now = Date.now();
-
 		const member: tables["auth_space_member"] = {
 			id: crypto.randomUUID(),
 			spaceId: invite.spaceId,
@@ -223,23 +163,31 @@ export const acceptInvite = base
 
 		try {
 			await sql.begin(async (tx) => {
+				// Claims the link first, so it can only ever be used once.
+				const claimed = await tx`
+					UPDATE auth_space_invite SET acceptedAt = ${now}
+					WHERE id = ${invite.id} AND acceptedAt IS NULL
+					RETURNING id
+				`;
+				if (claimed.length === 0) throw invalidLink();
+
 				await tx`INSERT INTO auth_space_member ${tx(member)}`;
-				await tx`UPDATE auth_space_invite SET acceptedAt = ${now} WHERE id = ${invite.id}`;
 			});
 		} catch (e) {
-			if (e instanceof SQL.SQLiteError) {
-				if (e.code === "SQLITE_CONSTRAINT_UNIQUE") {
-					throw new ORPCError("CONFLICT", {
-						message: "You are already a member",
-					});
-				}
+			if (
+				e instanceof SQL.SQLiteError &&
+				e.code === "SQLITE_CONSTRAINT_UNIQUE"
+			) {
+				throw new ORPCError("CONFLICT", {
+					message: "You are already a member of this workspace",
+				});
 			}
 			throw e;
 		}
 
 		const workspace = (
-			await sql`SELECT * FROM workspace WHERE spaceId = ${invite.spaceId}`
-		)[0] as tables["workspace"];
+			await sql`SELECT id FROM workspace WHERE spaceId = ${invite.spaceId}`
+		)[0] as Pick<tables["workspace"], "id"> | undefined;
 
 		eventBus.emit({
 			type: "workspace.member_joined",
@@ -249,5 +197,5 @@ export const acceptInvite = base
 			payload: { userId: session.userId, role: member.role },
 		});
 
-		return { member, workspaceId: workspace?.id ?? null };
+		return { workspaceId: workspace?.id ?? null };
 	});

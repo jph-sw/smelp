@@ -1,5 +1,5 @@
 import { ORPCError } from "@orpc/client";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import {
 	createFileRoute,
 	Link,
@@ -16,6 +16,7 @@ import {
 } from "#/components/ui/card";
 import { FieldGroup } from "#/components/ui/field";
 import { useAppForm } from "#/hooks/form";
+import { instanceStatusQueryOptions } from "#/lib/data/instance";
 import { toastError } from "#/lib/errors";
 import { signIn, startSession } from "../../lib/auth";
 
@@ -25,10 +26,21 @@ const SignInSchema = v.object({
 });
 
 export const Route = createFileRoute("/signin")({
-	beforeLoad: ({ context }) => {
+	validateSearch: (search: Record<string, unknown>): { invite?: string } => ({
+		invite: typeof search.invite === "string" ? search.invite : undefined,
+	}),
+	beforeLoad: ({ context, search }) => {
 		if (context.user != null) {
-			throw redirect({ to: "/" });
+			throw search.invite
+				? redirect({ to: "/invite/$token", params: { token: search.invite } })
+				: redirect({ to: "/" });
 		}
+	},
+	loader: async ({ context: { queryClient } }) => {
+		const status = await queryClient.ensureQueryData(
+			instanceStatusQueryOptions,
+		);
+		if (status.needsSetup) throw redirect({ to: "/signup" });
 	},
 	component: SignIn,
 });
@@ -36,6 +48,8 @@ export const Route = createFileRoute("/signin")({
 function SignIn() {
 	const navigate = useNavigate();
 	const queryClient = useQueryClient();
+	const { invite } = Route.useSearch();
+	const { data: status } = useSuspenseQuery(instanceStatusQueryOptions);
 	const form = useAppForm({
 		defaultValues: {
 			email: "",
@@ -48,7 +62,11 @@ function SignIn() {
 			try {
 				await signIn(value.email, value.password);
 				await startSession(queryClient);
-				navigate({ to: "/" });
+				if (invite) {
+					navigate({ to: "/invite/$token", params: { token: invite } });
+				} else {
+					navigate({ to: "/" });
+				}
 			} catch (error) {
 				toastError(error);
 				if (error instanceof ORPCError) {
@@ -102,14 +120,20 @@ function SignIn() {
 						</form.AppForm>
 					</form>
 				</CardContent>
-				<CardFooter>
-					<p>
-						No account?{" "}
-						<Link to="/signup" className="underline underline-offset-3">
-							Sign up
-						</Link>
-					</p>
-				</CardFooter>
+				{(status.signupOpen || invite) && (
+					<CardFooter>
+						<p>
+							No account?{" "}
+							<Link
+								to="/signup"
+								search={{ invite }}
+								className="underline underline-offset-3"
+							>
+								Sign up
+							</Link>
+						</p>
+					</CardFooter>
+				)}
 			</Card>
 		</div>
 	);

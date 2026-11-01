@@ -12,12 +12,12 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as workspaceRouteRouteImport } from './routes/(workspace)/route'
 import { Route as CeoRouteRouteImport } from './routes/ceo/route'
-import { Route as InvitesRouteImport } from './routes/invites'
 import { Route as SigninRouteImport } from './routes/signin'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as workspaceIdRouteRouteImport } from './routes/(workspace)/$id/route'
 import { Route as workspaceCreateWorkspaceRouteImport } from './routes/(workspace)/create-workspace'
 import { Route as CeoIndexRouteImport } from './routes/ceo/index'
+import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as workspaceIdIndexRouteImport } from './routes/(workspace)/$id/index'
 import { Route as workspaceIdProjectsRouteRouteImport } from './routes/(workspace)/$id/projects/route'
 import { Route as workspaceIdBrowseIssueIdRouteImport } from './routes/(workspace)/$id/browse.$issueId'
@@ -45,11 +45,6 @@ const CeoRouteRoute = CeoRouteRouteImport.update({
   path: '/ceo',
   getParentRoute: () => rootRouteImport,
 } as any)
-const InvitesRoute = InvitesRouteImport.update({
-  id: '/invites',
-  path: '/invites',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const SigninRoute = SigninRouteImport.update({
   id: '/signin',
   path: '/signin',
@@ -75,6 +70,11 @@ const CeoIndexRoute = CeoIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => CeoRouteRoute,
+} as any)
+const InviteTokenRoute = InviteTokenRouteImport.update({
+  id: '/invite/$token',
+  path: '/invite/$token',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const workspaceIdIndexRoute = workspaceIdIndexRouteImport.update({
   id: '/',
@@ -151,11 +151,11 @@ const workspaceIdSettingsProjectsProjectIdStatesRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/ceo': typeof CeoRouteRouteWithChildren
-  '/invites': typeof InvitesRoute
   '/signin': typeof SigninRoute
   '/signup': typeof SignupRoute
   '/$id': typeof workspaceIdRouteRouteWithChildren
   '/create-workspace': typeof workspaceCreateWorkspaceRoute
+  '/invite/$token': typeof InviteTokenRoute
   '/ceo/': typeof CeoIndexRoute
   '/$id/projects': typeof workspaceIdProjectsRouteRouteWithChildren
   '/$id/': typeof workspaceIdIndexRoute
@@ -172,10 +172,10 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/invites': typeof InvitesRoute
   '/signin': typeof SigninRoute
   '/signup': typeof SignupRoute
   '/create-workspace': typeof workspaceCreateWorkspaceRoute
+  '/invite/$token': typeof InviteTokenRoute
   '/ceo': typeof CeoIndexRoute
   '/$id': typeof workspaceIdIndexRoute
   '/$id/browse/$issueId': typeof workspaceIdBrowseIssueIdRoute
@@ -192,11 +192,11 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/(workspace)': typeof workspaceRouteRouteWithChildren
   '/ceo': typeof CeoRouteRouteWithChildren
-  '/invites': typeof InvitesRoute
   '/signin': typeof SigninRoute
   '/signup': typeof SignupRoute
   '/(workspace)/$id': typeof workspaceIdRouteRouteWithChildren
   '/(workspace)/create-workspace': typeof workspaceCreateWorkspaceRoute
+  '/invite/$token': typeof InviteTokenRoute
   '/ceo/': typeof CeoIndexRoute
   '/(workspace)/$id/projects': typeof workspaceIdProjectsRouteRouteWithChildren
   '/(workspace)/$id/': typeof workspaceIdIndexRoute
@@ -216,11 +216,11 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/ceo'
-    | '/invites'
     | '/signin'
     | '/signup'
     | '/$id'
     | '/create-workspace'
+    | '/invite/$token'
     | '/ceo/'
     | '/$id/projects'
     | '/$id/'
@@ -237,10 +237,10 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/invites'
     | '/signin'
     | '/signup'
     | '/create-workspace'
+    | '/invite/$token'
     | '/ceo'
     | '/$id'
     | '/$id/browse/$issueId'
@@ -256,11 +256,11 @@ export interface FileRouteTypes {
     | '/'
     | '/(workspace)'
     | '/ceo'
-    | '/invites'
     | '/signin'
     | '/signup'
     | '/(workspace)/$id'
     | '/(workspace)/create-workspace'
+    | '/invite/$token'
     | '/ceo/'
     | '/(workspace)/$id/projects'
     | '/(workspace)/$id/'
@@ -280,9 +280,9 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   workspaceRouteRoute: typeof workspaceRouteRouteWithChildren
   CeoRouteRoute: typeof CeoRouteRouteWithChildren
-  InvitesRoute: typeof InvitesRoute
   SigninRoute: typeof SigninRoute
   SignupRoute: typeof SignupRoute
+  InviteTokenRoute: typeof InviteTokenRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -306,13 +306,6 @@ declare module '@tanstack/react-router' {
       path: '/ceo'
       fullPath: '/ceo'
       preLoaderRoute: typeof CeoRouteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/invites': {
-      id: '/invites'
-      path: '/invites'
-      fullPath: '/invites'
-      preLoaderRoute: typeof InvitesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/signin': {
@@ -349,6 +342,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/ceo/'
       preLoaderRoute: typeof CeoIndexRouteImport
       parentRoute: typeof CeoRouteRoute
+    }
+    '/invite/$token': {
+      id: '/invite/$token'
+      path: '/invite/$token'
+      fullPath: '/invite/$token'
+      preLoaderRoute: typeof InviteTokenRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/(workspace)/$id/': {
       id: '/(workspace)/$id/'
@@ -544,9 +544,9 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   workspaceRouteRoute: workspaceRouteRouteWithChildren,
   CeoRouteRoute: CeoRouteRouteWithChildren,
-  InvitesRoute: InvitesRoute,
   SigninRoute: SigninRoute,
   SignupRoute: SignupRoute,
+  InviteTokenRoute: InviteTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -4,10 +4,12 @@ import {
 	useSuspenseQuery,
 } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
 import * as v from "valibot";
 import { Avatar, AvatarFallback, AvatarImage } from "#/components/ui/avatar";
 import { Button } from "#/components/ui/button";
 import { FieldGroup } from "#/components/ui/field";
+import { Input } from "#/components/ui/input";
 import { toast } from "#/components/ui/toast";
 import { useAppForm } from "#/hooks/form";
 import {
@@ -17,10 +19,13 @@ import {
 } from "#/lib/data/workspace-invites";
 import { workspaceMembersQueryOptions } from "#/lib/data/workspace-members";
 import { toastError } from "#/lib/errors";
-import { initials } from "#/lib/utils";
+import { formatDate, initials } from "#/lib/utils";
 
 const InviteMemberSchema = v.object({
-	email: v.pipe(v.string(), v.email("Enter a valid email address.")),
+	email: v.union(
+		[v.literal(""), v.pipe(v.string(), v.trim(), v.email())],
+		"Enter a valid email address, or leave this empty.",
+	),
 	role: v.picklist(["guest", "member", "admin"]),
 });
 
@@ -40,6 +45,41 @@ export const Route = createFileRoute(
 	},
 });
 
+function NewInviteLink({ link }: { link: string }) {
+	const copy = async () => {
+		try {
+			await navigator.clipboard.writeText(link);
+			toast.add({ type: "success", description: "Link copied." });
+		} catch {
+			toast.add({
+				type: "error",
+				description: "Couldn't copy the link. Select it and copy it yourself.",
+			});
+		}
+	};
+
+	return (
+		<div className="flex flex-col gap-2 rounded-lg bg-secondary p-3">
+			<p className="text-sm font-medium">
+				Send this link to the person you're inviting
+			</p>
+			<div className="flex gap-2">
+				<Input
+					readOnly
+					aria-label="Invite link"
+					value={link}
+					onFocus={(event) => event.target.select()}
+				/>
+				<Button onClick={copy}>Copy</Button>
+			</div>
+			<p className="text-xs text-muted-foreground">
+				It works once and expires in 7 days. It won't be shown again, so copy it
+				now.
+			</p>
+		</div>
+	);
+}
+
 function RouteComponent() {
 	const { id: workspaceId } = Route.useParams();
 	const queryClient = useQueryClient();
@@ -54,6 +94,8 @@ function RouteComponent() {
 		workspaceId,
 	}).queryKey;
 
+	const [newLink, setNewLink] = useState<string | null>(null);
+
 	const form = useAppForm({
 		defaultValues: {
 			email: "",
@@ -64,16 +106,13 @@ function RouteComponent() {
 		},
 		onSubmit: async ({ value, formApi }) => {
 			try {
-				await createInvite({
+				const invite = await createInvite({
 					workspaceId,
-					email: value.email,
+					email: value.email || undefined,
 					role: value.role,
 				});
 				await queryClient.invalidateQueries({ queryKey: invitesQueryKey });
-				toast.add({
-					type: "success",
-					description: `Invited ${value.email}.`,
-				});
+				setNewLink(`${window.location.origin}/invite/${invite.token}`);
 				formApi.reset();
 			} catch (e) {
 				toastError(e);
@@ -101,7 +140,11 @@ function RouteComponent() {
 					<form.AppField
 						name="email"
 						children={(field) => (
-							<field.TextField label="Email" type="email" className="flex-1" />
+							<field.TextField
+								label="Email (optional)"
+								type="email"
+								className="sm:min-w-0 sm:flex-1"
+							/>
 						)}
 					/>
 					<form.AppField
@@ -109,6 +152,7 @@ function RouteComponent() {
 						children={(field) => (
 							<field.SelectField
 								label="Role"
+								className="sm:w-32 sm:shrink-0"
 								items={[
 									{ label: "Guest", value: "guest" },
 									{ label: "Member", value: "member" },
@@ -118,10 +162,15 @@ function RouteComponent() {
 						)}
 					/>
 					<form.AppForm>
-						<form.SubscribeButton label="Invite" className="sm:mt-0" />
+						<form.SubscribeButton
+							label="Create invite link"
+							className="shrink-0 sm:mt-0"
+						/>
 					</form.AppForm>
 				</FieldGroup>
 			</form>
+
+			{newLink && <NewInviteLink link={newLink} />}
 
 			{invites.length > 0 && (
 				<div className="flex flex-col gap-1">
@@ -135,10 +184,11 @@ function RouteComponent() {
 						>
 							<div className="flex min-w-0 flex-col">
 								<span className="text-sm font-medium [overflow-wrap:anywhere]">
-									{invite.email}
+									{invite.email ?? "Invite link"}
 								</span>
-								<span className="text-xs text-muted-foreground capitalize">
-									{invite.role}
+								<span className="text-xs text-muted-foreground">
+									<span className="capitalize">{invite.role}</span>, expires{" "}
+									{formatDate(invite.expiresAt)}
 								</span>
 							</div>
 							<Button

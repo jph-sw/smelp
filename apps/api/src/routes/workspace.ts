@@ -17,6 +17,7 @@ const RESERVED_WORKSPACE_IDS = new Set([
 	"api",
 	"ceo",
 	"create_workspace",
+	"invite",
 	"invites",
 	"rpc",
 	"signin",

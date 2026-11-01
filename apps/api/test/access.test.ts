@@ -321,6 +321,7 @@ describe("rate limits", () => {
 	});
 
 	test("repeated sign-ups from one address are blocked", async () => {
+		await sql`UPDATE instance_setting SET value = 'true' WHERE key = 'signupOpen'`;
 		const bot = clientFor(undefined, "203.0.113.8");
 		const signUp = (i: number) =>
 			bot.auth.signUp({
@@ -332,6 +333,7 @@ describe("rate limits", () => {
 
 		for (let i = 0; i < 10; i++) await signUp(i);
 		await expectCode(signUp(10), "TOO_MANY_REQUESTS");
+		await sql`UPDATE instance_setting SET value = 'false' WHERE key = 'signupOpen'`;
 	});
 });
 

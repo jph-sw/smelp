@@ -8,32 +8,24 @@ export const workspaceInvitesQueryOptions = ({
 }) =>
 	queryOptions({
 		queryKey: ["workspace-invites", workspaceId],
-		queryFn: async () => {
-			const invites = await orpc.workspaceInvites.find({ workspaceId });
-			return invites;
-		},
+		queryFn: () => orpc.workspaceInvites.find({ workspaceId }),
 	});
 
-export const createInvite = ({
-	workspaceId,
-	email,
-	role,
-}: {
+export const invitePreviewQueryOptions = ({ token }: { token: string }) =>
+	queryOptions({
+		queryKey: ["invite-preview", token],
+		queryFn: () => orpc.workspaceInvites.preview({ token }),
+		retry: false,
+	});
+
+export const createInvite = (input: {
 	workspaceId: string;
-	email: string;
+	email?: string;
 	role: "guest" | "member" | "admin";
-}) => orpc.workspaceInvites.create({ workspaceId, email, role });
+}) => orpc.workspaceInvites.create(input);
 
 export const cancelInvite = ({ inviteId }: { inviteId: string }) =>
 	orpc.workspaceInvites.cancel({ inviteId });
 
-export const myInvitesQueryOptions = queryOptions({
-	queryKey: ["my-invites"],
-	queryFn: async () => {
-		const invites = await orpc.workspaceInvites.findMine();
-		return invites;
-	},
-});
-
-export const acceptInvite = ({ inviteId }: { inviteId: string }) =>
-	orpc.workspaceInvites.accept({ inviteId });
+export const acceptInvite = ({ token }: { token: string }) =>
+	orpc.workspaceInvites.accept({ token });

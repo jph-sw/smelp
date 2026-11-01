@@ -16,12 +16,14 @@ export async function signUp(
 	fullName: string,
 	displayName: string,
 	password: string,
+	inviteToken?: string,
 ) {
 	const res = await orpc.auth.signUp({
 		email,
 		fullName,
 		displayName,
 		password,
+		inviteToken,
 	});
 
 	return res.user;

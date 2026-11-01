@@ -3,6 +3,8 @@ import { setCookie } from "@orpc/server/helpers";
 import { Auth } from "@smelp/auth";
 import { SQL } from "bun";
 import * as v from "valibot";
+import { isFirstRun, isSignupOpen, makeFirstAdmin } from "../../lib/instance";
+import { findUsableInvite } from "../../lib/invites";
 import { enforceRateLimit, RateLimiter } from "../../lib/rate-limit";
 import { base } from "../../orpc";
 
@@ -15,10 +17,23 @@ const Params = v.object({
 	fullName: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(80)),
 	displayName: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(40)),
 	password: v.pipe(v.string(), v.minLength(10), v.maxLength(64)),
+	inviteToken: v.optional(v.string()),
 });
 
 export const signUp = base.input(Params).handler(async ({ input, context }) => {
 	enforceRateLimit(signUpsByIp, context.ip);
+
+	const firstRun = await isFirstRun();
+	const allowed =
+		firstRun ||
+		(await isSignupOpen()) ||
+		(input.inviteToken !== undefined &&
+			(await findUsableInvite(input.inviteToken)) !== undefined);
+	if (!allowed) {
+		throw new ORPCError("FORBIDDEN", {
+			message: "Sign-ups are closed. Ask an admin for an invite link.",
+		});
+	}
 
 	try {
 		const { session, user } = await auth.signUp(
@@ -27,6 +42,8 @@ export const signUp = base.input(Params).handler(async ({ input, context }) => {
 			input.displayName,
 			input.password,
 		);
+
+		if (firstRun) await makeFirstAdmin(user.id);
 
 		setCookie(context.resHeaders, "auth_session", session.authSessionToken, {
 			httpOnly: true,
