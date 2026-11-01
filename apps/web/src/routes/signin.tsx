@@ -15,13 +15,13 @@ import {
 	CardTitle,
 } from "#/components/ui/card";
 import { FieldGroup } from "#/components/ui/field";
-import { toast } from "#/components/ui/toast";
 import { useAppForm } from "#/hooks/form";
+import { toastError } from "#/lib/errors";
 import { signIn, startSession } from "../../lib/auth";
 
 const SignInSchema = v.object({
-	email: v.pipe(v.string(), v.email()),
-	password: v.pipe(v.string()),
+	email: v.pipe(v.string(), v.email("Enter a valid email address.")),
+	password: v.pipe(v.string(), v.minLength(1, "Enter your password.")),
 });
 
 export const Route = createFileRoute("/signin")({
@@ -50,24 +50,21 @@ function SignIn() {
 				await startSession(queryClient);
 				navigate({ to: "/" });
 			} catch (error) {
+				toastError(error);
 				if (error instanceof ORPCError) {
-					console.log("Form error: ", error);
-					toast.add({ type: "error", description: error.message });
 					form.setErrorMap({
 						onSubmit: {
 							fields: { email: "", password: "" },
 						},
 					});
-				} else {
-					console.error("Unexpected sign-in error: ", error);
 				}
 			}
 		},
 	});
 
 	return (
-		<div className="w-full h-dvh flex justify-center items-center">
-			<Card className="w-xl">
+		<div className="flex h-dvh w-full items-center justify-center p-4">
+			<Card className="w-full max-w-sm">
 				<CardHeader>
 					<CardTitle>Sign in</CardTitle>
 				</CardHeader>
@@ -82,24 +79,35 @@ function SignIn() {
 							<form.AppField
 								name="email"
 								children={(field) => (
-									<field.TextField label="Email" type="email" />
+									<field.TextField
+										label="Email"
+										type="email"
+										autoComplete="email"
+									/>
 								)}
 							/>
 							<form.AppField
 								name="password"
 								children={(field) => (
-									<field.TextField label="Password" type="password" />
+									<field.TextField
+										label="Password"
+										type="password"
+										autoComplete="current-password"
+									/>
 								)}
 							/>
 						</FieldGroup>
 						<form.AppForm>
-							<form.SubscribeButton label="Sign In" />
+							<form.SubscribeButton label="Sign in" className="w-full" />
 						</form.AppForm>
 					</form>
 				</CardContent>
 				<CardFooter>
 					<p>
-						No account? <Link to="/signup">Sign up</Link>
+						No account?{" "}
+						<Link to="/signup" className="underline underline-offset-3">
+							Sign up
+						</Link>
 					</p>
 				</CardFooter>
 			</Card>

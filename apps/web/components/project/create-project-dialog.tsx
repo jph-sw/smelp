@@ -3,7 +3,13 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import type { tables } from "@smelp/db";
 import { useState } from "react";
 import { Button } from "../ui/button";
-import { Dialog, DialogContent, DialogTrigger } from "../ui/dialog";
+import {
+	Dialog,
+	DialogContent,
+	DialogHeader,
+	DialogTitle,
+	DialogTrigger,
+} from "../ui/dialog";
 import { CreateProjectForm } from "./create-project-form";
 
 export function CreateProjectDialog({
@@ -16,9 +22,10 @@ export function CreateProjectDialog({
 	return (
 		<Dialog open={isOpen} onOpenChange={setIsOpen}>
 			<DialogTrigger
+				aria-label="New project"
 				render={
 					<Button
-						className={"hidden group-hover/collapsible:flex"}
+						className="opacity-0 group-hover/collapsible:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100"
 						variant={"ghost"}
 						size={"icon-sm"}
 					/>
@@ -26,14 +33,14 @@ export function CreateProjectDialog({
 			>
 				<HugeiconsIcon icon={PlusSignIcon} />
 			</DialogTrigger>
-			<DialogContent className={"min-w-2xl p-0"}>
-				<div className="w-full h-40 bg-secondary rounded-t-xl rounded-b-lg" />
-				<div className="p-4">
-					<CreateProjectForm
-						workspace={workspace}
-						onSuccess={() => setIsOpen(false)}
-					/>
-				</div>
+			<DialogContent className="sm:max-w-2xl">
+				<DialogHeader>
+					<DialogTitle>New project</DialogTitle>
+				</DialogHeader>
+				<CreateProjectForm
+					workspace={workspace}
+					onSuccess={() => setIsOpen(false)}
+				/>
 			</DialogContent>
 		</Dialog>
 	);

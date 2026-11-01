@@ -16,6 +16,7 @@ import {
 } from "#/components/ui/alert-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "#/components/ui/avatar";
 import { Button } from "#/components/ui/button";
+import { formatDate, initials } from "#/lib/utils";
 import type { DataTableFeatures } from "./data-table-features";
 
 const columnHelper = createColumnHelper<DataTableFeatures, ProjectMember>();
@@ -89,9 +90,7 @@ export function createColumns({
 					<div className="flex items-center gap-3">
 						<Avatar size="sm">
 							<AvatarImage src={image ?? undefined} />
-							<AvatarFallback>
-								{displayName.slice(0, 2).toUpperCase()}
-							</AvatarFallback>
+							<AvatarFallback>{initials(displayName)}</AvatarFallback>
 						</Avatar>
 						<span>{fullName}</span>
 					</div>
@@ -115,9 +114,7 @@ export function createColumns({
 		columnHelper.accessor("createdAt", {
 			header: "Joining date",
 			cell: ({ row }) => {
-				const date = new Date(row.getValue("createdAt"));
-
-				return date.toDateString();
+				return formatDate(row.getValue("createdAt"));
 			},
 		}),
 		...(canRemove

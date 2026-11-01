@@ -1,15 +1,27 @@
-import { ORPCError } from "@orpc/client";
-import { createFileRoute } from "@tanstack/react-router";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import * as v from "valibot";
 import libraryUrl from "#/assets/library.png";
-import { Card, CardContent, CardHeader, CardTitle } from "#/components/ui/card";
+import {
+	Card,
+	CardContent,
+	CardFooter,
+	CardHeader,
+	CardTitle,
+} from "#/components/ui/card";
 import { FieldGroup } from "#/components/ui/field";
 import { toast } from "#/components/ui/toast";
 import { useAppForm } from "#/hooks/form";
+import { workspacesQueryOptions } from "#/lib/data/workspace";
+import { toastError } from "#/lib/errors";
 import { orpc } from "#/lib/orpc";
 
 const CreateWorkspaceSchema = v.object({
-	name: v.pipe(v.string(), v.minLength(6), v.maxLength(32)),
+	name: v.pipe(
+		v.string(),
+		v.minLength(6, "Use at least 6 characters."),
+		v.maxLength(32, "Use at most 32 characters."),
+	),
 });
 
 export const Route = createFileRoute("/(workspace)/create-workspace")({
@@ -17,6 +29,14 @@ export const Route = createFileRoute("/(workspace)/create-workspace")({
 });
 
 function RouteComponent() {
+	const navigate = Route.useNavigate();
+	const queryClient = useQueryClient();
+	const { user } = Route.useRouteContext();
+	const { data: workspaces } = useQuery({
+		...workspacesQueryOptions({ userId: user?.id ?? "" }),
+		enabled: user != null,
+	});
+
 	const form = useAppForm({
 		defaultValues: {
 			name: "",
@@ -31,13 +51,10 @@ function RouteComponent() {
 					type: "success",
 					description: `Workspace "${res.name}" created.`,
 				});
+				await queryClient.invalidateQueries({ queryKey: ["workspaces"] });
+				navigate({ to: "/$id", params: { id: res.id } });
 			} catch (e) {
-				if (e instanceof ORPCError) {
-					toast.add({
-						type: "error",
-						description: e.message,
-					});
-				}
+				toastError(e);
 			}
 		},
 	});
@@ -47,11 +64,11 @@ function RouteComponent() {
 			<img
 				className="absolute w-full h-dvh object-cover"
 				src={libraryUrl}
-				aria-label="library"
+				alt=""
 			/>
 			<div className="w-full h-dvh absolute">
-				<div className="h-full w-full xl:w-1/2 p-12">
-					<Card className="h-full bg-card/99 xl:p-32">
+				<div className="h-full w-full p-4 sm:p-12 xl:w-1/2">
+					<Card className="h-full justify-center bg-card/99 sm:px-8 xl:px-24">
 						<CardHeader>
 							<CardTitle>Create your workspace</CardTitle>
 						</CardHeader>
@@ -75,6 +92,13 @@ function RouteComponent() {
 								</form.AppForm>
 							</form>
 						</CardContent>
+						{workspaces && workspaces.length > 0 && (
+							<CardFooter>
+								<Link to="/" className="underline underline-offset-3">
+									Back to your workspace
+								</Link>
+							</CardFooter>
+						)}
 					</Card>
 				</div>
 			</div>

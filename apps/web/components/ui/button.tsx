@@ -1,4 +1,5 @@
 import { Button as ButtonPrimitive } from "@base-ui/react/button";
+import { useRender } from "@base-ui/react/use-render";
 import { cva, type VariantProps } from "class-variance-authority";
 
 import { cn } from "#/lib/utils";
@@ -42,15 +43,25 @@ function Button({
 	className,
 	variant = "default",
 	size = "default",
+	render,
 	...props
 }: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {
-	return (
-		<ButtonPrimitive
-			data-slot="button"
-			className={cn(buttonVariants({ variant, size, className }))}
-			{...props}
-		/>
-	);
+	const classes = cn(buttonVariants({ variant, size, className }));
+
+	// Links styled as buttons keep their link semantics instead of role="button".
+	const rendered = useRender({
+		enabled: render !== undefined,
+		render: render as useRender.RenderProp,
+		ref: props.ref,
+		props: {
+			"data-slot": "button",
+			...(props as Record<string, unknown>),
+			className: classes,
+		},
+	});
+	if (render !== undefined) return rendered;
+
+	return <ButtonPrimitive data-slot="button" className={classes} {...props} />;
 }
 
 export { Button, buttonVariants };
