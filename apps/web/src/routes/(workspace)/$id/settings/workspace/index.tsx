@@ -1,4 +1,3 @@
-import { ORPCError } from "@orpc/client";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
@@ -23,9 +22,14 @@ import {
 	updateWorkspace,
 	workspaceQueryOptions,
 } from "#/lib/data/workspace";
+import { toastError } from "#/lib/errors";
 
 const UpdateWorkspaceSchema = v.object({
-	name: v.pipe(v.string(), v.minLength(6), v.maxLength(32)),
+	name: v.pipe(
+		v.string(),
+		v.minLength(6, "Use at least 6 characters."),
+		v.maxLength(32, "Use at most 32 characters."),
+	),
 });
 
 export const Route = createFileRoute("/(workspace)/$id/settings/workspace/")({
@@ -52,12 +56,7 @@ function RouteComponent() {
 			});
 			navigate({ to: "/" });
 		} catch (e) {
-			if (e instanceof ORPCError) {
-				toast.add({
-					type: "error",
-					description: e.message,
-				});
-			}
+			toastError(e);
 		} finally {
 			setIsDeleting(false);
 			setIsDeleteOpen(false);
@@ -74,93 +73,83 @@ function RouteComponent() {
 		onSubmit: async ({ value }) => {
 			try {
 				await updateWorkspace({ workspaceId, name: value.name });
-				await queryClient.invalidateQueries({
-					queryKey: workspaceQuery.queryKey,
-				});
+				await Promise.all([
+					queryClient.invalidateQueries({
+						queryKey: workspaceQuery.queryKey,
+					}),
+					queryClient.invalidateQueries({ queryKey: ["workspaces"] }),
+				]);
 				toast.add({
 					type: "success",
 					description: "Workspace updated.",
 				});
 			} catch (e) {
-				if (e instanceof ORPCError) {
-					toast.add({
-						type: "error",
-						description: e.message,
-					});
-				}
+				toastError(e);
 			}
 		},
 	});
 
 	return (
-		<div className="flex justify-center w-full">
-			<div className="w-5xl py-8 space-y-6">
-				<div className="">
-					<div className="space-y-4">
-						<form
-							onSubmit={(e) => {
-								e.preventDefault();
-								form.handleSubmit();
-							}}
-							className="grid grid-cols-3"
-						>
-							<form.AppField
-								name="name"
-								children={(field) => <field.TextField label="Workspace name" />}
-							/>
-						</form>
-						<form.AppForm>
-							<form.SubscribeButton label="Update workspace" />
-						</form.AppForm>
-					</div>
-				</div>
-				<Card className="mt-48">
-					<CardContent>
-						<div className="w-full flex justify-between">
-							<div>
-								<h3 className="text-md font-semibold">Delete this workspace</h3>
-								<p className="text-card-foreground/70">
-									When deleting a workspace, all of the data and resources
-									within that workspace will be permanently removed and cannot
-									be recovered.
-								</p>
-							</div>
-							<div className="items-center flex">
-								<AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
-									<AlertDialogTrigger
-										render={<Button variant={"destructive"} />}
-									>
-										Delete
-									</AlertDialogTrigger>
-									<AlertDialogContent>
-										<AlertDialogHeader>
-											<AlertDialogTitle>
-												Delete "{workspace.name}"?
-											</AlertDialogTitle>
-											<AlertDialogDescription>
-												This will permanently delete the workspace and all of
-												its data and resources. This action cannot be undone.
-											</AlertDialogDescription>
-										</AlertDialogHeader>
-										<AlertDialogFooter>
-											<AlertDialogCancel disabled={isDeleting}>
-												Cancel
-											</AlertDialogCancel>
-											<AlertDialogAction
-												variant={"destructive"}
-												disabled={isDeleting}
-												onClick={handleDelete}
-											>
-												Delete workspace
-											</AlertDialogAction>
-										</AlertDialogFooter>
-									</AlertDialogContent>
-								</AlertDialog>
-							</div>
+		<div className="space-y-12">
+			<form
+				onSubmit={(e) => {
+					e.preventDefault();
+					form.handleSubmit();
+				}}
+				className="max-w-sm"
+			>
+				<form.AppField
+					name="name"
+					children={(field) => <field.TextField label="Workspace name" />}
+				/>
+				<form.AppForm>
+					<form.SubscribeButton label="Update workspace" />
+				</form.AppForm>
+			</form>
+			<Card>
+				<CardContent>
+					<div className="flex w-full flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+						<div>
+							<h3 className="text-sm font-semibold">Delete this workspace</h3>
+							<p className="text-card-foreground/70">
+								When deleting a workspace, all of the data and resources within
+								that workspace will be permanently removed and cannot be
+								recovered.
+							</p>
 						</div>
-					</CardContent>
-				</Card>
-			</div>
+						<div className="shrink-0">
+							<AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+								<AlertDialogTrigger render={<Button variant={"destructive"} />}>
+									Delete
+								</AlertDialogTrigger>
+								<AlertDialogContent>
+									<AlertDialogHeader>
+										<AlertDialogTitle>
+											Delete "{workspace.name}"?
+										</AlertDialogTitle>
+										<AlertDialogDescription>
+											This will permanently delete the workspace and all of its
+											data and resources. This action cannot be undone.
+										</AlertDialogDescription>
+									</AlertDialogHeader>
+									<AlertDialogFooter>
+										<AlertDialogCancel disabled={isDeleting}>
+											Cancel
+										</AlertDialogCancel>
+										<AlertDialogAction
+											variant={"destructive"}
+											disabled={isDeleting}
+											onClick={handleDelete}
+										>
+											Delete workspace
+										</AlertDialogAction>
+									</AlertDialogFooter>
+								</AlertDialogContent>
+							</AlertDialog>
+						</div>
+					</div>
+				</CardContent>
+			</Card>
 		</div>
 	);
 }

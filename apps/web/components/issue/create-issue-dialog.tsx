@@ -1,4 +1,10 @@
-import { Dialog, DialogContent } from "../ui/dialog";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogHeader,
+	DialogTitle,
+} from "../ui/dialog";
 import {
 	closeCreateIssueDialog,
 	useCreateIssueDialogStore,
@@ -16,12 +22,20 @@ export function CreateIssueDialog() {
 			}}
 			disablePointerDismissal
 		>
-			<DialogContent className={"min-w-2xl p-4"}>
+			<DialogContent className="sm:max-w-2xl">
 				{state.isOpen && (
-					<CreateIssueForm
-						params={state.params}
-						onSuccess={closeCreateIssueDialog}
-					/>
+					<>
+						<DialogHeader>
+							<DialogTitle>New work item</DialogTitle>
+							<DialogDescription>
+								In {state.params.projectName}
+							</DialogDescription>
+						</DialogHeader>
+						<CreateIssueForm
+							params={state.params}
+							onSuccess={closeCreateIssueDialog}
+						/>
+					</>
 				)}
 			</DialogContent>
 		</Dialog>

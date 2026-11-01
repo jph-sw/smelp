@@ -47,6 +47,9 @@ export function NavProjects({
 						<Button
 							variant={"ghost"}
 							size={"icon-sm"}
+							className="aria-expanded:bg-transparent"
+							aria-expanded={isOpen}
+							aria-label={isOpen ? "Collapse projects" : "Expand projects"}
 							onClick={() => setIsOpen(!isOpen)}
 						>
 							<HugeiconsIcon
@@ -77,7 +80,9 @@ export function NavProjects({
 										}
 									>
 										<DynamicIcon name={project.icon} />
-										{project.name}
+										<span className="truncate" title={project.name}>
+											{project.name}
+										</span>
 									</SidebarMenuButton>
 									<DropdownMenu>
 										<DropdownMenuTrigger

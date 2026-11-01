@@ -53,7 +53,7 @@ function RouteComponent() {
 				<SiteHeader workspace={workspace} workspaces={workspaces} user={user} />
 				<div className="flex flex-1 min-h-0">
 					<AppSidebar workspace={workspace} projects={projects} />
-					<SidebarInset className="min-h-0">
+					<SidebarInset className="min-h-0 min-w-0">
 						<div className="flex flex-1 min-h-0 flex-col">
 							<div className="flex-1 min-h-0 overflow-y-auto rounded-xl bg-muted/50">
 								<Outlet />
