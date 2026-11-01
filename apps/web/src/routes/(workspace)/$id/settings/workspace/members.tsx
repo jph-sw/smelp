@@ -6,11 +6,10 @@ import {
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import * as v from "valibot";
+import { CopyLink } from "#/components/copy-link";
 import { Avatar, AvatarFallback, AvatarImage } from "#/components/ui/avatar";
 import { Button } from "#/components/ui/button";
 import { FieldGroup } from "#/components/ui/field";
-import { Input } from "#/components/ui/input";
-import { toast } from "#/components/ui/toast";
 import { useAppForm } from "#/hooks/form";
 import {
 	cancelInvite,
@@ -44,41 +43,6 @@ export const Route = createFileRoute(
 		]);
 	},
 });
-
-function NewInviteLink({ link }: { link: string }) {
-	const copy = async () => {
-		try {
-			await navigator.clipboard.writeText(link);
-			toast.add({ type: "success", description: "Link copied." });
-		} catch {
-			toast.add({
-				type: "error",
-				description: "Couldn't copy the link. Select it and copy it yourself.",
-			});
-		}
-	};
-
-	return (
-		<div className="flex flex-col gap-2 rounded-lg bg-secondary p-3">
-			<p className="text-sm font-medium">
-				Send this link to the person you're inviting
-			</p>
-			<div className="flex gap-2">
-				<Input
-					readOnly
-					aria-label="Invite link"
-					value={link}
-					onFocus={(event) => event.target.select()}
-				/>
-				<Button onClick={copy}>Copy</Button>
-			</div>
-			<p className="text-xs text-muted-foreground">
-				It works once and expires in 7 days. It won't be shown again, so copy it
-				now.
-			</p>
-		</div>
-	);
-}
 
 function RouteComponent() {
 	const { id: workspaceId } = Route.useParams();
@@ -170,7 +134,13 @@ function RouteComponent() {
 				</FieldGroup>
 			</form>
 
-			{newLink && <NewInviteLink link={newLink} />}
+			{newLink && (
+				<CopyLink
+					title="Send this link to the person you're inviting"
+					hint="It works once and expires in 7 days. It won't be shown again, so copy it now."
+					link={newLink}
+				/>
+			)}
 
 			{invites.length > 0 && (
 				<div className="flex flex-col gap-1">

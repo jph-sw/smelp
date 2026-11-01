@@ -3,11 +3,17 @@ import { RPCHandler } from "@orpc/server/fetch";
 import { CORSPlugin, ResponseHeadersPlugin } from "@orpc/server/plugins";
 import { findIssueActivity } from "./routes/activity";
 import { me } from "./routes/auth/me";
+import {
+	changePassword,
+	previewPasswordReset,
+	resetPassword,
+} from "./routes/auth/password";
 import { signIn } from "./routes/auth/signin";
 import { signOut } from "./routes/auth/signout";
 import { signUp } from "./routes/auth/signup";
 import { createComment, deleteComment, findComments } from "./routes/comment";
 import {
+	createPasswordReset,
 	findInstanceStatus,
 	findInstanceUsers,
 	updateInstance,
@@ -61,12 +67,16 @@ export const router = {
 		status: findInstanceStatus,
 		update: updateInstance,
 		users: findInstanceUsers,
+		createPasswordReset,
 	},
 	auth: {
 		signIn,
 		signUp,
 		signOut,
 		me,
+		previewPasswordReset,
+		resetPassword,
+		changePassword,
 	},
 	workspace: {
 		find: findWorkspace,

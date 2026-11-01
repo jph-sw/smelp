@@ -11,6 +11,14 @@ const FIFTEEN_MINUTES = 15 * 60 * 1000;
 const attemptsByAccount = new RateLimiter(10, FIFTEEN_MINUTES);
 const attemptsByIp = new RateLimiter(50, FIFTEEN_MINUTES);
 
+const accountKeyFor = (ip: string, email: string) =>
+	`${ip}:${email.toLowerCase()}`;
+
+// A fresh password shouldn't stay locked out by failed attempts with the old one.
+export function clearSignInAttempts(ip: string, email: string) {
+	attemptsByAccount.reset(accountKeyFor(ip, email));
+}
+
 const Params = v.object({
 	email: v.pipe(v.string(), v.email()),
 	password: v.pipe(v.string(), v.minLength(1), v.maxLength(128)),
@@ -18,7 +26,7 @@ const Params = v.object({
 
 export const signIn = base.input(Params).handler(async ({ input, context }) => {
 	// Scoped to the IP as well, so nobody can lock another person out by email alone.
-	const accountKey = `${context.ip}:${input.email.toLowerCase()}`;
+	const accountKey = accountKeyFor(context.ip, input.email);
 	enforceRateLimit(attemptsByAccount, accountKey);
 	enforceRateLimit(attemptsByIp, context.ip);
 

@@ -1,4 +1,3 @@
-import { ORPCError } from "@orpc/client";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import {
 	createFileRoute,
@@ -69,13 +68,6 @@ function SignIn() {
 				}
 			} catch (error) {
 				toastError(error);
-				if (error instanceof ORPCError) {
-					form.setErrorMap({
-						onSubmit: {
-							fields: { email: "", password: "" },
-						},
-					});
-				}
 			}
 		},
 	});

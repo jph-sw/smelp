@@ -31,6 +31,22 @@ export class Auth {
 		return user[0]?.role === "admin";
 	}
 
+	hashPassword(password: string): Promise<string> {
+		return Bun.password.hash(password, { algorithm: "argon2id" });
+	}
+
+	async verifyPassword(userId: string, password: string): Promise<boolean> {
+		const accounts = (await this
+			.sql`SELECT password FROM auth_account WHERE userId = ${userId} AND providerId = 'password'`) as Pick<
+			tables["auth_account"],
+			"password"
+		>[];
+		return Bun.password.verify(
+			password,
+			accounts[0]?.password ?? DUMMY_PASSWORD_HASH,
+		);
+	}
+
 	async userHasPermission(
 		userId: string,
 		spaceId: string,

@@ -4,6 +4,7 @@ import { Logger } from "tslog";
 import type { activity_logs } from "../types/tables/activity";
 import type {
 	auth_account,
+	auth_password_reset,
 	auth_session,
 	auth_space,
 	auth_space_invite,
@@ -80,6 +81,7 @@ export type tables = {
 	auth_space: auth_space;
 	auth_space_member: auth_space_member;
 	auth_space_invite: auth_space_invite;
+	auth_password_reset: auth_password_reset;
 	activity_logs: activity_logs;
 	workspace: workspace;
 	project: project;

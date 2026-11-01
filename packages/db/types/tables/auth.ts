@@ -62,3 +62,13 @@ export type auth_space_invite = {
 	tokenHash: string | null;
 	expiresAt: number;
 };
+
+export type auth_password_reset = {
+	id: string;
+	userId: string;
+	tokenHash: string;
+	createdByUserId: string | null;
+	createdAt: number;
+	expiresAt: number;
+	usedAt: number | null;
+};

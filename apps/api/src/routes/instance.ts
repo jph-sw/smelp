@@ -1,7 +1,9 @@
+import { ORPCError } from "@orpc/server";
 import { DB, type tables } from "@smelp/db";
 import * as v from "valibot";
 import { requireInstanceAdmin } from "../lib/access";
 import { isFirstRun, isSignupOpen, setSignupOpen } from "../lib/instance";
+import { createPasswordResetLink } from "../lib/password-reset";
 import { base } from "../orpc";
 
 const sql = new DB().sqlite;
@@ -32,3 +34,16 @@ export const findInstanceUsers = base.handler(async ({ context }) => {
 		"id" | "fullName" | "displayName" | "email" | "role" | "image" | "createdAt"
 	>[];
 });
+
+export const createPasswordReset = base
+	.input(v.object({ userId: v.string() }))
+	.handler(async ({ input, context }) => {
+		const session = await requireInstanceAdmin(context.headers);
+
+		const user = (
+			await sql`SELECT id FROM auth_user WHERE id = ${input.userId}`
+		)[0];
+		if (!user) throw new ORPCError("NOT_FOUND");
+
+		return createPasswordResetLink(input.userId, session.userId);
+	});

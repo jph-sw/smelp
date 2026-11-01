@@ -69,13 +69,11 @@ export const signUp = base.input(Params).handler(async ({ input, context }) => {
 			if (error.message.includes("auth_user.displayName")) {
 				throw new ORPCError("CONFLICT", {
 					message: "That display name is already taken",
-					data: { field: "displayName" },
 				});
 			}
 
 			throw new ORPCError("CONFLICT", {
 				message: "Email already registered",
-				data: { field: "email" },
 			});
 		}
 		throw error;

@@ -9,6 +9,7 @@
 		"dev:web": "bun run --cwd apps/web dev",
 		"build:web": "bun run --cwd apps/web build",
 		"migrate:new": "bun run scripts/migrate-new.ts",
+		"admin:reset-link": "bun run apps/api/scripts/create-reset-link.ts",
 		"test": "bun test",
 		"chore:format": "bunx --bun @biomejs/biome format --write",
 		"chore:check": "bunx --bun @biomejs/biome check --write"

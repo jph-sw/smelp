@@ -168,6 +168,9 @@ export function SiteHeader({
 						<DropdownMenuContent align="end" className="w-auto min-w-40">
 							<DropdownMenuGroup>
 								<DropdownMenuLabel>{user.displayName}</DropdownMenuLabel>
+								<DropdownMenuItem render={<Link to="/account" />}>
+									Account
+								</DropdownMenuItem>
 								{user.role === "admin" && (
 									<DropdownMenuItem render={<Link to="/ceo" />}>
 										Instance settings
