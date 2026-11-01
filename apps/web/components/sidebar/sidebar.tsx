@@ -22,7 +22,7 @@ export function AppSidebar({
 	projects,
 }: {
 	workspace: tables["workspace"];
-	projects: tables["project"][];
+	projects: (tables["project"] & { isMember: boolean })[];
 }) {
 	const matchRoute = useMatchRoute();
 	const params = useParams({ strict: false });
@@ -30,8 +30,10 @@ export function AppSidebar({
 	// New work items go into the project on screen. Issue ids are "<projectId>-<n>".
 	const currentProjectId =
 		params.projectId ?? params.issueId?.replace(/-\d+$/, "");
+	const myProjects = projects.filter((project) => project.isMember);
 	const targetProject =
-		projects.find((project) => project.id === currentProjectId) ?? projects[0];
+		myProjects.find((project) => project.id === currentProjectId) ??
+		myProjects[0];
 
 	return (
 		<Sidebar
@@ -80,7 +82,7 @@ export function AppSidebar({
 					</SidebarGroupContent>
 				</SidebarGroup>
 				<NavWorkspaces workspace={workspace} />
-				<NavProjects workspace={workspace} projects={projects} />
+				<NavProjects workspace={workspace} projects={myProjects} />
 			</SidebarContent>
 		</Sidebar>
 	);

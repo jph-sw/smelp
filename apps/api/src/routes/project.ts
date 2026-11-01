@@ -5,6 +5,7 @@ import { DB, type tables } from "@smelp/db";
 import { eventBus } from "@smelp/events";
 import { SQL } from "bun";
 import * as v from "valibot";
+import { requireWorkspacePermission } from "../lib/access";
 import { base } from "../orpc";
 
 const sql = new DB().sqlite;
@@ -22,11 +23,11 @@ export const createProject = base
 		}),
 	)
 	.handler(async ({ input, context }) => {
-		const token = getCookie(context.headers, "auth_session");
-		if (!token) throw new ORPCError("UNAUTHORIZED");
-
-		const session = await auth.validateAuthSessionToken(token);
-		if (!session) throw new ORPCError("UNAUTHORIZED");
+		const { session } = await requireWorkspacePermission(
+			context.headers,
+			input.workspaceId,
+			"content:write",
+		);
 
 		const now = Date.now();
 
@@ -225,6 +226,13 @@ export const joinProject = base
 		if (!project) {
 			throw new ORPCError("NOT_FOUND");
 		}
+
+		// Joining makes you a project member, so workspace guests can't do it themselves.
+		await requireWorkspacePermission(
+			context.headers,
+			project.workspaceId,
+			"content:write",
+		);
 
 		if (project.access !== "public") {
 			throw new ORPCError("FORBIDDEN", {
