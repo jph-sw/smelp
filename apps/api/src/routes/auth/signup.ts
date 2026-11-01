@@ -44,8 +44,16 @@ export const signUp = base.input(Params).handler(async ({ input, context }) => {
 			error instanceof SQL.SQLiteError &&
 			error.code === "SQLITE_CONSTRAINT_UNIQUE"
 		) {
+			if (error.message.includes("auth_user.displayName")) {
+				throw new ORPCError("CONFLICT", {
+					message: "That display name is already taken",
+					data: { field: "displayName" },
+				});
+			}
+
 			throw new ORPCError("CONFLICT", {
 				message: "Email already registered",
+				data: { field: "email" },
 			});
 		}
 		throw error;
