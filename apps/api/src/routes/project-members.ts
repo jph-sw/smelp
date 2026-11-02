@@ -222,7 +222,20 @@ export const removeProjectMember = base
 			throw new ORPCError("NOT_FOUND");
 		}
 
-		await sql`DELETE FROM auth_space_member WHERE id = ${member.id}`;
+		await sql.begin(async (tx) => {
+			if (member.role === "admin") {
+				const others = await tx`
+					SELECT id FROM auth_space_member
+					WHERE spaceId = ${project.spaceId} AND role = 'admin' AND id != ${member.id}
+				`;
+				if (others.length === 0) {
+					throw new ORPCError("BAD_REQUEST", {
+						message: "Make someone else a project admin first.",
+					});
+				}
+			}
+			await tx`DELETE FROM auth_space_member WHERE id = ${member.id}`;
+		});
 
 		eventBus.emit({
 			type: "workspace.member_removed",

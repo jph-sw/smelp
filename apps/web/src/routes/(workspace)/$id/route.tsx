@@ -9,6 +9,7 @@ import {
 	workspaceQueryOptions,
 	workspacesQueryOptions,
 } from "#/lib/data/workspace";
+import { workspaceMembersQueryOptions } from "#/lib/data/workspace-members";
 
 export const Route = createFileRoute("/(workspace)/$id")({
 	component: RouteComponent,
@@ -19,6 +20,9 @@ export const Route = createFileRoute("/(workspace)/$id")({
 			queryClient.ensureQueryData(workspacesQueryOptions({ userId: user.id })),
 			queryClient.ensureQueryData(workspaceQueryOptions({ workspaceId: id })),
 			queryClient.ensureQueryData(projectsQueryOptions({ workspaceId: id })),
+			queryClient.ensureQueryData(
+				workspaceMembersQueryOptions({ workspaceId: id }),
+			),
 		]);
 	},
 	errorComponent: ErrorPage,

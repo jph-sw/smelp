@@ -10,6 +10,7 @@ import { DynamicIcon } from "#/components/dynamic-icon";
 import { Button } from "#/components/ui/button";
 import { Card } from "#/components/ui/card";
 import { joinProject, projectsQueryOptions } from "#/lib/data/project";
+import { useWorkspaceAccess } from "#/lib/data/workspace-members";
 import { toastError } from "#/lib/errors";
 import { cn, formatDate } from "#/lib/utils";
 
@@ -25,6 +26,7 @@ export const Route = createFileRoute("/(workspace)/$id/projects/")({
 function RouteComponent() {
 	const { id: workspaceId } = Route.useParams();
 	const queryClient = useQueryClient();
+	const { canWrite } = useWorkspaceAccess(workspaceId);
 
 	const { data: projects } = useSuspenseQuery(
 		projectsQueryOptions({ workspaceId }),
@@ -118,14 +120,16 @@ function RouteComponent() {
 										<HugeiconsIcon icon={Setting07Icon} />
 									</Button>
 								) : (
-									<Button
-										variant={"secondary"}
-										size={"sm"}
-										disabled={isJoining}
-										onClick={() => join({ projectId: project.id })}
-									>
-										Join
-									</Button>
+									canWrite && (
+										<Button
+											variant={"secondary"}
+											size={"sm"}
+											disabled={isJoining}
+											onClick={() => join({ projectId: project.id })}
+										>
+											Join
+										</Button>
+									)
 								)}
 							</div>
 						</div>
