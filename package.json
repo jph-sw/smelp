@@ -8,6 +8,7 @@
 		"dev:api": "bun --watch ./apps/api/src/index.ts",
 		"dev:web": "bun run --cwd apps/web dev",
 		"build:web": "bun run --cwd apps/web build",
+		"start": "NODE_ENV=production bun ./apps/api/src/index.ts",
 		"migrate:new": "bun run scripts/migrate-new.ts",
 		"admin:reset-link": "bun run apps/api/scripts/create-reset-link.ts",
 		"test": "bun test",
