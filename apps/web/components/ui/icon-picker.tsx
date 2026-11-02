@@ -1,25 +1,24 @@
 // inspiration took from https://github.com/R4ULtv/ui/blob/master/registry/icon-picker/icon-picker-tanstack.tsx
-import * as HugeIconsCollection from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react";
+import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import * as React from "react";
 import { Input } from "#/components/ui/input";
 import { useDebounce } from "#/hooks/use-debounce";
+import { useIconCollection } from "#/lib/icon-collection";
 import { cn } from "#/lib/utils";
-
-const allIcons: Record<string, unknown> = HugeIconsCollection;
 
 const IconItem = React.memo(
 	({
 		iconName,
+		icon,
 		setSelectedIcon,
 		selectedIcon,
 	}: {
 		iconName: string;
+		icon: IconSvgElement | undefined;
 		setSelectedIcon?: (iconName: string) => void;
 		selectedIcon?: string | null;
 	}) => {
-		const icon = allIcons[iconName];
 		const handleClick = React.useCallback(() => {
 			setSelectedIcon?.(iconName);
 		}, [iconName, setSelectedIcon]);
@@ -56,12 +55,14 @@ const IconPicker = React.memo(
 		const [searchQuery, setSearchQuery] = React.useState("");
 		const debouncedSearchQuery = useDebounce(searchQuery, 200);
 
+		const allIcons = useIconCollection();
+
 		const iconsMap = React.useMemo(
 			() =>
-				Object.keys(allIcons).filter(
-					(key) => key.endsWith("Icon") && Array.isArray(allIcons[key]),
+				Object.keys(allIcons ?? {}).filter(
+					(key) => key.endsWith("Icon") && Array.isArray(allIcons?.[key]),
 				),
-			[],
+			[allIcons],
 		);
 
 		const filteredIcons = React.useMemo(() => {
@@ -111,7 +112,12 @@ const IconPicker = React.memo(
 						aria-label="Search icons"
 					/>
 				</div>
-				<div className="h-80 p-1.5">
+				<div className="relative h-80 p-1.5">
+					{!allIcons && (
+						<p className="absolute inset-0 flex items-center justify-center text-sm text-muted-foreground">
+							Loading icons...
+						</p>
+					)}
 					<div ref={parentRef} className="overflow-auto h-full w-full">
 						<div
 							className="relative w-full"
@@ -144,6 +150,7 @@ const IconPicker = React.memo(
 													<IconItem
 														key={iconName}
 														iconName={iconName}
+														icon={allIcons?.[iconName]}
 														setSelectedIcon={setSelectedIcon}
 														selectedIcon={selectedIcon}
 													/>

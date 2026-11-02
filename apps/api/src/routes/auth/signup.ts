@@ -3,6 +3,7 @@ import { setCookie } from "@orpc/server/helpers";
 import { Auth } from "@smelp/auth";
 import { SQL } from "bun";
 import * as v from "valibot";
+import { useSecureCookies } from "../../lib/cookies";
 import { isFirstRun, isSignupOpen, makeFirstAdmin } from "../../lib/instance";
 import { findUsableInvite } from "../../lib/invites";
 import { enforceRateLimit, RateLimiter } from "../../lib/rate-limit";
@@ -47,7 +48,7 @@ export const signUp = base.input(Params).handler(async ({ input, context }) => {
 
 		setCookie(context.resHeaders, "auth_session", session.authSessionToken, {
 			httpOnly: true,
-			secure: process.env.NODE_ENV === "production",
+			secure: useSecureCookies(),
 			sameSite: "lax",
 			path: "/",
 			maxAge: auth.authSessionExpiresInSeconds,

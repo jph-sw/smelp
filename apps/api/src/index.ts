@@ -1,3 +1,4 @@
+import path from "node:path";
 import type { Context } from "@orpc/server";
 import type { RPCHandler } from "@orpc/server/fetch";
 import type { FriendlyStandardHandleOptions } from "@orpc/server/standard";
@@ -6,6 +7,7 @@ import { Migrator } from "@smelp/migrate";
 
 import { avatarResponse } from "./lib/avatars";
 import { logMailStatus } from "./lib/mail";
+import { createWebAppHandler } from "./lib/web-app";
 import { handler } from "./router";
 
 const migrator = new Migrator();
@@ -57,7 +59,16 @@ const rpcRouteHandler = bunRequestHandler(handler, (request) => ({
 	},
 }));
 
+// In development the web app comes from Vite instead, on its own port.
+const webApp = await createWebAppHandler(
+	process.env.WEB_DIST ?? path.resolve(import.meta.dir, "../../web/dist"),
+);
+if (!webApp && process.env.NODE_ENV === "production") {
+	utils.logger.warn("The web app isn't built, so only the API is being served");
+}
+
 const server = Bun.serve({
+	fetch: webApp ?? (() => new Response("Not found", { status: 404 })),
 	routes: {
 		"/rpc": rpcRouteHandler,
 		"/rpc/*": rpcRouteHandler,

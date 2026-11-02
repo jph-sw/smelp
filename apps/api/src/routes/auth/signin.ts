@@ -2,6 +2,7 @@ import { ORPCError } from "@orpc/server";
 import { setCookie } from "@orpc/server/helpers";
 import { Auth } from "@smelp/auth";
 import * as v from "valibot";
+import { useSecureCookies } from "../../lib/cookies";
 import { enforceRateLimit, RateLimiter } from "../../lib/rate-limit";
 import { base } from "../../orpc";
 
@@ -42,7 +43,7 @@ export const signIn = base.input(Params).handler(async ({ input, context }) => {
 
 	setCookie(context.resHeaders, "auth_session", session.authSessionToken, {
 		httpOnly: true,
-		secure: process.env.NODE_ENV === "production",
+		secure: useSecureCookies(),
 		sameSite: "lax",
 		path: "/",
 		maxAge: auth.authSessionExpiresInSeconds,

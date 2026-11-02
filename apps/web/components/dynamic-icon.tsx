@@ -1,18 +1,27 @@
 // this was written with the help of ai
-import * as HugeIconsCollection from "@hugeicons/core-free-icons";
-import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
+import { HugeiconsIcon } from "@hugeicons/react";
 import type * as React from "react";
-
-const allIcons: Record<string, IconSvgElement> =
-	HugeIconsCollection as unknown as Record<string, IconSvgElement>;
+import { useIconCollection } from "#/lib/icon-collection";
 
 type DynamicIconProps = {
 	name?: string | null;
 } & Omit<React.ComponentProps<typeof HugeiconsIcon>, "icon">;
 
 export function DynamicIcon({ name, ...props }: DynamicIconProps) {
+	const icons = useIconCollection();
 	if (!name) return null; // nothing selected yet
-	const icon = allIcons[name];
+	if (!icons) {
+		// Holds the space, so the layout doesn't shift when the icon arrives.
+		const size = props.size ?? 24;
+		return (
+			<span
+				aria-hidden
+				className={props.className}
+				style={{ display: "inline-block", width: size, height: size }}
+			/>
+		);
+	}
+	const icon = icons[name];
 	if (!icon) return null; // stale/unknown name
 	return <HugeiconsIcon icon={icon} {...props} />;
 }
