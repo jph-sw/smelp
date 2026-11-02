@@ -22,6 +22,7 @@ import {
 	updateWorkspace,
 	workspaceQueryOptions,
 } from "#/lib/data/workspace";
+import { useWorkspaceAccess } from "#/lib/data/workspace-members";
 import { toastError } from "#/lib/errors";
 
 const UpdateWorkspaceSchema = v.object({
@@ -43,6 +44,7 @@ function RouteComponent() {
 	const queryClient = useQueryClient();
 	const workspaceQuery = workspaceQueryOptions({ workspaceId });
 	const { data: workspace } = useSuspenseQuery(workspaceQuery);
+	const { canManage } = useWorkspaceAccess(workspaceId);
 	const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 	const [isDeleting, setIsDeleting] = useState(false);
 
@@ -89,6 +91,14 @@ function RouteComponent() {
 			}
 		},
 	});
+
+	if (!canManage) {
+		return (
+			<p className="text-sm text-muted-foreground">
+				Only workspace admins can change these settings.
+			</p>
+		);
+	}
 
 	return (
 		<div className="space-y-12">

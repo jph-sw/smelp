@@ -16,6 +16,7 @@ import {
 	SidebarMenuButton,
 	SidebarMenuItem,
 } from "#/components/ui/sidebar";
+import { useWorkspaceAccess } from "#/lib/data/workspace-members";
 import { DynamicIcon } from "../dynamic-icon";
 import { CreateProjectDialog } from "../project/create-project-dialog";
 import { Button } from "../ui/button";
@@ -36,6 +37,7 @@ export function NavProjects({
 }) {
 	const [isOpen, setIsOpen] = useState(true);
 	const matchRoute = useMatchRoute();
+	const { canWrite } = useWorkspaceAccess(workspace.id);
 
 	return (
 		<Collapsible open={isOpen} defaultOpen className="group/collapsible">
@@ -43,7 +45,7 @@ export function NavProjects({
 				<SidebarGroupLabel>
 					Projects
 					<div className="flex items-center ml-auto">
-						<CreateProjectDialog workspace={workspace} />
+						{canWrite && <CreateProjectDialog workspace={workspace} />}
 						<Button
 							variant={"ghost"}
 							size={"icon-sm"}

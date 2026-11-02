@@ -106,6 +106,13 @@ export type DomainEvent =
 			payload: { userId: string; role: string };
 	  }
 	| {
+			type: "workspace.member_role_changed";
+			workspaceId: string;
+			actorId: string;
+			entityId: string;
+			payload: { field: "role"; oldValue: string; newValue: string };
+	  }
+	| {
 			type: "workspace.member_removed";
 			workspaceId: string;
 			actorId: string;

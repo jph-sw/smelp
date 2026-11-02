@@ -7,6 +7,7 @@ import { useState } from "react";
 import { Button } from "#/components/ui/button";
 import { SidebarTrigger } from "#/components/ui/sidebar";
 import { type AuthUser, endSession, signOut } from "#/lib/auth";
+import { useWorkspaceAccess } from "#/lib/data/workspace-members";
 import { toastError } from "#/lib/errors";
 import { initials } from "#/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
@@ -33,6 +34,7 @@ export function SiteHeader({
 	const navigate = useNavigate();
 	const queryClient = useQueryClient();
 	const [isSwitcherOpen, setIsSwitcherOpen] = useState(false);
+	const { canManage } = useWorkspaceAccess(workspace.id);
 
 	const handleSignOut = async () => {
 		try {
@@ -93,17 +95,19 @@ export function SiteHeader({
 												>
 													<HugeiconsIcon icon={GearsIcon} /> Settings
 												</Button>
-												<Button
-													variant={"outline"}
-													render={
-														<Link
-															to="/$id/settings/workspace/members"
-															params={{ id: workspace.id }}
-														/>
-													}
-												>
-													<HugeiconsIcon icon={UserPlus} /> Invite members
-												</Button>
+												{canManage && (
+													<Button
+														variant={"outline"}
+														render={
+															<Link
+																to="/$id/settings/workspace/members"
+																params={{ id: workspace.id }}
+															/>
+														}
+													>
+														<HugeiconsIcon icon={UserPlus} /> Invite members
+													</Button>
+												)}
 											</div>
 										</div>
 									</div>

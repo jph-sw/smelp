@@ -59,7 +59,12 @@ import {
 	findInvites,
 	previewInvite,
 } from "./routes/workspace-invites";
-import { findWorkspaceMembers } from "./routes/workspace-members";
+import {
+	findWorkspaceMembers,
+	leaveWorkspace,
+	removeWorkspaceMember,
+	updateWorkspaceMemberRole,
+} from "./routes/workspace-members";
 import { findWorkspaces } from "./routes/workspaces";
 
 export const router = {
@@ -86,6 +91,9 @@ export const router = {
 	},
 	workspaceMembers: {
 		find: findWorkspaceMembers,
+		remove: removeWorkspaceMember,
+		updateRole: updateWorkspaceMemberRole,
+		leave: leaveWorkspace,
 	},
 	workspaceInvites: {
 		create: createInvite,
