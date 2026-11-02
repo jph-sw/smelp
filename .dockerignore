@@ -1,0 +1,13 @@
+**/node_modules
+**/dist
+**/*.sqlite*
+.git
+.github
+.agents
+.claude
+.zed
+.env
+.env.*
+Dockerfile
+compose.yaml
+apps/api/test

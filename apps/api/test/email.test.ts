@@ -464,6 +464,7 @@ test("the status endpoint never exposes mail settings", async () => {
 	expect(Object.keys(status).sort()).toEqual([
 		"emailEnabled",
 		"needsSetup",
+		"secureCookies",
 		"signupOpen",
 	]);
 });
