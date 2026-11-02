@@ -72,3 +72,10 @@ export type auth_password_reset = {
 	expiresAt: number;
 	usedAt: number | null;
 };
+
+export type auth_user_avatar = {
+	userId: string;
+	contentType: string;
+	data: Uint8Array;
+	updatedAt: number;
+};
