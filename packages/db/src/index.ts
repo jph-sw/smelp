@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import { createHash } from "node:crypto";
 import { type BunFile, SQL } from "bun";
 import { Logger } from "tslog";
@@ -24,12 +25,80 @@ export function databasePath() {
 	return process.env.DATABASE_PATH ?? "database.sqlite";
 }
 
-export class DB {
-	public sqlite = new SQL(`sqlite://${databasePath()}`);
+const insideTransaction = new AsyncLocalStorage<true>();
 
-	constructor() {
-		this.sqlite`PRAGMA foreign_keys = ON`.execute();
+// Queries on a connection that has a transaction open become part of it, so another
+// request's save could be rolled back with someone else's failure. This gives each
+// transaction the connection to itself. Code inside one goes straight through, since
+// waiting behind its own transaction would never finish.
+function queued(connection: SQL): SQL {
+	let tail: Promise<unknown> = Promise.resolve();
+	const run = <T>(work: () => PromiseLike<T>): Promise<T> => {
+		if (insideTransaction.getStore()) return Promise.resolve(work());
+		const result = tail.then(work);
+		tail = result.catch(() => {});
+		return result;
+	};
+
+	// A query only starts once it's awaited, so that's the moment it joins the queue.
+	const queuedQuery = (query: PromiseLike<unknown>) =>
+		new Proxy(query, {
+			get(target, property) {
+				if (property === "then") {
+					return (...handlers: Parameters<Promise<unknown>["then"]>) =>
+						run(() => target).then(...handlers);
+				}
+				if (property === "catch" || property === "finally") {
+					const settled = run(() => target);
+					return settled[property].bind(settled);
+				}
+				const value = Reflect.get(target, property);
+				return typeof value === "function" ? value.bind(target) : value;
+			},
+		});
+
+	return new Proxy(connection, {
+		apply(target, _this, args: unknown[]) {
+			const result = Reflect.apply(target, undefined, args);
+			// sql`...` is a query, while sql(row) only builds part of one.
+			const isTemplate = Array.isArray(args[0]) && "raw" in args[0];
+			return isTemplate ? queuedQuery(result) : result;
+		},
+		get(target, property) {
+			const value = Reflect.get(target, property);
+			if (property === "begin") {
+				return (...args: unknown[]) =>
+					run(() =>
+						insideTransaction.run(
+							true,
+							() => Reflect.apply(value, target, args) as PromiseLike<unknown>,
+						),
+					);
+			}
+			return typeof value === "function" ? value.bind(target) : value;
+		},
+	});
+}
+
+const connections = new Map<string, SQL>();
+
+// One connection per process. Waiting for a lock blocks this thread, so with several
+// connections, a request waiting on another's open transaction would stop that
+// transaction from ever finishing. The timeout is for other processes, like a backup.
+function connectionTo(path: string) {
+	let connection = connections.get(path);
+	if (!connection) {
+		const raw = new SQL(`sqlite://${path}`);
+		raw`PRAGMA busy_timeout = 10000`.execute();
+		raw`PRAGMA foreign_keys = ON`.execute();
+		connection = queued(raw);
+		connections.set(path, connection);
 	}
+	return connection;
+}
+
+export class DB {
+	public sqlite = connectionTo(databasePath());
 }
 
 export class Utils {
