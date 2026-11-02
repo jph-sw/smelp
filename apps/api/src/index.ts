@@ -79,3 +79,11 @@ const server = Bun.serve({
 });
 
 utils.logger.info(`𖹭 Server running at ${server.url}`);
+
+// Finishes requests in progress. As the first process in a container, nothing else
+// would handle these, and Docker would wait and then force it to stop.
+for (const signal of ["SIGTERM", "SIGINT"] as const) {
+	process.on(signal, () => {
+		server.stop().finally(() => process.exit(0));
+	});
+}

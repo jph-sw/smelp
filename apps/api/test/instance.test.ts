@@ -78,6 +78,7 @@ describe("first run", () => {
 			needsSetup: true,
 			signupOpen: false,
 			emailEnabled: false,
+			secureCookies: false,
 		});
 	});
 

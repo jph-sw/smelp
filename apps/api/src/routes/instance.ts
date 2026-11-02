@@ -2,6 +2,7 @@ import { ORPCError } from "@orpc/server";
 import { DB, type tables } from "@smelp/db";
 import * as v from "valibot";
 import { requireInstanceAdmin } from "../lib/access";
+import { useSecureCookies } from "../lib/cookies";
 import { isFirstRun, isSignupOpen, setSignupOpen } from "../lib/instance";
 import {
 	isMailEnabled,
@@ -18,6 +19,7 @@ export const findInstanceStatus = base.handler(async () => ({
 	needsSetup: await isFirstRun(),
 	signupOpen: await isSignupOpen(),
 	emailEnabled: isMailEnabled(),
+	secureCookies: useSecureCookies(),
 }));
 
 export const updateInstance = base

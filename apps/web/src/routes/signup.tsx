@@ -6,6 +6,7 @@ import {
 	useNavigate,
 } from "@tanstack/react-router";
 import * as v from "valibot";
+import { InsecureCookieWarning } from "#/components/insecure-cookie-warning";
 import {
 	Card,
 	CardContent,
@@ -144,7 +145,8 @@ function SignUpForm({
 						</CardDescription>
 					)}
 				</CardHeader>
-				<CardContent>
+				<CardContent className="space-y-4">
+					<InsecureCookieWarning />
 					<form
 						onSubmit={(e) => {
 							e.preventDefault();

@@ -28,7 +28,7 @@ function readConfig() {
 		return { config: null, missing };
 	}
 
-	const port = Number(env.SMTP_PORT ?? 587);
+	const port = Number(env.SMTP_PORT || 587);
 	return {
 		missing,
 		config: {
