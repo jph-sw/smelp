@@ -2,10 +2,11 @@ import path from "node:path";
 import type { Context } from "@orpc/server";
 import type { RPCHandler } from "@orpc/server/fetch";
 import type { FriendlyStandardHandleOptions } from "@orpc/server/standard";
-import { Utils } from "@smelp/db";
+import { databasePath, Utils } from "@smelp/db";
 import { Migrator } from "@smelp/migrate";
 
 import { avatarResponse } from "./lib/avatars";
+import { markServerRunning } from "./lib/backup";
 import { logMailStatus } from "./lib/mail";
 import { createWebAppHandler } from "./lib/web-app";
 import { handler } from "./router";
@@ -80,10 +81,13 @@ const server = Bun.serve({
 
 utils.logger.info(`𖹭 Server running at ${server.url}`);
 
+const clearRunningMarker = markServerRunning(databasePath());
+
 // Finishes requests in progress. As the first process in a container, nothing else
 // would handle these, and Docker would wait and then force it to stop.
 for (const signal of ["SIGTERM", "SIGINT"] as const) {
 	process.on(signal, () => {
+		clearRunningMarker();
 		server.stop().finally(() => process.exit(0));
 	});
 }
