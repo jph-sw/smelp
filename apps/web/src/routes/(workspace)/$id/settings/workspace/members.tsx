@@ -83,7 +83,10 @@ function InviteSection({ workspaceId }: { workspaceId: string }) {
 		workspaceId,
 	}).queryKey;
 
-	const [newLink, setNewLink] = useState<string | null>(null);
+	const [newLink, setNewLink] = useState<{
+		link: string;
+		emailedTo: string | null;
+	} | null>(null);
 
 	const form = useAppForm({
 		defaultValues: {
@@ -101,7 +104,17 @@ function InviteSection({ workspaceId }: { workspaceId: string }) {
 					role: value.role,
 				});
 				await queryClient.invalidateQueries({ queryKey: invitesQueryKey });
-				setNewLink(`${window.location.origin}/invite/${invite.token}`);
+				setNewLink({
+					link: `${window.location.origin}/invite/${invite.token}`,
+					emailedTo: invite.emailDelivery === "sent" ? invite.email : null,
+				});
+				if (invite.emailDelivery === "failed") {
+					toast.add({
+						type: "error",
+						description:
+							"The invite email couldn't be sent. Copy the link instead.",
+					});
+				}
 				formApi.reset();
 			} catch (e) {
 				toastError(e);
@@ -161,9 +174,17 @@ function InviteSection({ workspaceId }: { workspaceId: string }) {
 
 			{newLink && (
 				<CopyLink
-					title="Send this link to the person you're inviting"
-					hint="It works once and expires in 7 days. It won't be shown again, so copy it now."
-					link={newLink}
+					title={
+						newLink.emailedTo
+							? `Invite emailed to ${newLink.emailedTo}. You can also copy the link`
+							: "Send this link to the person you're inviting"
+					}
+					hint={
+						newLink.emailedTo
+							? "It works once and expires in 7 days."
+							: "It works once and expires in 7 days. It won't be shown again, so copy it now."
+					}
+					link={newLink.link}
 				/>
 			)}
 

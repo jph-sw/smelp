@@ -1,9 +1,13 @@
 import { ORPCError } from "@orpc/server";
 import { Auth } from "@smelp/auth";
-import { DB } from "@smelp/db";
+import { DB, type tables, Utils } from "@smelp/db";
 import * as v from "valibot";
 import { requireSession } from "../../lib/access";
-import { findUsablePasswordReset } from "../../lib/password-reset";
+import { isMailEnabled, sendPasswordResetEmail } from "../../lib/mail";
+import {
+	createPasswordResetLink,
+	findUsablePasswordReset,
+} from "../../lib/password-reset";
 import { enforceRateLimit, RateLimiter } from "../../lib/rate-limit";
 import { hashSecretToken } from "../../lib/tokens";
 import { base } from "../../orpc";
@@ -11,16 +15,58 @@ import { clearSignInAttempts } from "./signin";
 
 const sql = new DB().sqlite;
 const auth = new Auth();
+const utils = new Utils();
 
 const FIFTEEN_MINUTES = 15 * 60 * 1000;
 const resetsByIp = new RateLimiter(20, FIFTEEN_MINUTES);
 const changesByUser = new RateLimiter(10, FIFTEEN_MINUTES);
+
+const ONE_HOUR = 60 * 60 * 1000;
+const resetRequestsByIp = new RateLimiter(10, FIFTEEN_MINUTES);
+// Stops someone flooding another person's inbox, or repeatedly cancelling their
+// unused link, since each new link replaces the last.
+const resetRequestsByEmail = new RateLimiter(3, ONE_HOUR);
 
 const NewPassword = v.pipe(v.string(), v.minLength(10), v.maxLength(64));
 
 const invalidLink = () =>
 	new ORPCError("NOT_FOUND", {
 		message: "This reset link is invalid or has expired.",
+	});
+
+async function emailResetLink(email: string) {
+	const user = (
+		await sql`SELECT id FROM auth_user WHERE email = ${email}`
+	)[0] as Pick<tables["auth_user"], "id"> | undefined;
+	if (!user) return;
+
+	const { token } = await createPasswordResetLink(user.id, null);
+	await sendPasswordResetEmail({ to: email, token });
+}
+
+// Public. The answer and its timing are the same whether or not the account exists,
+// so the work happens after responding and this can't be used to find accounts.
+export const requestPasswordReset = base
+	.input(
+		v.object({
+			email: v.pipe(v.string(), v.trim(), v.toLowerCase(), v.email()),
+		}),
+	)
+	.handler(async ({ input, context }) => {
+		if (!isMailEnabled()) {
+			throw new ORPCError("BAD_REQUEST", {
+				message: "Email isn't set up on this server. Ask your instance admin.",
+			});
+		}
+		enforceRateLimit(resetRequestsByIp, context.ip);
+
+		if (resetRequestsByEmail.consume(input.email).allowed) {
+			emailResetLink(input.email).catch((error) => {
+				utils.logger.error(`Couldn't start a password reset: ${error}`);
+			});
+		}
+
+		return { success: true };
 	});
 
 // Public: holding the link is the proof. It only confirms which account it's for.

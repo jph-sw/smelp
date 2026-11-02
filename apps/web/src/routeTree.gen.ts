@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as workspaceRouteRouteImport } from './routes/(workspace)/route'
 import { Route as AccountRouteImport } from './routes/account'
 import { Route as CeoRouteRouteImport } from './routes/ceo/route'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as SigninRouteImport } from './routes/signin'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as workspaceIdRouteRouteImport } from './routes/(workspace)/$id/route'
@@ -50,6 +51,11 @@ const AccountRoute = AccountRouteImport.update({
 const CeoRouteRoute = CeoRouteRouteImport.update({
   id: '/ceo',
   path: '/ceo',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SigninRoute = SigninRouteImport.update({
@@ -164,6 +170,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/ceo': typeof CeoRouteRouteWithChildren
   '/account': typeof AccountRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/signin': typeof SigninRoute
   '/signup': typeof SignupRoute
   '/$id': typeof workspaceIdRouteRouteWithChildren
@@ -187,6 +194,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/signin': typeof SigninRoute
   '/signup': typeof SignupRoute
   '/create-workspace': typeof workspaceCreateWorkspaceRoute
@@ -209,6 +217,7 @@ export interface FileRoutesById {
   '/(workspace)': typeof workspaceRouteRouteWithChildren
   '/ceo': typeof CeoRouteRouteWithChildren
   '/account': typeof AccountRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/signin': typeof SigninRoute
   '/signup': typeof SignupRoute
   '/(workspace)/$id': typeof workspaceIdRouteRouteWithChildren
@@ -235,6 +244,7 @@ export interface FileRouteTypes {
     | '/'
     | '/ceo'
     | '/account'
+    | '/forgot-password'
     | '/signin'
     | '/signup'
     | '/$id'
@@ -258,6 +268,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/account'
+    | '/forgot-password'
     | '/signin'
     | '/signup'
     | '/create-workspace'
@@ -279,6 +290,7 @@ export interface FileRouteTypes {
     | '/(workspace)'
     | '/ceo'
     | '/account'
+    | '/forgot-password'
     | '/signin'
     | '/signup'
     | '/(workspace)/$id'
@@ -305,6 +317,7 @@ export interface RootRouteChildren {
   workspaceRouteRoute: typeof workspaceRouteRouteWithChildren
   CeoRouteRoute: typeof CeoRouteRouteWithChildren
   AccountRoute: typeof AccountRoute
+  ForgotPasswordRoute: typeof ForgotPasswordRoute
   SigninRoute: typeof SigninRoute
   SignupRoute: typeof SignupRoute
   InviteTokenRoute: typeof InviteTokenRoute
@@ -339,6 +352,13 @@ declare module '@tanstack/react-router' {
       path: '/ceo'
       fullPath: '/ceo'
       preLoaderRoute: typeof CeoRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/signin': {
@@ -585,6 +605,7 @@ const rootRouteChildren: RootRouteChildren = {
   workspaceRouteRoute: workspaceRouteRouteWithChildren,
   CeoRouteRoute: CeoRouteRouteWithChildren,
   AccountRoute: AccountRoute,
+  ForgotPasswordRoute: ForgotPasswordRoute,
   SigninRoute: SigninRoute,
   SignupRoute: SignupRoute,
   InviteTokenRoute: InviteTokenRoute,
