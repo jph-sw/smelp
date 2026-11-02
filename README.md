@@ -166,6 +166,7 @@ Open <http://localhost:5173>. The API runs on port 3000 and keeps its data in `.
 | --- | --- |
 | `bun test` | Runs the API tests, on a temporary database |
 | `bun run chore:check` | Formats and lints with Biome |
+| `bun run typecheck` | Checks types in the API and the web app |
 | `bun run migrate:new <name>` | Creates a new migration in `migrations/` |
 | `bun run build:web && bun run start` | Runs the production build without Docker |
 

@@ -260,7 +260,7 @@ export class Auth {
 
 		const authSessionSecretHashBuffer = await crypto.subtle.digest(
 			"SHA-256",
-			authSessionSecret as BufferSource,
+			authSessionSecret as Uint8Array<ArrayBuffer>,
 		);
 		const authSessionSecretHash = new Uint8Array(authSessionSecretHashBuffer);
 		const secretCorrect = this.constantTimeEqual(

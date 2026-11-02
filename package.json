@@ -14,6 +14,8 @@
 		"backup": "bun run apps/api/scripts/backup.ts",
 		"restore": "bun run apps/api/scripts/restore.ts",
 		"test": "bun test",
+		"lint": "bunx --bun @biomejs/biome ci apps packages",
+		"typecheck": "bun run --cwd apps/api tsc --noEmit && bun run --cwd apps/web tsc --noEmit",
 		"chore:format": "bunx --bun @biomejs/biome format --write",
 		"chore:check": "bunx --bun @biomejs/biome check --write"
 	},
