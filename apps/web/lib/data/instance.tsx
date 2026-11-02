@@ -20,3 +20,5 @@ export const createPasswordReset = ({
 	userId: string;
 	displayName: string;
 }) => orpc.instance.createPasswordReset({ userId });
+
+export const sendTestEmail = () => orpc.instance.sendTestEmail();

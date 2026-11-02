@@ -5,12 +5,14 @@ import { Utils } from "@smelp/db";
 import { Migrator } from "@smelp/migrate";
 
 import { avatarResponse } from "./lib/avatars";
+import { logMailStatus } from "./lib/mail";
 import { handler } from "./router";
 
 const migrator = new Migrator();
 const utils = new Utils();
 
 await migrator.up();
+logMailStatus();
 
 function bunRequestHandler<T extends Context>(
 	handler: RPCHandler<T>,

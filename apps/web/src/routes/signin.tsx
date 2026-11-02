@@ -112,18 +112,28 @@ function SignIn() {
 						</form.AppForm>
 					</form>
 				</CardContent>
-				{(status.signupOpen || invite) && (
-					<CardFooter>
-						<p>
-							No account?{" "}
+				{(status.signupOpen || invite || status.emailEnabled) && (
+					<CardFooter className="flex-col items-start gap-2">
+						{status.emailEnabled && (
 							<Link
-								to="/signup"
-								search={{ invite }}
+								to="/forgot-password"
 								className="underline underline-offset-3"
 							>
-								Sign up
+								Forgot your password?
 							</Link>
-						</p>
+						)}
+						{(status.signupOpen || invite) && (
+							<p>
+								No account?{" "}
+								<Link
+									to="/signup"
+									search={{ invite }}
+									className="underline underline-offset-3"
+								>
+									Sign up
+								</Link>
+							</p>
+						)}
 					</CardFooter>
 				)}
 			</Card>

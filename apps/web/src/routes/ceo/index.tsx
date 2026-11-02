@@ -10,10 +10,12 @@ import { Avatar, AvatarFallback, AvatarImage } from "#/components/ui/avatar";
 import { Button } from "#/components/ui/button";
 import { Card, CardContent } from "#/components/ui/card";
 import { Switch } from "#/components/ui/switch";
+import { toast } from "#/components/ui/toast";
 import {
 	createPasswordReset,
 	instanceStatusQueryOptions,
 	instanceUsersQueryOptions,
+	sendTestEmail,
 	updateInstance,
 } from "#/lib/data/instance";
 import { toastError } from "#/lib/errors";
@@ -33,6 +35,7 @@ function RouteComponent() {
 	const [resetLink, setResetLink] = useState<{
 		displayName: string;
 		link: string;
+		emailed: boolean;
 	} | null>(null);
 	const { data: status } = useSuspenseQuery(instanceStatusQueryOptions);
 	const { data: users } = useSuspenseQuery(instanceUsersQueryOptions);
@@ -46,13 +49,29 @@ function RouteComponent() {
 			}),
 	});
 
+	const { mutate: sendTest, isPending: isSendingTest } = useMutation({
+		mutationFn: sendTestEmail,
+		onSuccess: ({ to }) =>
+			toast.add({ type: "success", description: `Test email sent to ${to}.` }),
+		onError: (e) => toastError(e),
+	});
+
 	const { mutate: createReset, isPending: isCreatingReset } = useMutation({
 		mutationFn: createPasswordReset,
-		onSuccess: ({ token }, { displayName }) =>
+		onSuccess: ({ token, emailDelivery }, { displayName }) => {
 			setResetLink({
 				displayName,
 				link: `${window.location.origin}/reset-password/${token}`,
-			}),
+				emailed: emailDelivery === "sent",
+			});
+			if (emailDelivery === "failed") {
+				toast.add({
+					type: "error",
+					description:
+						"The reset email couldn't be sent. Copy the link instead.",
+				});
+			}
+		},
 		onError: (e) => toastError(e),
 	});
 
@@ -83,10 +102,41 @@ function RouteComponent() {
 					/>
 				</CardContent>
 			</Card>
+			<Card>
+				<CardContent className="flex flex-wrap items-center justify-between gap-4">
+					<div className="min-w-0 flex-1 basis-64">
+						<h2 className="text-sm font-semibold">
+							Email is {status.emailEnabled ? "on" : "off"}
+						</h2>
+						<p className="text-card-foreground/70">
+							{status.emailEnabled
+								? "Invites and password reset links are emailed, and people can reset a forgotten password themselves."
+								: "Invite and password reset links are shown here to copy and send yourself. To turn email on, set SMTP_HOST, SMTP_FROM and APP_URL on the server."}
+						</p>
+					</div>
+					{status.emailEnabled && (
+						<Button
+							variant="outline"
+							disabled={isSendingTest}
+							onClick={() => sendTest()}
+						>
+							Send test email
+						</Button>
+					)}
+				</CardContent>
+			</Card>
 			{resetLink && (
 				<CopyLink
-					title={`Send this password reset link to ${resetLink.displayName}`}
-					hint="It works once and expires in 24 hours. It won't be shown again, so copy it now."
+					title={
+						resetLink.emailed
+							? `Reset link emailed to ${resetLink.displayName}. You can also copy it`
+							: `Send this password reset link to ${resetLink.displayName}`
+					}
+					hint={
+						resetLink.emailed
+							? "It works once and expires in 24 hours."
+							: "It works once and expires in 24 hours. It won't be shown again, so copy it now."
+					}
 					link={resetLink.link}
 				/>
 			)}

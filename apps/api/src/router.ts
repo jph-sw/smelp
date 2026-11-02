@@ -6,6 +6,7 @@ import { me } from "./routes/auth/me";
 import {
 	changePassword,
 	previewPasswordReset,
+	requestPasswordReset,
 	resetPassword,
 } from "./routes/auth/password";
 import { removeAvatar, setAvatar, updateProfile } from "./routes/auth/profile";
@@ -17,6 +18,7 @@ import {
 	createPasswordReset,
 	findInstanceStatus,
 	findInstanceUsers,
+	sendTestEmail,
 	updateInstance,
 } from "./routes/instance";
 import {
@@ -74,6 +76,7 @@ export const router = {
 		update: updateInstance,
 		users: findInstanceUsers,
 		createPasswordReset,
+		sendTestEmail,
 	},
 	auth: {
 		signIn,
@@ -82,6 +85,7 @@ export const router = {
 		me,
 		previewPasswordReset,
 		resetPassword,
+		requestPasswordReset,
 		changePassword,
 		updateProfile,
 		setAvatar,

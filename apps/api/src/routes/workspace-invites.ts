@@ -6,11 +6,20 @@ import { SQL } from "bun";
 import * as v from "valibot";
 import { requireSession, requireWorkspacePermission } from "../lib/access";
 import { findUsableInvite, INVITE_LIFETIME_MS } from "../lib/invites";
+import {
+	type EmailDelivery,
+	isMailEnabled,
+	sendInviteEmail,
+} from "../lib/mail";
+import { RateLimiter } from "../lib/rate-limit";
 import { createSecretToken, hashSecretToken } from "../lib/tokens";
 import { base } from "../orpc";
 
 const sql = new DB().sqlite;
 const auth = new Auth();
+
+// Invites reach any address, so this stops an account from being used to send spam.
+const inviteEmailsByUser = new RateLimiter(30, 60 * 60 * 1000);
 
 const invalidLink = () =>
 	new ORPCError("NOT_FOUND", {
@@ -70,6 +79,23 @@ export const createInvite = base
 			payload: { email: invite.email, role: invite.role },
 		});
 
+		let emailDelivery: EmailDelivery = "none";
+		if (invite.email && isMailEnabled()) {
+			if (inviteEmailsByUser.consume(session.userId).allowed) {
+				const inviter = (
+					await sql`SELECT displayName FROM auth_user WHERE id = ${session.userId}`
+				)[0] as Pick<tables["auth_user"], "displayName">;
+				emailDelivery = await sendInviteEmail({
+					to: invite.email,
+					workspaceName: workspace.name,
+					inviterName: inviter.displayName,
+					token,
+				});
+			} else {
+				emailDelivery = "failed";
+			}
+		}
+
 		// Only the hash is stored, so this response is the one chance to see the token.
 		return {
 			id: invite.id,
@@ -77,6 +103,7 @@ export const createInvite = base
 			role: invite.role,
 			expiresAt: invite.expiresAt,
 			token,
+			emailDelivery,
 		};
 	});
 
