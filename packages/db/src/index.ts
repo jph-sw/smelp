@@ -10,6 +10,7 @@ import type {
 	auth_space_invite,
 	auth_space_member,
 	auth_user,
+	auth_user_avatar,
 } from "../types/tables/auth";
 import type { comment } from "../types/tables/comment";
 import type { issue } from "../types/tables/issue";
@@ -82,6 +83,7 @@ export type tables = {
 	auth_space_member: auth_space_member;
 	auth_space_invite: auth_space_invite;
 	auth_password_reset: auth_password_reset;
+	auth_user_avatar: auth_user_avatar;
 	activity_logs: activity_logs;
 	workspace: workspace;
 	project: project;

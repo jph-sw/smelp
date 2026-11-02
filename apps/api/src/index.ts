@@ -4,6 +4,7 @@ import type { FriendlyStandardHandleOptions } from "@orpc/server/standard";
 import { Utils } from "@smelp/db";
 import { Migrator } from "@smelp/migrate";
 
+import { avatarResponse } from "./lib/avatars";
 import { handler } from "./router";
 
 const migrator = new Migrator();
@@ -59,6 +60,8 @@ const server = Bun.serve({
 		"/rpc": rpcRouteHandler,
 		"/rpc/*": rpcRouteHandler,
 		"/api/status": new Response("OK"),
+		"/api/avatars/:userId": (request) =>
+			avatarResponse(request.headers, request.params.userId),
 	},
 });
 

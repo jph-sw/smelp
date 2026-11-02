@@ -8,6 +8,7 @@ import {
 	previewPasswordReset,
 	resetPassword,
 } from "./routes/auth/password";
+import { removeAvatar, setAvatar, updateProfile } from "./routes/auth/profile";
 import { signIn } from "./routes/auth/signin";
 import { signOut } from "./routes/auth/signout";
 import { signUp } from "./routes/auth/signup";
@@ -82,6 +83,9 @@ export const router = {
 		previewPasswordReset,
 		resetPassword,
 		changePassword,
+		updateProfile,
+		setAvatar,
+		removeAvatar,
 	},
 	workspace: {
 		find: findWorkspace,
