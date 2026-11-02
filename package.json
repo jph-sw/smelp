@@ -11,6 +11,8 @@
 		"start": "NODE_ENV=production bun ./apps/api/src/index.ts",
 		"migrate:new": "bun run scripts/migrate-new.ts",
 		"admin:reset-link": "bun run apps/api/scripts/create-reset-link.ts",
+		"backup": "bun run apps/api/scripts/backup.ts",
+		"restore": "bun run apps/api/scripts/restore.ts",
 		"test": "bun test",
 		"chore:format": "bunx --bun @biomejs/biome format --write",
 		"chore:check": "bunx --bun @biomejs/biome check --write"
