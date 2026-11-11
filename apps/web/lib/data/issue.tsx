@@ -49,5 +49,8 @@ export const deleteIssue = ({ id }: { id: string }) =>
 export const createComment = (input: { issueId: string; body: string }) =>
 	orpc.comments.create(input);
 
+export const updateComment = (input: { commentId: string; body: string }) =>
+	orpc.comments.update(input);
+
 export const deleteComment = ({ id }: { id: string }) =>
 	orpc.comments.delete({ id });

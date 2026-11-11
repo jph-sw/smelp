@@ -66,6 +66,7 @@ export const createComment = base
 			authorId: session.userId,
 			body: input.body,
 			createdAt: Date.now(),
+			editedAt: null,
 		};
 		await sql`INSERT INTO comment ${sql(comment)}`;
 
@@ -78,6 +79,55 @@ export const createComment = base
 		});
 
 		return comment;
+	});
+
+export const updateComment = base
+	.input(
+		v.object({
+			commentId: v.string(),
+			body: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(10_000)),
+		}),
+	)
+	.handler(async ({ input, context }) => {
+		const session = await requireSession(context.headers);
+
+		const comment = (
+			await sql`SELECT * FROM comment WHERE id = ${input.commentId}`
+		)[0] as tables["comment"] | undefined;
+		if (!comment) throw new ORPCError("NOT_FOUND");
+
+		const issue = await findIssueOrThrow(comment.issueId);
+		await requireProjectPermission(
+			context.headers,
+			issue.projectId,
+			"space:read",
+		);
+
+		// Only the author can reword a comment, admins included: it speaks for them.
+		if (comment.authorId !== session.userId) {
+			throw new ORPCError("FORBIDDEN");
+		}
+
+		const updated: tables["comment"] = {
+			...comment,
+			body: input.body,
+			editedAt: Date.now(),
+		};
+		await sql`
+			UPDATE comment
+			SET body = ${updated.body}, editedAt = ${updated.editedAt}
+			WHERE id = ${comment.id}
+		`;
+
+		eventBus.emit({
+			type: "comment.updated",
+			entityId: comment.id,
+			workspaceId: issue.workspaceId,
+			actorId: session.userId,
+			payload: { issueId: issue.id },
+		});
+
+		return updated;
 	});
 
 export const deleteComment = base

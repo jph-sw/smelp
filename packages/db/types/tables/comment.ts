@@ -4,4 +4,5 @@ export type comment = {
 	authorId: string | null;
 	body: string;
 	createdAt: number;
+	editedAt: number | null;
 };
