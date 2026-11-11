@@ -281,7 +281,6 @@ describe("private projects", () => {
 
 	test("are hidden from workspace members outside them", async () => {
 		expect(mentionsPrivate(await feedTypes(member))).toBe(false);
-		expect(mentionsPrivate(await feedTypes(guest))).toBe(false);
 	});
 
 	test("are shown to their members and instance admins", async () => {
@@ -349,10 +348,7 @@ describe("private projects", () => {
 		const events = await feedTypes(privateMember);
 		expect(events[0]?.type).toBe("project.member_added");
 		expect(events[0]?.details.userName).toBe(member.displayName);
-		// The member added can now see it, and the guest still can't.
-		expect((await feedTypes(guest)).map((e) => e.id)).not.toContain(
-			events[0]?.id,
-		);
+		// The member added can now see it.
 		await sql`DELETE FROM auth_space_member WHERE spaceId = ${PRIVATE_PROJECT} AND userId = ${member.id}`;
 	});
 
@@ -451,12 +447,18 @@ describe("comment edits", () => {
 		expect(seen.some((event) => event.issue?.id === issue.id)).toBe(true);
 		expect(JSON.stringify(seen)).not.toContain("Second");
 		expect(edits(await feedTypes(member))).toEqual([]);
-		expect(edits(await feedTypes(guest))).toEqual([]);
 	});
 });
 
 describe("guests", () => {
-	test("see their projects but not member changes", async () => {
+	test("can't see the feed at all", async () => {
+		await expectCode(
+			guest.client.activity.findWorkspace({ workspaceId: WORKSPACE }),
+			"FORBIDDEN",
+		);
+	});
+
+	test("members see role changes", async () => {
 		const extra = await createUser("Extra");
 		await addMember(WORKSPACE, extra.id, "member");
 		const { id: memberId } = (
@@ -468,16 +470,6 @@ describe("guests", () => {
 			role: "admin",
 		});
 		await settle();
-
-		const guestEvents = await feedTypes(guest);
-		expect(guestEvents.some((e) => e.type.startsWith("workspace."))).toBe(
-			false,
-		);
-		expect(
-			guestEvents.some(
-				(e) => e.type === "issue.created" && e.project?.id === PUBLIC_PROJECT,
-			),
-		).toBe(true);
 
 		const memberEvents = await feedTypes(member);
 		expect(memberEvents[0]?.type).toBe("workspace.member_role_changed");
@@ -526,6 +518,5 @@ describe("invites", () => {
 		expect(forMember[0]?.details.email).toBeNull();
 
 		expect(JSON.stringify([forAdmin, forMember])).not.toContain(invite.token);
-		expect(JSON.stringify(await feedTypes(guest))).not.toContain("newcomer");
 	});
 });
