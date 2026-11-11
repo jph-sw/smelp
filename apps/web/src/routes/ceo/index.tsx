@@ -11,6 +11,7 @@ import { Button } from "#/components/ui/button";
 import { Card, CardContent } from "#/components/ui/card";
 import { Switch } from "#/components/ui/switch";
 import { toast } from "#/components/ui/toast";
+import { usePageTitle } from "#/hooks/use-page-title";
 import {
 	createPasswordReset,
 	instanceStatusQueryOptions,
@@ -31,6 +32,7 @@ export const Route = createFileRoute("/ceo/")({
 });
 
 function RouteComponent() {
+	usePageTitle("Instance admin");
 	const queryClient = useQueryClient();
 	const [resetLink, setResetLink] = useState<{
 		displayName: string;

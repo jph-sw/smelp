@@ -31,6 +31,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "#/components/ui/select";
+import { usePageTitle } from "#/hooks/use-page-title";
 import {
 	projectMembersQueryOptions,
 	useProjectAccess,
@@ -161,6 +162,7 @@ function DeleteStateButton({
 }
 
 function RouteComponent() {
+	usePageTitle("Project states");
 	const { projectId } = Route.useParams();
 	const queryClient = useQueryClient();
 	const statesOptions = statesQueryOptions({ projectId });

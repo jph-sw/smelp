@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "#/components/ui/card";
 import { FieldGroup } from "#/components/ui/field";
 import { toast } from "#/components/ui/toast";
 import { useAppForm } from "#/hooks/form";
+import { usePageTitle } from "#/hooks/use-page-title";
 import { type AuthUser, currentUserQueryOptions } from "#/lib/auth";
 import { AvatarFileError, avatarAsBase64 } from "#/lib/data/avatar";
 import { NewPasswordSchema, PASSWORDS_DIFFER } from "#/lib/data/password";
@@ -57,6 +58,7 @@ export const Route = createFileRoute("/account")({
 });
 
 function RouteComponent() {
+	usePageTitle("Account");
 	const { data: user } = useSuspenseQuery(currentUserQueryOptions);
 
 	const form = useAppForm({

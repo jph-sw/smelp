@@ -6,6 +6,7 @@ import { AddMemberDialog } from "#/components/settings/members-project/add-membe
 import { createColumns } from "#/components/settings/members-project/columns";
 import { DataTable } from "#/components/settings/members-project/data-table";
 import { toast } from "#/components/ui/toast";
+import { usePageTitle } from "#/hooks/use-page-title";
 import { currentUserQueryOptions } from "#/lib/auth";
 import {
 	projectMembersQueryOptions,
@@ -25,6 +26,7 @@ export const Route = createFileRoute(
 });
 
 function RouteComponent() {
+	usePageTitle("Project members");
 	const { projectId } = Route.useParams();
 	const queryClient = useQueryClient();
 	const { data: members } = useSuspenseQuery(

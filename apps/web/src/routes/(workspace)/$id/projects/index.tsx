@@ -9,6 +9,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { DynamicIcon } from "#/components/dynamic-icon";
 import { Button } from "#/components/ui/button";
 import { Card } from "#/components/ui/card";
+import { usePageTitle } from "#/hooks/use-page-title";
 import { joinProject, projectsQueryOptions } from "#/lib/data/project";
 import { useWorkspaceAccess } from "#/lib/data/workspace-members";
 import { toastError } from "#/lib/errors";
@@ -24,6 +25,7 @@ export const Route = createFileRoute("/(workspace)/$id/projects/")({
 });
 
 function RouteComponent() {
+	usePageTitle("Projects");
 	const { id: workspaceId } = Route.useParams();
 	const queryClient = useQueryClient();
 	const { canWrite } = useWorkspaceAccess(workspaceId);

@@ -1,6 +1,7 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { DynamicIcon } from "#/components/dynamic-icon";
+import { usePageTitle } from "#/hooks/use-page-title";
 import { myIssuesQueryOptions } from "#/lib/data/issue";
 import { projectsQueryOptions } from "#/lib/data/project";
 import { workspaceQueryOptions } from "#/lib/data/workspace";
@@ -16,6 +17,7 @@ function RouteComponent() {
 	const { data: workspace } = useSuspenseQuery(
 		workspaceQueryOptions({ workspaceId }),
 	);
+	usePageTitle(workspace.name);
 	const { data: projects } = useSuspenseQuery(
 		projectsQueryOptions({ workspaceId }),
 	);

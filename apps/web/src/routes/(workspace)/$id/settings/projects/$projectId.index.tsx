@@ -26,6 +26,7 @@ import {
 } from "#/components/ui/popover";
 import { toast } from "#/components/ui/toast";
 import { useAppForm } from "#/hooks/form";
+import { usePageTitle } from "#/hooks/use-page-title";
 import {
 	deleteProject,
 	projectQueryOptions,
@@ -140,6 +141,7 @@ export const Route = createFileRoute(
 });
 
 function RouteComponent() {
+	usePageTitle("Project settings");
 	const { id: workspaceId, projectId } = Route.useParams();
 	const navigate = Route.useNavigate();
 	const queryClient = useQueryClient();

@@ -13,6 +13,7 @@ import {
 	CardHeader,
 	CardTitle,
 } from "#/components/ui/card";
+import { usePageTitle } from "#/hooks/use-page-title";
 import { currentUserQueryOptions } from "#/lib/auth";
 import {
 	acceptInvite,
@@ -27,6 +28,7 @@ export const Route = createFileRoute("/invite/$token")({
 });
 
 function RouteComponent() {
+	usePageTitle("Invitation");
 	const { token } = Route.useParams();
 	const navigate = Route.useNavigate();
 	const queryClient = useQueryClient();

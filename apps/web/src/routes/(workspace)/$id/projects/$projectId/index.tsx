@@ -14,7 +14,9 @@ import {
 import { IssueItem } from "#/components/kanban/issue-item";
 import { StateColumn } from "#/components/kanban/state-column";
 import { ProjectHeader } from "#/components/project/project-header";
+import { usePageTitle } from "#/hooks/use-page-title";
 import { issuesQueryOptions, updateIssue } from "#/lib/data/issue";
+import { projectQueryOptions } from "#/lib/data/project";
 import { projectMembersQueryOptions } from "#/lib/data/project-members";
 import { statesQueryOptions } from "#/lib/data/state";
 import { toastError } from "#/lib/errors";
@@ -58,6 +60,10 @@ function matchesFilters(issue: tables["issue"], filters: BoardFilters) {
 
 function RouteComponent() {
 	const { projectId, id: workspaceId } = Route.useParams();
+	const { data: project } = useSuspenseQuery(
+		projectQueryOptions({ projectId }),
+	);
+	usePageTitle(project.name);
 	const filters = Route.useSearch();
 	const navigate = Route.useNavigate();
 
