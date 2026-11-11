@@ -29,7 +29,7 @@ import {
 	findIssue,
 	updateIssue,
 } from "./routes/issue";
-import { findIssues, findMyIssues } from "./routes/issues";
+import { findIssues, findMyIssues, searchIssues } from "./routes/issues";
 import {
 	createProject,
 	deleteProject,
@@ -141,6 +141,7 @@ export const router = {
 	issues: {
 		find: findIssues,
 		findMine: findMyIssues,
+		search: searchIssues,
 	},
 	comments: {
 		find: findComments,
