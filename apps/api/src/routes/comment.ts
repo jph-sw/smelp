@@ -58,6 +58,7 @@ export const createComment = base
 			context.headers,
 			issue.projectId,
 			"space:read",
+			{ write: true },
 		);
 
 		const comment: tables["comment"] = {
@@ -105,6 +106,7 @@ export const updateComment = base
 			context.headers,
 			issue.projectId,
 			"space:read",
+			{ write: true },
 		);
 
 		// Only the author can reword a comment, admins included: it speaks for them.
@@ -153,6 +155,7 @@ export const deleteComment = base
 			context.headers,
 			issue.projectId,
 			"space:read",
+			{ write: true },
 		);
 
 		// Authors can remove their own comments; project admins can remove any.

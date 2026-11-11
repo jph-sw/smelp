@@ -26,7 +26,7 @@ export function AppSidebar({
 	projects,
 }: {
 	workspace: tables["workspace"];
-	projects: (tables["project"] & { isMember: boolean })[];
+	projects: (tables["project"] & { isMember: boolean; isArchived: boolean })[];
 }) {
 	const matchRoute = useMatchRoute();
 	const params = useParams({ strict: false });
@@ -34,10 +34,17 @@ export function AppSidebar({
 	// New work items go into the project on screen. Issue ids are "<projectId>-<n>".
 	const currentProjectId =
 		params.projectId ?? params.issueId?.replace(/-\d+$/, "");
-	const myProjects = projects.filter((project) => project.isMember);
-	const targetProject =
-		myProjects.find((project) => project.id === currentProjectId) ??
-		myProjects[0];
+	// Archived projects are read-only, so they leave the sidebar and can't take new work items.
+	const myProjects = projects.filter(
+		(project) => project.isMember && !project.isArchived,
+	);
+	const isOnArchivedProject = projects.some(
+		(project) => project.id === currentProjectId && project.isArchived,
+	);
+	const targetProject = isOnArchivedProject
+		? undefined
+		: (myProjects.find((project) => project.id === currentProjectId) ??
+			myProjects[0]);
 
 	return (
 		<Sidebar
@@ -52,6 +59,7 @@ export function AppSidebar({
 								<SidebarMenuButton
 									disabled={!targetProject}
 									onClick={() =>
+										targetProject &&
 										openCreateIssueDialog({
 											workspaceId: workspace.id,
 											projectId: targetProject.id,

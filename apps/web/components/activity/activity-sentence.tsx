@@ -136,6 +136,10 @@ export function ActivitySentence({
 			return <>edited a comment on {issue}</>;
 		case "project.created":
 			return <>created the project {project}</>;
+		case "project.archived":
+			return <>archived the project {project}</>;
+		case "project.unarchived":
+			return <>unarchived the project {project}</>;
 		case "project.updated": {
 			const changes = d.changes ?? [];
 			if (changes.length === 1 && changes[0] === "name") {

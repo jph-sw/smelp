@@ -12,6 +12,7 @@ import {
 } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
+import { ArchivedBanner } from "#/components/project/archived-banner";
 import {
 	AlertDialog,
 	AlertDialogCancel,
@@ -167,7 +168,7 @@ function RouteComponent() {
 	const queryClient = useQueryClient();
 	const statesOptions = statesQueryOptions({ projectId });
 	const { data: states } = useSuspenseQuery(statesOptions);
-	const { canManage } = useProjectAccess(projectId);
+	const { canManage, isArchived } = useProjectAccess(projectId);
 
 	const [newName, setNewName] = useState("");
 	const [newColor, setNewColor] = useState("#64748b");
@@ -194,6 +195,26 @@ function RouteComponent() {
 			<p className="text-sm text-muted-foreground">
 				Only project admins can change states.
 			</p>
+		);
+	}
+
+	if (isArchived) {
+		return (
+			<div className="flex flex-col gap-6">
+				<h1 className="text-lg font-medium">States</h1>
+				<ArchivedBanner />
+				<ul className="flex flex-col gap-2">
+					{states.map((state) => (
+						<li key={state.id} className="flex items-center gap-2 text-sm">
+							<span
+								className="size-3 shrink-0 rounded-full ring-1 ring-foreground/20"
+								style={{ backgroundColor: state.color }}
+							/>
+							{state.name}
+						</li>
+					))}
+				</ul>
+			</div>
 		);
 	}
 

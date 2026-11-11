@@ -37,5 +37,6 @@ export const findProjects = base
 			.map((project) => ({
 				...project,
 				isMember: Boolean(project.isMember),
+				isArchived: project.archivedAt !== null,
 			}));
 	});

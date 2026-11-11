@@ -48,6 +48,7 @@ export const findMyIssues = base
 				AND auth_space_member.userId = ${session.userId}
 			WHERE issue.workspaceId = ${input.workspaceId}
 				AND issue.assignee = ${session.userId}
+				AND project.archivedAt IS NULL
 				AND state."group" NOT IN ('completed', 'cancelled')
 			ORDER BY issue.updatedAt DESC
 		`) as (tables["issue"] & {

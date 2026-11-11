@@ -26,10 +26,29 @@ export async function requireInstanceAdmin(headers: Headers) {
 	return session;
 }
 
+// Permissions that only look at a project. Asking for any other permission means
+// the caller is about to change something, which an archived project refuses.
+const READ_PERMISSIONS: readonly Permission[] = ["space:read", "content:read"];
+
+export function requireNotArchived(project: tables["project"]) {
+	if (project.archivedAt !== null) {
+		throw new ORPCError("FORBIDDEN", { message: "This project is archived" });
+	}
+}
+
+type ProjectAccessOptions = {
+	/** Treat the call as a write even though `permission` is a read one
+	 *  (e.g. guests may comment, which only needs `space:read`). */
+	write?: boolean;
+	/** Let the call through on an archived project (archive, unarchive, delete). */
+	allowArchived?: boolean;
+};
+
 export async function requireProjectPermission(
 	headers: Headers,
 	projectId: string,
 	permission: Permission,
+	options: ProjectAccessOptions = {},
 ) {
 	const session = await requireSession(headers);
 
@@ -44,6 +63,9 @@ export async function requireProjectPermission(
 		permission,
 	);
 	if (!allowed) throw new ORPCError("FORBIDDEN");
+
+	const writes = options.write ?? !READ_PERMISSIONS.includes(permission);
+	if (writes && !options.allowArchived) requireNotArchived(project);
 
 	return { session, project };
 }

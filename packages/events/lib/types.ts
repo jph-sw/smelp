@@ -75,6 +75,14 @@ export type DomainEvent =
 				memberIds: string[];
 			}
 	  >
+	| Event<
+			"project.archived",
+			{ projectId: string; name: string; access: "public" | "private" }
+	  >
+	| Event<
+			"project.unarchived",
+			{ projectId: string; name: string; access: "public" | "private" }
+	  >
 	| Event<"project.member_added", MemberRef & { projectId: string }>
 	| Event<"project.member_removed", MemberRef & { projectId: string }>
 	| Event<

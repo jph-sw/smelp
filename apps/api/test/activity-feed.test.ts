@@ -401,6 +401,37 @@ describe("assigning while creating", () => {
 	});
 });
 
+describe("archiving", () => {
+	test("shows like other project changes, and a private one only to its members", async () => {
+		await owner.client.project.archive({ projectId: PUBLIC_PROJECT });
+		await owner.client.project.unarchive({ projectId: PUBLIC_PROJECT });
+		await owner.client.project.archive({ projectId: PRIVATE_PROJECT });
+		await owner.client.project.unarchive({ projectId: PRIVATE_PROJECT });
+		await settle();
+
+		const archiving = (events: Awaited<ReturnType<typeof feedTypes>>) =>
+			events
+				.filter(
+					(e) =>
+						e.type === "project.archived" || e.type === "project.unarchived",
+				)
+				.map((e) => `${e.type} ${e.project?.id}`)
+				// Both happen within a millisecond, so their order isn't fixed.
+				.sort();
+
+		expect(archiving(await feedTypes(member))).toEqual([
+			`project.archived ${PUBLIC_PROJECT}`,
+			`project.unarchived ${PUBLIC_PROJECT}`,
+		]);
+		expect(archiving(await feedTypes(privateMember))).toEqual([
+			`project.archived ${PRIVATE_PROJECT}`,
+			`project.archived ${PUBLIC_PROJECT}`,
+			`project.unarchived ${PRIVATE_PROJECT}`,
+			`project.unarchived ${PUBLIC_PROJECT}`,
+		]);
+	});
+});
+
 describe("comment edits", () => {
 	test("show on the feed, only to people who can see the work item", async () => {
 		const issue = await issueIn(PRIVATE_PROJECT, "Edited secret");

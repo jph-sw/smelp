@@ -6,6 +6,7 @@ import { eventBus, type ProjectChange } from "@smelp/events";
 import { SQL } from "bun";
 import * as v from "valibot";
 import {
+	requireNotArchived,
 	requireProjectPermission,
 	requireWorkspacePermission,
 } from "../lib/access";
@@ -64,6 +65,8 @@ export const createProject = base
 			createdBy: session.userId,
 			createdAt: now,
 			updatedAt: now,
+			archivedAt: null,
+			archivedBy: null,
 		};
 
 		const project_counter: tables["project_counter"] = {
@@ -306,6 +309,8 @@ export const joinProject = base
 			"content:write",
 		);
 
+		requireNotArchived(project);
+
 		if (project.access !== "public") {
 			throw new ORPCError("FORBIDDEN", {
 				message: "This project is private. Ask a member to invite you.",
@@ -335,3 +340,54 @@ export const joinProject = base
 
 		return member;
 	});
+
+// Archiving needs the same right as deleting: it takes the project out of
+// everyone's way, and only an admin can undo it.
+function setArchived(archived: boolean) {
+	return base
+		.input(v.object({ projectId: v.string() }))
+		.handler(async ({ input, context }) => {
+			const { session, project } = await requireProjectPermission(
+				context.headers,
+				input.projectId,
+				"space:delete",
+				{ allowArchived: true },
+			);
+
+			if ((project.archivedAt !== null) === archived) {
+				throw new ORPCError("CONFLICT", {
+					message: archived
+						? "This project is already archived"
+						: "This project is not archived",
+				});
+			}
+
+			const now = Date.now();
+			await sql`
+				UPDATE project SET
+					archivedAt = ${archived ? now : null},
+					archivedBy = ${archived ? session.userId : null},
+					updatedAt = ${now}
+				WHERE id = ${project.id}
+			`;
+
+			eventBus.emit({
+				type: archived ? "project.archived" : "project.unarchived",
+				workspaceId: project.workspaceId,
+				actorId: session.userId,
+				entityId: project.id,
+				payload: {
+					projectId: project.id,
+					name: project.name,
+					access: project.access,
+				},
+			});
+
+			return (
+				await sql`SELECT * FROM project WHERE id = ${project.id}`
+			)[0] as tables["project"];
+		});
+}
+
+export const archiveProject = setArchived(true);
+export const unarchiveProject = setArchived(false);

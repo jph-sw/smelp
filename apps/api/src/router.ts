@@ -37,10 +37,12 @@ import {
 } from "./routes/issue";
 import { findIssues, findMyIssues, searchIssues } from "./routes/issues";
 import {
+	archiveProject,
 	createProject,
 	deleteProject,
 	findProject,
 	joinProject,
+	unarchiveProject,
 	updateProject,
 } from "./routes/project";
 import {
@@ -131,6 +133,8 @@ export const router = {
 		delete: deleteProject,
 		join: joinProject,
 		update: updateProject,
+		archive: archiveProject,
+		unarchive: unarchiveProject,
 	},
 	projectMembers: {
 		find: findProjectMembers,

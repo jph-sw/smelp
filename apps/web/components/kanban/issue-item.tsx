@@ -8,13 +8,16 @@ export function IssueItem({
 	issue,
 	workspaceId,
 	assignee,
+	draggable = true,
 }: {
 	issue: tables["issue"];
 	workspaceId: string;
 	assignee?: ProjectMember;
+	draggable?: boolean;
 }) {
 	const { ref } = useDraggable({
 		id: issue.id,
+		disabled: !draggable,
 	});
 
 	return (

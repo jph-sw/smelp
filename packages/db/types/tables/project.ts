@@ -12,4 +12,7 @@ export type project = {
 	createdBy: string;
 	createdAt: number;
 	updatedAt: number;
+	/** Set while the project is archived (read-only); NULL otherwise. */
+	archivedAt: number | null;
+	archivedBy: string | null;
 };

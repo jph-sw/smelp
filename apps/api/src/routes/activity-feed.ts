@@ -127,6 +127,8 @@ function toFeedEvent(row: FeedRow, canSeeInviteEmails: boolean): FeedEvent {
 			break;
 		case "project.created":
 		case "project.deleted":
+		case "project.archived":
+		case "project.unarchived":
 		case "workspace.created":
 			details = { name: text("name") };
 			break;
@@ -337,7 +339,12 @@ export const findWorkspaceActivity = base
 					)
 					-- Everyone in the workspace sees public projects in the list.
 					OR (
-						ev.action IN ('project.created', 'project.updated')
+						ev.action IN (
+							'project.created',
+							'project.updated',
+							'project.archived',
+							'project.unarchived'
+						)
 						AND p.access = 'public'
 					)
 				))
