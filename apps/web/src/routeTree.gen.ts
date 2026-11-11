@@ -22,6 +22,7 @@ import { Route as CeoIndexRouteImport } from './routes/ceo/index'
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as ResetPasswordTokenRouteImport } from './routes/reset-password.$token'
 import { Route as workspaceIdIndexRouteImport } from './routes/(workspace)/$id/index'
+import { Route as workspaceIdActivityRouteImport } from './routes/(workspace)/$id/activity'
 import { Route as workspaceIdProjectsRouteRouteImport } from './routes/(workspace)/$id/projects/route'
 import { Route as workspaceIdBrowseIssueIdRouteImport } from './routes/(workspace)/$id/browse.$issueId'
 import { Route as workspaceIdProjectsIndexRouteImport } from './routes/(workspace)/$id/projects/index'
@@ -97,6 +98,11 @@ const ResetPasswordTokenRoute = ResetPasswordTokenRouteImport.update({
 const workspaceIdIndexRoute = workspaceIdIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => workspaceIdRouteRoute,
+} as any)
+const workspaceIdActivityRoute = workspaceIdActivityRouteImport.update({
+  id: '/activity',
+  path: '/activity',
   getParentRoute: () => workspaceIdRouteRoute,
 } as any)
 const workspaceIdProjectsRouteRoute =
@@ -179,6 +185,7 @@ export interface FileRoutesByFullPath {
   '/reset-password/$token': typeof ResetPasswordTokenRoute
   '/ceo/': typeof CeoIndexRoute
   '/$id/projects': typeof workspaceIdProjectsRouteRouteWithChildren
+  '/$id/activity': typeof workspaceIdActivityRoute
   '/$id/': typeof workspaceIdIndexRoute
   '/$id/settings/workspace': typeof workspaceIdSettingsWorkspaceRouteRouteWithChildren
   '/$id/browse/$issueId': typeof workspaceIdBrowseIssueIdRoute
@@ -201,6 +208,7 @@ export interface FileRoutesByTo {
   '/invite/$token': typeof InviteTokenRoute
   '/reset-password/$token': typeof ResetPasswordTokenRoute
   '/ceo': typeof CeoIndexRoute
+  '/$id/activity': typeof workspaceIdActivityRoute
   '/$id': typeof workspaceIdIndexRoute
   '/$id/browse/$issueId': typeof workspaceIdBrowseIssueIdRoute
   '/$id/projects': typeof workspaceIdProjectsIndexRoute
@@ -226,6 +234,7 @@ export interface FileRoutesById {
   '/reset-password/$token': typeof ResetPasswordTokenRoute
   '/ceo/': typeof CeoIndexRoute
   '/(workspace)/$id/projects': typeof workspaceIdProjectsRouteRouteWithChildren
+  '/(workspace)/$id/activity': typeof workspaceIdActivityRoute
   '/(workspace)/$id/': typeof workspaceIdIndexRoute
   '/(workspace)/$id/settings/workspace': typeof workspaceIdSettingsWorkspaceRouteRouteWithChildren
   '/(workspace)/$id/browse/$issueId': typeof workspaceIdBrowseIssueIdRoute
@@ -253,6 +262,7 @@ export interface FileRouteTypes {
     | '/reset-password/$token'
     | '/ceo/'
     | '/$id/projects'
+    | '/$id/activity'
     | '/$id/'
     | '/$id/settings/workspace'
     | '/$id/browse/$issueId'
@@ -275,6 +285,7 @@ export interface FileRouteTypes {
     | '/invite/$token'
     | '/reset-password/$token'
     | '/ceo'
+    | '/$id/activity'
     | '/$id'
     | '/$id/browse/$issueId'
     | '/$id/projects'
@@ -299,6 +310,7 @@ export interface FileRouteTypes {
     | '/reset-password/$token'
     | '/ceo/'
     | '/(workspace)/$id/projects'
+    | '/(workspace)/$id/activity'
     | '/(workspace)/$id/'
     | '/(workspace)/$id/settings/workspace'
     | '/(workspace)/$id/browse/$issueId'
@@ -415,6 +427,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/$id/'
       preLoaderRoute: typeof workspaceIdIndexRouteImport
+      parentRoute: typeof workspaceIdRouteRoute
+    }
+    '/(workspace)/$id/activity': {
+      id: '/(workspace)/$id/activity'
+      path: '/activity'
+      fullPath: '/$id/activity'
+      preLoaderRoute: typeof workspaceIdActivityRouteImport
       parentRoute: typeof workspaceIdRouteRoute
     }
     '/(workspace)/$id/projects': {
@@ -555,6 +574,7 @@ const workspaceIdSettingsProjectsProjectIdRouteRouteWithChildren =
 
 interface workspaceIdRouteRouteChildren {
   workspaceIdProjectsRouteRoute: typeof workspaceIdProjectsRouteRouteWithChildren
+  workspaceIdActivityRoute: typeof workspaceIdActivityRoute
   workspaceIdIndexRoute: typeof workspaceIdIndexRoute
   workspaceIdSettingsWorkspaceRouteRoute: typeof workspaceIdSettingsWorkspaceRouteRouteWithChildren
   workspaceIdBrowseIssueIdRoute: typeof workspaceIdBrowseIssueIdRoute
@@ -563,6 +583,7 @@ interface workspaceIdRouteRouteChildren {
 
 const workspaceIdRouteRouteChildren: workspaceIdRouteRouteChildren = {
   workspaceIdProjectsRouteRoute: workspaceIdProjectsRouteRouteWithChildren,
+  workspaceIdActivityRoute: workspaceIdActivityRoute,
   workspaceIdIndexRoute: workspaceIdIndexRoute,
   workspaceIdSettingsWorkspaceRouteRoute:
     workspaceIdSettingsWorkspaceRouteRouteWithChildren,

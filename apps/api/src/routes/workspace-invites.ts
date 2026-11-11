@@ -11,6 +11,7 @@ import {
 	isMailEnabled,
 	sendInviteEmail,
 } from "../lib/mail";
+import { displayNameOf } from "../lib/names";
 import { RateLimiter } from "../lib/rate-limit";
 import { createSecretToken, hashSecretToken } from "../lib/tokens";
 import { base } from "../orpc";
@@ -217,7 +218,11 @@ export const acceptInvite = base
 			workspaceId: workspace?.id ?? "",
 			actorId: session.userId,
 			entityId: member.id,
-			payload: { userId: session.userId, role: member.role },
+			payload: {
+				userId: session.userId,
+				userName: await displayNameOf(session.userId),
+				role: member.role,
+			},
 		});
 
 		return { workspaceId: workspace?.id ?? null };

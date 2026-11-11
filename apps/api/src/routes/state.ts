@@ -1,5 +1,6 @@
 import { ORPCError } from "@orpc/server";
 import { DB, type tables, Utils } from "@smelp/db";
+import { eventBus, type StateChange } from "@smelp/events";
 import * as v from "valibot";
 import { requireProjectPermission, requireSession } from "../lib/access";
 import { base } from "../orpc";
@@ -25,10 +26,25 @@ async function requireManageableState(headers: Headers, stateId: string) {
 		| undefined;
 	if (!state) throw new ORPCError("NOT_FOUND");
 
-	await requireProjectPermission(headers, state.projectId, "space:update");
+	const { session, project } = await requireProjectPermission(
+		headers,
+		state.projectId,
+		"space:update",
+	);
 
-	return state;
+	return { state, session, project };
 }
+
+// Who did it and where, shared by every state event.
+const eventBase = (
+	session: { userId: string },
+	project: tables["project"],
+	entityId: string,
+) => ({
+	workspaceId: project.workspaceId,
+	actorId: session.userId,
+	entityId,
+});
 
 export const createState = base
 	.input(
@@ -40,7 +56,7 @@ export const createState = base
 		}),
 	)
 	.handler(async ({ input, context }) => {
-		await requireProjectPermission(
+		const { session, project } = await requireProjectPermission(
 			context.headers,
 			input.projectId,
 			"space:update",
@@ -62,6 +78,17 @@ export const createState = base
 		};
 		await sql`INSERT INTO state ${sql(state)}`;
 
+		eventBus.emit({
+			...eventBase(session, project, state.id),
+			type: "state.created",
+			payload: {
+				projectId: project.id,
+				projectName: project.name,
+				name: state.name,
+				group: state.group,
+			},
+		});
+
 		return state;
 	});
 
@@ -77,22 +104,48 @@ export const updateState = base
 		}),
 	)
 	.handler(async ({ input, context }) => {
-		const state = await requireManageableState(context.headers, input.id);
-		const name = input.name ?? state.name;
+		const { state, session, project } = await requireManageableState(
+			context.headers,
+			input.id,
+		);
+		const next = {
+			name: input.name ?? state.name,
+			color: input.color ?? state.color,
+			group: input.group ?? state.group,
+		};
 
 		await sql.begin(async (tx) => {
 			await tx`
 				UPDATE state SET
-					name = ${name},
-					value = ${utils.toSlug(name)},
-					color = ${input.color ?? state.color},
-					"group" = ${input.group ?? state.group}
+					name = ${next.name},
+					value = ${utils.toSlug(next.name)},
+					color = ${next.color},
+					"group" = ${next.group}
 				WHERE id = ${state.id}
 			`;
 			if (input.isDefault) {
 				await tx`UPDATE state SET isDefault = CASE WHEN id = ${state.id} THEN 1 ELSE 0 END WHERE projectId = ${state.projectId}`;
 			}
 		});
+
+		const changes: StateChange[] = (["name", "color", "group"] as const).filter(
+			(key) => next[key] !== state[key],
+		);
+		if (input.isDefault && !state.isDefault) changes.push("isDefault");
+		if (changes.length > 0) {
+			eventBus.emit({
+				...eventBase(session, project, state.id),
+				type: "state.updated",
+				payload: {
+					projectId: project.id,
+					projectName: project.name,
+					name: next.name,
+					oldName: state.name,
+					group: next.group,
+					changes,
+				},
+			});
+		}
 
 		return (
 			await sql`SELECT * FROM state WHERE id = ${state.id}`
@@ -102,7 +155,10 @@ export const updateState = base
 export const deleteState = base
 	.input(v.object({ id: v.string(), moveToStateId: v.string() }))
 	.handler(async ({ input, context }) => {
-		const state = await requireManageableState(context.headers, input.id);
+		const { state, session, project } = await requireManageableState(
+			context.headers,
+			input.id,
+		);
 
 		if (state.isDefault) {
 			throw new ORPCError("BAD_REQUEST", {
@@ -111,8 +167,8 @@ export const deleteState = base
 		}
 
 		const target = (
-			await sql`SELECT id FROM state WHERE id = ${input.moveToStateId} AND projectId = ${state.projectId}`
-		)[0];
+			await sql`SELECT id, name FROM state WHERE id = ${input.moveToStateId} AND projectId = ${state.projectId}`
+		)[0] as Pick<tables["state"], "id" | "name"> | undefined;
 		if (!target || input.moveToStateId === state.id) {
 			throw new ORPCError("BAD_REQUEST", {
 				message: "Choose another state in this project for its work items",
@@ -124,20 +180,31 @@ export const deleteState = base
 			await tx`DELETE FROM state WHERE id = ${state.id}`;
 		});
 
+		eventBus.emit({
+			...eventBase(session, project, state.id),
+			type: "state.deleted",
+			payload: {
+				projectId: project.id,
+				projectName: project.name,
+				name: state.name,
+				movedToName: target.name,
+			},
+		});
+
 		return { id: state.id };
 	});
 
 export const reorderStates = base
 	.input(v.object({ projectId: v.string(), stateIds: v.array(v.string()) }))
 	.handler(async ({ input, context }) => {
-		await requireProjectPermission(
+		const { session, project } = await requireProjectPermission(
 			context.headers,
 			input.projectId,
 			"space:update",
 		);
 
 		const existing = (await sql`
-			SELECT id FROM state WHERE projectId = ${input.projectId}
+			SELECT id FROM state WHERE projectId = ${input.projectId} ORDER BY position
 		`) as { id: string }[];
 		const sameStates =
 			existing.length === input.stateIds.length &&
@@ -149,10 +216,20 @@ export const reorderStates = base
 			});
 		}
 
+		if (existing.every((state, i) => state.id === input.stateIds[i])) {
+			return { success: true };
+		}
+
 		await sql.begin(async (tx) => {
 			for (const [position, id] of input.stateIds.entries()) {
 				await tx`UPDATE state SET position = ${position} WHERE id = ${id}`;
 			}
+		});
+
+		eventBus.emit({
+			...eventBase(session, project, project.id),
+			type: "state.reordered",
+			payload: { projectId: project.id, projectName: project.name },
 		});
 
 		return { success: true };

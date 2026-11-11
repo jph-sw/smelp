@@ -4,6 +4,7 @@ import { eventBus } from "@smelp/events";
 import { SQL } from "bun";
 import * as v from "valibot";
 import { requireProjectPermission, requireSession } from "../lib/access";
+import { displayNameOf } from "../lib/names";
 import { base } from "../orpc";
 
 const sql = new DB().sqlite;
@@ -17,6 +18,13 @@ async function requireStateInProject(stateId: string, projectId: string) {
 			message: "This state doesn't belong to the project",
 		});
 	}
+}
+
+async function stateName(stateId: string) {
+	const state = (await sql`SELECT name FROM state WHERE id = ${stateId}`)[0] as
+		| Pick<tables["state"], "name">
+		| undefined;
+	return state?.name ?? null;
 }
 
 const Title = v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(120));
@@ -140,14 +148,18 @@ export const updateIssue = base
 			workspaceId: issue.workspaceId,
 			actorId: session.userId,
 		};
+		const ref = { projectId: issue.projectId, title: issue.title };
 		if (stateChanged) {
 			eventBus.emit({
 				...event,
 				type: "issue.status_changed",
 				payload: {
+					...ref,
 					field: "status",
 					oldValue: oldIssue.state,
 					newValue: issue.state,
+					oldName: await stateName(oldIssue.state),
+					newName: await stateName(issue.state),
 				},
 			});
 		}
@@ -156,6 +168,7 @@ export const updateIssue = base
 				...event,
 				type: "issue.updated",
 				payload: {
+					...ref,
 					field: "title",
 					oldValue: oldIssue.title,
 					newValue: issue.title,
@@ -167,7 +180,12 @@ export const updateIssue = base
 			eventBus.emit({
 				...event,
 				type: "issue.updated",
-				payload: { field: "description", oldValue: null, newValue: null },
+				payload: {
+					...ref,
+					field: "description",
+					oldValue: null,
+					newValue: null,
+				},
 			});
 		}
 		if (assigneeChanged) {
@@ -175,9 +193,12 @@ export const updateIssue = base
 				...event,
 				type: "issue.assigned",
 				payload: {
+					...ref,
 					field: "assignee",
 					oldValue: oldIssue.assignee,
 					newValue: issue.assignee,
+					oldName: await displayNameOf(oldIssue.assignee),
+					newName: await displayNameOf(issue.assignee),
 				},
 			});
 		}
