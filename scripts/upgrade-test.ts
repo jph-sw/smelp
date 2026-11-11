@@ -106,7 +106,10 @@ async function start(ref: string | undefined, label: string) {
 }
 
 let cookie = "";
-async function rpc<T = Record<string, string>>(procedure: string, json: unknown = {}) {
+async function rpc<T = Record<string, string>>(
+	procedure: string,
+	json: unknown = {},
+) {
 	const res = await fetch(`${base}/rpc/${procedure}`, {
 		method: "POST",
 		headers: { "content-type": "application/json", cookie },
@@ -119,7 +122,10 @@ async function rpc<T = Record<string, string>>(procedure: string, json: unknown 
 	const body = (await res.json().catch(() => null)) as { json: T } | null;
 	return { status: res.status, data: body?.json as T };
 }
-async function ok<T = Record<string, string>>(procedure: string, json: unknown = {}) {
+async function ok<T = Record<string, string>>(
+	procedure: string,
+	json: unknown = {},
+) {
 	const { status, data } = await rpc<T>(procedure, json);
 	if (status !== 200)
 		throw new Error(`${procedure} returned ${status}: ${JSON.stringify(data)}`);
@@ -206,6 +212,52 @@ try {
 	);
 	const version = await ok<{ version: string }>("instance/version");
 	console.log(`  · now running ${version.version}`);
+
+	// Features newer than the old version must work on its data too. A route the new
+	// version doesn't have answers 404, and its check is skipped.
+	const missing = (status: number) => status === 404;
+	const search = await rpc<{ id: string }[]>("issues/search", {
+		workspaceId: workspace.id,
+		query: "upgrade",
+	});
+	if (!missing(search.status)) {
+		check(
+			search.status === 200 && search.data.some((i) => i.id === issue.id),
+			"search finds the old work item",
+		);
+	}
+	const feed = await rpc<{ events: { type: string }[] }>(
+		"activity/findWorkspace",
+		{
+			workspaceId: workspace.id,
+		},
+	);
+	if (!missing(feed.status)) {
+		check(
+			feed.status === 200 &&
+				feed.data.events.some((e) => e.type === "issue.created"),
+			"the activity feed shows events from before the upgrade",
+		);
+	}
+	if (hasComments) {
+		const [old] = await ok<{ id: string }[]>("comments/find", {
+			issueId: issue.id,
+		});
+		const edit = await rpc("comments/update", {
+			commentId: old?.id,
+			body: "Edited after the upgrade",
+		});
+		if (!missing(edit.status))
+			check(edit.status === 200, "the old comment can be edited");
+	}
+	const archived = await rpc("project/archive", { projectId: "UPG" });
+	if (!missing(archived.status)) {
+		check(archived.status === 200, "the old project can be archived");
+		check(
+			(await rpc("project/unarchive", { projectId: "UPG" })).status === 200,
+			"and unarchived",
+		);
+	}
 	if (!useBun) {
 		const backup = await $`docker exec ${name} bun run --silent backup`.text();
 		check(backup.includes("Backup saved"), "backups still work");
