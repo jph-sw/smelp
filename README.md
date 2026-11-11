@@ -17,10 +17,10 @@ Not there yet: a list view, workspace-wide search, cycles, attachments, notifica
 
 ## Install
 
-You need Docker with Compose 2.24 or newer. There's no published image, so this builds from source. Use the newest version from [CHANGELOG.md](CHANGELOG.md) in place of `v0.1.0`.
+You need Docker with Compose 2.24 or newer. There's no published image, so this builds from source. Use the newest version from [CHANGELOG.md](CHANGELOG.md) in place of `v0.2.0`.
 
 ```sh
-git clone --branch v0.1.0 https://github.com/jph-sw/smelp.git
+git clone --branch v0.2.0 https://github.com/jph-sw/smelp.git
 cd smelp
 docker compose up -d --build
 ```
