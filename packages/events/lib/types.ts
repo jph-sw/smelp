@@ -50,6 +50,13 @@ export type DomainEvent =
 			payload: { issueId: string };
 	  }
 	| {
+			type: "comment.updated";
+			workspaceId: string;
+			actorId: string;
+			entityId: string;
+			payload: { issueId: string };
+	  }
+	| {
 			type: "auth.signin";
 			workspaceId: string;
 			actorId: string;
