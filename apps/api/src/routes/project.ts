@@ -2,7 +2,7 @@ import { ORPCError } from "@orpc/server";
 import { getCookie } from "@orpc/server/helpers";
 import { Auth } from "@smelp/auth";
 import { DB, type tables } from "@smelp/db";
-import { eventBus } from "@smelp/events";
+import { eventBus, type ProjectChange } from "@smelp/events";
 import { SQL } from "bun";
 import * as v from "valibot";
 import {
@@ -138,7 +138,7 @@ export const createProject = base
 			workspaceId: input.workspaceId,
 			entityId: project.id,
 			actorId: session.userId,
-			payload: { name: project.name },
+			payload: { projectId: project.id, name: project.name },
 		});
 
 		return project;
@@ -186,21 +186,46 @@ export const updateProject = base
 		}),
 	)
 	.handler(async ({ input, context }) => {
-		const { project } = await requireProjectPermission(
+		const { session, project } = await requireProjectPermission(
 			context.headers,
 			input.projectId,
 			"space:update",
 		);
 
+		const next = {
+			name: input.name ?? project.name,
+			description: input.description ?? project.description,
+			icon: input.icon ?? project.icon,
+			access: input.access ?? project.access,
+		};
+		const changes = (Object.keys(next) as ProjectChange[]).filter(
+			(key) => next[key] !== project[key],
+		);
+		if (changes.length === 0) return project;
+
 		await sql`
 			UPDATE project SET
-				name = ${input.name ?? project.name},
-				description = ${input.description ?? project.description},
-				icon = ${input.icon ?? project.icon},
-				access = ${input.access ?? project.access},
+				name = ${next.name},
+				description = ${next.description},
+				icon = ${next.icon},
+				access = ${next.access},
 				updatedAt = ${Date.now()}
 			WHERE id = ${project.id}
 		`;
+
+		eventBus.emit({
+			type: "project.updated",
+			workspaceId: project.workspaceId,
+			actorId: session.userId,
+			entityId: project.id,
+			payload: {
+				projectId: project.id,
+				name: next.name,
+				oldName: project.name,
+				access: next.access,
+				changes,
+			},
+		});
 
 		return (
 			await sql`SELECT * FROM project WHERE id = ${project.id}`
@@ -233,6 +258,10 @@ export const deleteProject = base
 			throw new ORPCError("FORBIDDEN");
 		}
 
+		const members = (await sql`
+			SELECT userId FROM auth_space_member WHERE spaceId = ${project.spaceId}
+		`) as Pick<tables["auth_space_member"], "userId">[];
+
 		// deleting the space cascades to project, issue, state, project_counter,
 		// auth_space_member, and auth_space_invite
 		await sql`DELETE FROM auth_space WHERE id = ${project.spaceId}`;
@@ -243,7 +272,10 @@ export const deleteProject = base
 			actorId: session.userId,
 			entityId: project.id,
 			payload: {
+				projectId: project.id,
 				name: project.name,
+				access: project.access,
+				memberIds: members.map((member) => member.userId),
 			},
 		});
 
