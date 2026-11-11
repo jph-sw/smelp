@@ -377,6 +377,53 @@ describe("private projects", () => {
 	});
 });
 
+describe("assigning while creating", () => {
+	test("shows who it was assigned to", async () => {
+		const states = await owner.client.states.find({
+			projectId: PUBLIC_PROJECT,
+		});
+		const issue = await owner.client.issue.create({
+			title: "Assigned at birth",
+			description: "",
+			state: states[0]?.id ?? "",
+			type: "task",
+			workspaceId: WORKSPACE,
+			projectId: PUBLIC_PROJECT,
+			assignee: member.id,
+		});
+		await settle();
+
+		const assigned = (await feedTypes(member)).find(
+			(event) =>
+				event.type === "issue.assigned" && event.issue?.id === issue.id,
+		);
+		expect(assigned?.details?.to).toBe(member.displayName);
+	});
+});
+
+describe("comment edits", () => {
+	test("show on the feed, only to people who can see the work item", async () => {
+		const issue = await issueIn(PRIVATE_PROJECT, "Edited secret");
+		const comment = await owner.client.comments.create({
+			issueId: issue.id,
+			body: "First",
+		});
+		await owner.client.comments.update({
+			commentId: comment.id,
+			body: "Second",
+		});
+		await settle();
+
+		const edits = (events: Awaited<ReturnType<typeof feedTypes>>) =>
+			events.filter((event) => event.type === "comment.updated");
+		const seen = edits(await feedTypes(privateMember));
+		expect(seen.some((event) => event.issue?.id === issue.id)).toBe(true);
+		expect(JSON.stringify(seen)).not.toContain("Second");
+		expect(edits(await feedTypes(member))).toEqual([]);
+		expect(edits(await feedTypes(guest))).toEqual([]);
+	});
+});
+
 describe("guests", () => {
 	test("see their projects but not member changes", async () => {
 		const extra = await createUser("Extra");

@@ -132,6 +132,8 @@ export function ActivitySentence({
 			);
 		case "comment.created":
 			return <>commented on {issue}</>;
+		case "comment.updated":
+			return <>edited a comment on {issue}</>;
 		case "project.created":
 			return <>created the project {project}</>;
 		case "project.updated": {

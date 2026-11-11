@@ -2,6 +2,10 @@
 
 Each release is a git tag. To upgrade, follow [Upgrade](README.md#upgrade) in the README.
 
+## Unreleased
+
+- **Comments:** authors can edit their own comments. Edited comments say so next to their time.
+
 ## 0.1.0 (2026-11-11)
 
 The first release: a small team can install smelp with Docker and track its work in it.

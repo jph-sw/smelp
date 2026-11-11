@@ -1,4 +1,4 @@
-import { Delete02Icon } from "@hugeicons/core-free-icons";
+import { Delete02Icon, PencilEdit01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { ProjectMember, tables } from "@smelp/db";
 import {
@@ -12,6 +12,7 @@ import {
 	createComment,
 	deleteComment,
 	issueActivityQueryOptions,
+	updateComment,
 } from "#/lib/data/issue";
 import { toastError } from "#/lib/errors";
 import { formatDate, formatRelativeTime, initials } from "#/lib/utils";
@@ -113,6 +114,128 @@ function DeleteCommentButton({
 	);
 }
 
+function CommentItem({
+	comment,
+	canEdit,
+	canDelete,
+	isRemoving,
+	onDelete,
+	onEdited,
+}: {
+	comment: tables["comment"] & {
+		authorName: string | null;
+		authorImage: string | null;
+	};
+	canEdit: boolean;
+	canDelete: boolean;
+	isRemoving: boolean;
+	onDelete: () => void;
+	onEdited: () => Promise<void>;
+}) {
+	const [editing, setEditing] = useState(false);
+	const [draft, setDraft] = useState(comment.body);
+
+	const { mutate: saveComment, isPending: isSaving } = useMutation({
+		mutationFn: updateComment,
+		onSuccess: async () => {
+			await onEdited();
+			setEditing(false);
+		},
+		onError: (e) => toastError(e),
+	});
+
+	const startEditing = () => {
+		setDraft(comment.body);
+		setEditing(true);
+	};
+	const cancel = () => setEditing(false);
+	const canSave =
+		!isSaving && draft.trim() !== "" && draft.trim() !== comment.body;
+	const save = () => {
+		if (canSave) saveComment({ commentId: comment.id, body: draft });
+	};
+
+	return (
+		<li className="flex gap-3 rounded-lg bg-secondary p-3">
+			<Avatar size="sm">
+				<AvatarImage src={comment.authorImage ?? undefined} alt="" />
+				<AvatarFallback>{initials(comment.authorName)}</AvatarFallback>
+			</Avatar>
+			<div className="min-w-0 flex-1">
+				<div className="flex items-baseline justify-between gap-3">
+					<span className="text-xs font-medium [overflow-wrap:anywhere]">
+						{comment.authorName ?? "Former member"}
+					</span>
+					<div className="flex items-center gap-1">
+						<Timestamp time={comment.createdAt} />
+						{comment.editedAt !== null && (
+							<span
+								className="shrink-0 text-xs text-muted-foreground"
+								title={`Edited ${formatDate(comment.editedAt)}`}
+							>
+								· edited
+							</span>
+						)}
+						{canEdit && !editing && (
+							<Button
+								variant="ghost"
+								size="icon-sm"
+								aria-label="Edit comment"
+								onClick={startEditing}
+							>
+								<HugeiconsIcon icon={PencilEdit01Icon} />
+							</Button>
+						)}
+						{canDelete && !editing && (
+							<DeleteCommentButton isPending={isRemoving} onDelete={onDelete} />
+						)}
+					</div>
+				</div>
+				{editing ? (
+					<form
+						className="mt-1 space-y-2"
+						onSubmit={(event) => {
+							event.preventDefault();
+							save();
+						}}
+					>
+						<Textarea
+							aria-label="Edit comment"
+							autoFocus
+							value={draft}
+							onChange={(event) => setDraft(event.target.value)}
+							onKeyDown={(event) => {
+								if (event.key === "Escape") {
+									event.preventDefault();
+									cancel();
+								} else if (
+									event.key === "Enter" &&
+									(event.metaKey || event.ctrlKey)
+								) {
+									event.preventDefault();
+									save();
+								}
+							}}
+						/>
+						<div className="flex gap-2">
+							<Button type="submit" size="sm" disabled={!canSave}>
+								Save
+							</Button>
+							<Button type="button" size="sm" variant="ghost" onClick={cancel}>
+								Cancel
+							</Button>
+						</div>
+					</form>
+				) : (
+					<p className="text-sm/relaxed whitespace-pre-wrap [overflow-wrap:anywhere]">
+						{comment.body}
+					</p>
+				)}
+			</div>
+		</li>
+	);
+}
+
 export function IssueActivity({
 	issueId,
 	userId,
@@ -180,34 +303,15 @@ export function IssueActivity({
 							<Timestamp time={entry.createdAt} />
 						</li>
 					) : (
-						<li
+						<CommentItem
 							key={entry.id}
-							className="flex gap-3 rounded-lg bg-secondary p-3"
-						>
-							<Avatar size="sm">
-								<AvatarImage src={entry.authorImage ?? undefined} alt="" />
-								<AvatarFallback>{initials(entry.authorName)}</AvatarFallback>
-							</Avatar>
-							<div className="min-w-0 flex-1">
-								<div className="flex items-baseline justify-between gap-3">
-									<span className="text-xs font-medium [overflow-wrap:anywhere]">
-										{entry.authorName ?? "Former member"}
-									</span>
-									<div className="flex items-center gap-1">
-										<Timestamp time={entry.createdAt} />
-										{(entry.authorId === userId || canManage) && (
-											<DeleteCommentButton
-												isPending={isRemoving}
-												onDelete={() => removeComment({ id: entry.id })}
-											/>
-										)}
-									</div>
-								</div>
-								<p className="text-sm/relaxed whitespace-pre-wrap [overflow-wrap:anywhere]">
-									{entry.body}
-								</p>
-							</div>
-						</li>
+							comment={entry}
+							canEdit={entry.authorId === userId}
+							canDelete={entry.authorId === userId || canManage}
+							isRemoving={isRemoving}
+							onDelete={() => removeComment({ id: entry.id })}
+							onEdited={refreshComments}
+						/>
 					),
 				)}
 			</ol>
