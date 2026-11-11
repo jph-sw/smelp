@@ -1,6 +1,7 @@
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import { currentUserQueryOptions } from "../auth";
 import { orpc } from "../orpc";
+import { projectQueryOptions } from "./project";
 
 export const projectMembersQueryOptions = ({
 	projectId,
@@ -54,13 +55,23 @@ export function useProjectAccess(projectId: string) {
 		projectMembersQueryOptions({ projectId }),
 	);
 
+	const { data: project } = useSuspenseQuery(
+		projectQueryOptions({ projectId }),
+	);
+
 	const role = members.find((member) => member.userId === user?.id)?.role;
 	const isInstanceAdmin = user?.role === "admin";
+	const isArchived = project.archivedAt !== null;
+	const canManage = isInstanceAdmin || role === "admin";
 
 	return {
 		user,
 		members,
-		canWrite: isInstanceAdmin || role === "member" || role === "admin",
-		canManage: isInstanceAdmin || role === "admin",
+		isArchived,
+		// An archived project is read-only for everyone, admins included.
+		canWrite:
+			!isArchived && (isInstanceAdmin || role === "member" || role === "admin"),
+		// Includes archive, unarchive and delete, which still work while archived.
+		canManage,
 	};
 }

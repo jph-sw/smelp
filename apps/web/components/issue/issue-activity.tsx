@@ -119,12 +119,15 @@ export function IssueActivity({
 	states,
 	members,
 	canManage,
+	readOnly = false,
 }: {
 	issueId: string;
 	userId: string | undefined;
 	states: tables["state"][];
 	members: ProjectMember[];
 	canManage: boolean;
+	/** Archived project: show the discussion, but no way to add to or remove from it. */
+	readOnly?: boolean;
 }) {
 	const queryClient = useQueryClient();
 	const commentsOptions = commentsQueryOptions({ issueId });
@@ -195,7 +198,7 @@ export function IssueActivity({
 									</span>
 									<div className="flex items-center gap-1">
 										<Timestamp time={entry.createdAt} />
-										{(entry.authorId === userId || canManage) && (
+										{!readOnly && (entry.authorId === userId || canManage) && (
 											<DeleteCommentButton
 												isPending={isRemoving}
 												onDelete={() => removeComment({ id: entry.id })}
@@ -211,29 +214,31 @@ export function IssueActivity({
 					),
 				)}
 			</ol>
-			<form
-				className="space-y-2"
-				onSubmit={(event) => {
-					event.preventDefault();
-					submit();
-				}}
-			>
-				<Textarea
-					aria-label="Add a comment"
-					placeholder="Add a comment"
-					value={draft}
-					onChange={(event) => setDraft(event.target.value)}
-					onKeyDown={(event) => {
-						if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
-							event.preventDefault();
-							submit();
-						}
+			{!readOnly && (
+				<form
+					className="space-y-2"
+					onSubmit={(event) => {
+						event.preventDefault();
+						submit();
 					}}
-				/>
-				<Button type="submit" disabled={!draft.trim() || isAdding}>
-					Comment
-				</Button>
-			</form>
+				>
+					<Textarea
+						aria-label="Add a comment"
+						placeholder="Add a comment"
+						value={draft}
+						onChange={(event) => setDraft(event.target.value)}
+						onKeyDown={(event) => {
+							if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+								event.preventDefault();
+								submit();
+							}
+						}}
+					/>
+					<Button type="submit" disabled={!draft.trim() || isAdding}>
+						Comment
+					</Button>
+				</form>
+			)}
 		</section>
 	);
 }

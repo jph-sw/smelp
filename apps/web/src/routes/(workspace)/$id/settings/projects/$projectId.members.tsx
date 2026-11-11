@@ -2,12 +2,14 @@ import type { ProjectMember } from "@smelp/db";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo } from "react";
+import { ArchivedBanner } from "#/components/project/archived-banner";
 import { AddMemberDialog } from "#/components/settings/members-project/add-member-dialog";
 import { createColumns } from "#/components/settings/members-project/columns";
 import { DataTable } from "#/components/settings/members-project/data-table";
 import { toast } from "#/components/ui/toast";
 import { usePageTitle } from "#/hooks/use-page-title";
 import { currentUserQueryOptions } from "#/lib/auth";
+import { projectQueryOptions } from "#/lib/data/project";
 import {
 	projectMembersQueryOptions,
 	removeProjectMember,
@@ -33,10 +35,16 @@ function RouteComponent() {
 		projectMembersQueryOptions({ projectId }),
 	);
 	const { data: currentUser } = useSuspenseQuery(currentUserQueryOptions);
+	const { data: project } = useSuspenseQuery(
+		projectQueryOptions({ projectId }),
+	);
+	const isArchived = project.archivedAt !== null;
 
 	const currentMember = members.find((m) => m.userId === currentUser?.id);
+	// Members of an archived project can't be added or removed until it is unarchived.
 	const canManageMembers =
-		currentUser?.role === "admin" || currentMember?.role === "admin";
+		!isArchived &&
+		(currentUser?.role === "admin" || currentMember?.role === "admin");
 
 	const handleRemove = async (member: ProjectMember) => {
 		try {
@@ -69,6 +77,7 @@ function RouteComponent() {
 				<h1 className="text-lg font-medium">Members</h1>
 				{canManageMembers && <AddMemberDialog projectId={projectId} />}
 			</div>
+			{isArchived && <ArchivedBanner className="mb-4" />}
 			<DataTable columns={columns} data={members} />
 		</div>
 	);

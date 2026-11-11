@@ -58,6 +58,7 @@ export const createComment = base
 			context.headers,
 			issue.projectId,
 			"space:read",
+			{ write: true },
 		);
 
 		const comment: tables["comment"] = {
@@ -95,6 +96,7 @@ export const deleteComment = base
 			context.headers,
 			issue.projectId,
 			"space:read",
+			{ write: true },
 		);
 
 		// Authors can remove their own comments; project admins can remove any.

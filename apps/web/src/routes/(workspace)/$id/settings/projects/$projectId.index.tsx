@@ -4,6 +4,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import * as v from "valibot";
 import { DynamicIcon } from "#/components/dynamic-icon";
+import { ArchivedBanner } from "#/components/project/archived-banner";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -28,8 +29,10 @@ import { toast } from "#/components/ui/toast";
 import { useAppForm } from "#/hooks/form";
 import { usePageTitle } from "#/hooks/use-page-title";
 import {
+	archiveProject,
 	deleteProject,
 	projectQueryOptions,
+	unarchiveProject,
 	updateProject,
 } from "#/lib/data/project";
 import { useProjectAccess } from "#/lib/data/project-members";
@@ -49,7 +52,13 @@ const ProjectDetailsSchema = v.object({
 	access: v.picklist(["public", "private"]),
 });
 
-function ProjectDetailsForm({ project }: { project: tables["project"] }) {
+function ProjectDetailsForm({
+	project,
+	disabled,
+}: {
+	project: tables["project"];
+	disabled: boolean;
+}) {
 	const queryClient = useQueryClient();
 	const [icon, setIcon] = useState(project.icon);
 
@@ -90,46 +99,49 @@ function ProjectDetailsForm({ project }: { project: tables["project"] }) {
 				form.handleSubmit();
 			}}
 		>
-			<FieldGroup>
-				<Popover>
-					<PopoverTrigger
-						aria-label="Choose project icon"
-						render={<Button className="size-12" variant="secondary" />}
-					>
-						<DynamicIcon className="size-8" name={icon} />
-					</PopoverTrigger>
-					<PopoverContent className="w-fit p-0">
-						<IconPicker
-							selectedIcon={icon}
-							setSelectedIcon={setIcon}
-							className="border-none bg-transparent"
-						/>
-					</PopoverContent>
-				</Popover>
-				<form.AppField
-					name="name"
-					children={(field) => <field.TextField label="Project name" />}
-				/>
-				<form.AppField
-					name="description"
-					children={(field) => <field.TextAreaField label="Description" />}
-				/>
-				<form.AppField
-					name="access"
-					children={(field) => (
-						<field.SelectField
-							label="Access"
-							items={[
-								{ value: "public", label: "Public" },
-								{ value: "private", label: "Private" },
-							]}
-						/>
-					)}
-				/>
-			</FieldGroup>
-			<form.AppForm>
-				<form.SubscribeButton label="Save changes" />
-			</form.AppForm>
+			{/* An archived project's settings are read-only; a fieldset disables every control in it. */}
+			<fieldset disabled={disabled} className="contents">
+				<FieldGroup>
+					<Popover>
+						<PopoverTrigger
+							aria-label="Choose project icon"
+							render={<Button className="size-12" variant="secondary" />}
+						>
+							<DynamicIcon className="size-8" name={icon} />
+						</PopoverTrigger>
+						<PopoverContent className="w-fit p-0">
+							<IconPicker
+								selectedIcon={icon}
+								setSelectedIcon={setIcon}
+								className="border-none bg-transparent"
+							/>
+						</PopoverContent>
+					</Popover>
+					<form.AppField
+						name="name"
+						children={(field) => <field.TextField label="Project name" />}
+					/>
+					<form.AppField
+						name="description"
+						children={(field) => <field.TextAreaField label="Description" />}
+					/>
+					<form.AppField
+						name="access"
+						children={(field) => (
+							<field.SelectField
+								label="Access"
+								items={[
+									{ value: "public", label: "Public" },
+									{ value: "private", label: "Private" },
+								]}
+							/>
+						)}
+					/>
+				</FieldGroup>
+				<form.AppForm>
+					<form.SubscribeButton label="Save changes" />
+				</form.AppForm>
+			</fieldset>
 		</form>
 	);
 }
@@ -150,6 +162,34 @@ function RouteComponent() {
 	const { canManage } = useProjectAccess(projectId);
 	const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 	const [isDeleting, setIsDeleting] = useState(false);
+	const [isArchiveOpen, setIsArchiveOpen] = useState(false);
+	const [isArchiving, setIsArchiving] = useState(false);
+	const isArchived = project.archivedAt !== null;
+
+	const handleArchive = async () => {
+		setIsArchiving(true);
+		try {
+			if (isArchived) {
+				await unarchiveProject({ projectId });
+			} else {
+				await archiveProject({ projectId });
+			}
+			await Promise.all([
+				queryClient.invalidateQueries({ queryKey: ["project", projectId] }),
+				queryClient.invalidateQueries({ queryKey: ["projects", workspaceId] }),
+				queryClient.invalidateQueries({ queryKey: ["my-issues"] }),
+			]);
+			toast.add({
+				type: "success",
+				description: isArchived ? "Project unarchived." : "Project archived.",
+			});
+		} catch (e) {
+			toastError(e);
+		} finally {
+			setIsArchiving(false);
+			setIsArchiveOpen(false);
+		}
+	};
 
 	const handleDelete = async () => {
 		setIsDeleting(true);
@@ -181,7 +221,58 @@ function RouteComponent() {
 
 	return (
 		<div className="space-y-12">
-			<ProjectDetailsForm key={project.id} project={project} />
+			{isArchived && <ArchivedBanner />}
+			<ProjectDetailsForm
+				key={project.id}
+				project={project}
+				disabled={isArchived}
+			/>
+			<Card>
+				<CardContent>
+					<div className="flex w-full flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+						<div>
+							<h3 className="text-sm font-semibold">
+								{isArchived ? "Unarchive this project" : "Archive this project"}
+							</h3>
+							<p className="text-card-foreground/70">
+								{isArchived
+									? "Make the project editable again and bring it back to the sidebar and the projects list."
+									: "Make the project read-only and hide it from the sidebar, the projects list and My work. Nothing is deleted, and you can unarchive it at any time."}
+							</p>
+						</div>
+						<div className="shrink-0">
+							<AlertDialog open={isArchiveOpen} onOpenChange={setIsArchiveOpen}>
+								<AlertDialogTrigger render={<Button variant={"outline"} />}>
+									{isArchived ? "Unarchive" : "Archive"}
+								</AlertDialogTrigger>
+								<AlertDialogContent>
+									<AlertDialogHeader>
+										<AlertDialogTitle>
+											{isArchived ? "Unarchive" : "Archive"} "{project.name}"?
+										</AlertDialogTitle>
+										<AlertDialogDescription>
+											{isArchived
+												? "Members will be able to create, edit and move work items again."
+												: "No one will be able to create, edit, move or comment on work items, or change the project's settings, until it is unarchived."}
+										</AlertDialogDescription>
+									</AlertDialogHeader>
+									<AlertDialogFooter>
+										<AlertDialogCancel disabled={isArchiving}>
+											Cancel
+										</AlertDialogCancel>
+										<AlertDialogAction
+											disabled={isArchiving}
+											onClick={handleArchive}
+										>
+											{isArchived ? "Unarchive project" : "Archive project"}
+										</AlertDialogAction>
+									</AlertDialogFooter>
+								</AlertDialogContent>
+							</AlertDialog>
+						</div>
+					</div>
+				</CardContent>
+			</Card>
 			<Card>
 				<CardContent>
 					<div className="flex w-full flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

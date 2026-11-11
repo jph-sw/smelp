@@ -24,7 +24,9 @@ function RouteComponent() {
 	const { data: myIssues } = useSuspenseQuery(
 		myIssuesQueryOptions({ workspaceId }),
 	);
-	const myProjects = projects.filter((project) => project.isMember);
+	const myProjects = projects.filter(
+		(project) => project.isMember && !project.isArchived,
+	);
 
 	return (
 		<div className="mx-auto w-full max-w-3xl space-y-6 p-4 sm:p-8">

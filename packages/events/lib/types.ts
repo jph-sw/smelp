@@ -92,6 +92,20 @@ export type DomainEvent =
 			payload: { name: string };
 	  }
 	| {
+			type: "project.archived";
+			workspaceId: string;
+			actorId: string;
+			entityId: string;
+			payload: { name: string };
+	  }
+	| {
+			type: "project.unarchived";
+			workspaceId: string;
+			actorId: string;
+			entityId: string;
+			payload: { name: string };
+	  }
+	| {
 			type: "workspace.member_invited";
 			workspaceId: string;
 			actorId: string;

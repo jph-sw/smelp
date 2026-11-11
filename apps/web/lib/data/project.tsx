@@ -36,3 +36,9 @@ export const updateProject = (input: {
 	icon?: string;
 	access?: "public" | "private";
 }) => orpc.project.update(input);
+
+export const archiveProject = ({ projectId }: { projectId: string }) =>
+	orpc.project.archive({ projectId });
+
+export const unarchiveProject = ({ projectId }: { projectId: string }) =>
+	orpc.project.unarchive({ projectId });

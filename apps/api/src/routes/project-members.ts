@@ -5,6 +5,7 @@ import { DB, type ProjectMember, type tables } from "@smelp/db";
 import { eventBus } from "@smelp/events";
 import { SQL } from "bun";
 import * as v from "valibot";
+import { requireProjectPermission } from "../lib/access";
 import { base } from "../orpc";
 
 const sql = new DB().sqlite;
@@ -110,28 +111,11 @@ export const addProjectMember = base
 		}),
 	)
 	.handler(async ({ input, context }) => {
-		const token = getCookie(context.headers, "auth_session");
-		if (!token) throw new ORPCError("UNAUTHORIZED");
-
-		const session = await auth.validateAuthSessionToken(token);
-		if (!session) throw new ORPCError("UNAUTHORIZED");
-
-		const project = (
-			await sql`SELECT * FROM project WHERE id = ${input.projectId}`
-		)[0] as tables["project"];
-
-		if (!project) {
-			throw new ORPCError("NOT_FOUND");
-		}
-
-		const allowed = await auth.userHasPermission(
-			session.userId,
-			project.spaceId,
+		const { session, project } = await requireProjectPermission(
+			context.headers,
+			input.projectId,
 			"members:invite",
 		);
-		if (!allowed) {
-			throw new ORPCError("FORBIDDEN");
-		}
 
 		const workspace = (
 			await sql`SELECT * FROM workspace WHERE id = ${project.workspaceId}`
@@ -188,28 +172,11 @@ export const removeProjectMember = base
 		}),
 	)
 	.handler(async ({ input, context }) => {
-		const token = getCookie(context.headers, "auth_session");
-		if (!token) throw new ORPCError("UNAUTHORIZED");
-
-		const session = await auth.validateAuthSessionToken(token);
-		if (!session) throw new ORPCError("UNAUTHORIZED");
-
-		const project = (
-			await sql`SELECT * FROM project WHERE id = ${input.projectId}`
-		)[0] as tables["project"];
-
-		if (!project) {
-			throw new ORPCError("NOT_FOUND");
-		}
-
-		const allowed = await auth.userHasPermission(
-			session.userId,
-			project.spaceId,
+		const { session, project } = await requireProjectPermission(
+			context.headers,
+			input.projectId,
 			"members:remove",
 		);
-		if (!allowed) {
-			throw new ORPCError("FORBIDDEN");
-		}
 
 		const member = (
 			await sql`

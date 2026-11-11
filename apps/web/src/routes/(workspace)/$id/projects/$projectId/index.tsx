@@ -13,6 +13,7 @@ import {
 } from "#/components/kanban/board-filters";
 import { IssueItem } from "#/components/kanban/issue-item";
 import { StateColumn } from "#/components/kanban/state-column";
+import { ArchivedBanner } from "#/components/project/archived-banner";
 import { ProjectHeader } from "#/components/project/project-header";
 import { usePageTitle } from "#/hooks/use-page-title";
 import { issuesQueryOptions, updateIssue } from "#/lib/data/issue";
@@ -73,6 +74,8 @@ function RouteComponent() {
 		projectMembersQueryOptions({ projectId }),
 	);
 
+	const isArchived = project.archivedAt !== null;
+
 	const queryClient = useQueryClient();
 	const issuesQueryKey = issuesQueryOptions({ projectId }).queryKey;
 
@@ -117,6 +120,7 @@ function RouteComponent() {
 	return (
 		<div className="flex h-full w-full min-h-0 flex-col overflow-hidden">
 			<ProjectHeader workspaceId={workspaceId} projectId={projectId} />
+			{isArchived && <ArchivedBanner className="mx-4 mt-3" />}
 			<BoardFilterBar
 				filters={filters}
 				onChange={(next) => navigate({ search: next, replace: true })}
@@ -130,7 +134,7 @@ function RouteComponent() {
 			)}
 			<DragDropProvider
 				onDragEnd={(event) => {
-					if (event.canceled) return;
+					if (event.canceled || isArchived) return;
 
 					const issueId = event.operation.source?.id;
 					const targetStateId = event.operation.target?.id;
@@ -157,6 +161,7 @@ function RouteComponent() {
 										issue={issue}
 										key={issue.id}
 										workspaceId={workspaceId}
+										draggable={!isArchived}
 										assignee={members.find(
 											(member) => member.userId === issue.assignee,
 										)}

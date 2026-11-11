@@ -9,6 +9,7 @@ import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
 import { IssueActivity } from "#/components/issue/issue-activity";
 import { IssueProperties } from "#/components/issue/issue-properties";
+import { ArchivedBanner } from "#/components/project/archived-banner";
 import { ProjectHeader } from "#/components/project/project-header";
 import {
 	Breadcrumb,
@@ -130,7 +131,7 @@ function RouteComponent() {
 	const { data: states } = useSuspenseQuery(
 		statesQueryOptions({ projectId: issue.projectId }),
 	);
-	const { user, members, canWrite, canManage } = useProjectAccess(
+	const { user, members, canWrite, canManage, isArchived } = useProjectAccess(
 		issue.projectId,
 	);
 
@@ -181,6 +182,7 @@ function RouteComponent() {
 					</BreadcrumbList>
 				</Breadcrumb>
 			</div>
+			{isArchived && <ArchivedBanner className="mx-4 mt-3 sm:mx-5" />}
 			<div className="flex min-h-0 flex-1 flex-col overflow-y-auto lg:flex-row lg:overflow-hidden">
 				<div className="min-w-0 flex-1 space-y-6 px-4 py-5 sm:px-9 lg:overflow-y-auto">
 					<div className="space-y-3">
@@ -240,6 +242,7 @@ function RouteComponent() {
 						states={states}
 						members={members}
 						canManage={canManage}
+						readOnly={isArchived}
 					/>
 				</div>
 				<aside className="hidden w-80 shrink-0 overflow-y-auto border-l lg:block xl:w-96">
