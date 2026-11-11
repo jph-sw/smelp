@@ -255,6 +255,19 @@ describe("issues.search access", () => {
 		await sql`DELETE FROM auth_space_member WHERE spaceId = ${SECRET} AND userId = ${instanceAdmin.id}`;
 	});
 
+	test("marks results from archived projects", async () => {
+		await sql`UPDATE project SET archivedAt = ${Date.now()} WHERE id = ${ALPHA}`;
+		try {
+			const results = await search(owner, "login");
+			const archived = results.find((r) => r.projectId === ALPHA);
+			const live = results.find((r) => r.projectId === BETA);
+			expect(archived?.projectArchived).toBe(true);
+			expect(live?.projectArchived).toBe(false);
+		} finally {
+			await sql`UPDATE project SET archivedAt = NULL WHERE id = ${ALPHA}`;
+		}
+	});
+
 	test("rejects users from another workspace", async () => {
 		await expectCode(search(outsider, "login"), "FORBIDDEN");
 		await expectCode(search(otherOwner, "login"), "FORBIDDEN");

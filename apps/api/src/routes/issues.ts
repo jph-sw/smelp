@@ -73,6 +73,8 @@ export type SearchResult = Pick<
 	stateGroup: string;
 	assigneeName: string | null;
 	assigneeImage: string | null;
+	// Archived projects stay searchable, marked so it's clear they're read-only.
+	projectArchived: boolean;
 };
 
 export const searchIssues = base
@@ -100,7 +102,7 @@ export const searchIssues = base
 			: 0;
 		const pattern = `%${escapeLike(query)}%`;
 
-		return (await sql`
+		const rows = (await sql`
 			SELECT
 				issue.id,
 				issue.title,
@@ -108,6 +110,7 @@ export const searchIssues = base
 				issue.assignee,
 				issue.updatedAt,
 				project.name AS projectName,
+				project.archivedAt IS NOT NULL AS projectArchived,
 				state.name AS stateName,
 				state.color AS stateColor,
 				state."group" AS stateGroup,
@@ -132,5 +135,14 @@ export const searchIssues = base
 				)
 			ORDER BY issue.updatedAt DESC
 			LIMIT ${SEARCH_LIMIT}
-		`) as SearchResult[];
+		`) as (Omit<SearchResult, "projectArchived"> & {
+			projectArchived: number;
+		})[];
+		// SQLite answers 0 or 1, which the page would print as text.
+		return rows.map(
+			(row): SearchResult => ({
+				...row,
+				projectArchived: row.projectArchived === 1,
+			}),
+		);
 	});
