@@ -76,7 +76,11 @@ export const createComment = base
 			entityId: comment.id,
 			workspaceId: issue.workspaceId,
 			actorId: session.userId,
-			payload: { issueId: issue.id },
+			payload: {
+				issueId: issue.id,
+				projectId: issue.projectId,
+				title: issue.title,
+			},
 		});
 
 		return comment;
@@ -126,7 +130,11 @@ export const updateComment = base
 			entityId: comment.id,
 			workspaceId: issue.workspaceId,
 			actorId: session.userId,
-			payload: { issueId: issue.id },
+			payload: {
+				issueId: issue.id,
+				projectId: issue.projectId,
+				title: issue.title,
+			},
 		});
 
 		return updated;

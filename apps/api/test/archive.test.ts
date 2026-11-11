@@ -307,16 +307,16 @@ describe("an archived project is read-only", () => {
 
 	test("an archived project can still be deleted", async () => {
 		await admin.client.project.create({
-			id: "GONE",
-			name: "Project GONE",
+			id: "ARCGN",
+			name: "Project ARCGN",
 			description: "",
 			access: "public",
 			icon: "AppWindowIcon",
 			workspaceId: WORKSPACE,
 		});
-		await admin.client.project.archive({ projectId: "GONE" });
-		await admin.client.project.delete({ projectId: "GONE" });
-		const rows = await sql`SELECT id FROM project WHERE id = 'GONE'`;
+		await admin.client.project.archive({ projectId: "ARCGN" });
+		await admin.client.project.delete({ projectId: "ARCGN" });
+		const rows = await sql`SELECT id FROM project WHERE id = 'ARCGN'`;
 		expect(rows).toHaveLength(0);
 	});
 });

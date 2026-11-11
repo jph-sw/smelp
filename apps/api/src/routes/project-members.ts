@@ -6,6 +6,7 @@ import { eventBus } from "@smelp/events";
 import { SQL } from "bun";
 import * as v from "valibot";
 import { requireProjectPermission } from "../lib/access";
+import { displayNameOf } from "../lib/names";
 import { base } from "../orpc";
 
 const sql = new DB().sqlite;
@@ -154,11 +155,16 @@ export const addProjectMember = base
 		}
 
 		eventBus.emit({
-			type: "workspace.member_joined",
+			type: "project.member_added",
 			workspaceId: project.workspaceId,
 			actorId: session.userId,
 			entityId: member.id,
-			payload: { userId: member.userId, role: member.role },
+			payload: {
+				projectId: project.id,
+				userId: member.userId,
+				userName: await displayNameOf(member.userId),
+				role: member.role,
+			},
 		});
 
 		return member;
@@ -205,11 +211,16 @@ export const removeProjectMember = base
 		});
 
 		eventBus.emit({
-			type: "workspace.member_removed",
+			type: "project.member_removed",
 			workspaceId: project.workspaceId,
 			actorId: session.userId,
 			entityId: member.id,
-			payload: { userId: member.userId, role: member.role },
+			payload: {
+				projectId: project.id,
+				userId: member.userId,
+				userName: await displayNameOf(member.userId),
+				role: member.role,
+			},
 		});
 
 		return { id: member.id };

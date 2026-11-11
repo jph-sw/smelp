@@ -6,6 +6,7 @@ import { eventBus } from "@smelp/events";
 import * as v from "valibot";
 import { requireWorkspacePermission } from "../lib/access";
 import { changeWorkspaceRole, removeFromWorkspace } from "../lib/membership";
+import { displayNameOf } from "../lib/names";
 import { base } from "../orpc";
 
 const sql = new DB().sqlite;
@@ -80,7 +81,11 @@ export const removeWorkspaceMember = base
 			workspaceId: workspace.id,
 			actorId: session.userId,
 			entityId: member.id,
-			payload: { userId: member.userId, role: member.role },
+			payload: {
+				userId: member.userId,
+				userName: await displayNameOf(member.userId),
+				role: member.role,
+			},
 		});
 
 		return { id: member.id };
@@ -111,6 +116,8 @@ export const updateWorkspaceMemberRole = base
 			actorId: session.userId,
 			entityId: member.id,
 			payload: {
+				userId: member.userId,
+				userName: await displayNameOf(member.userId),
 				field: "role",
 				oldValue: member.role,
 				newValue: input.role,
@@ -148,7 +155,11 @@ export const leaveWorkspace = base
 			workspaceId: workspace.id,
 			actorId: session.userId,
 			entityId: member.id,
-			payload: { userId: member.userId, role: member.role },
+			payload: {
+				userId: member.userId,
+				userName: await displayNameOf(member.userId),
+				role: member.role,
+			},
 		});
 
 		return { id: member.id };

@@ -3,6 +3,7 @@ import { RPCHandler } from "@orpc/server/fetch";
 import { CORSPlugin, ResponseHeadersPlugin } from "@orpc/server/plugins";
 import { logRequestError } from "./lib/request-errors";
 import { findIssueActivity } from "./routes/activity";
+import { findWorkspaceActivity } from "./routes/activity-feed";
 import { me } from "./routes/auth/me";
 import {
 	changePassword,
@@ -160,6 +161,7 @@ export const router = {
 	},
 	activity: {
 		findForIssue: findIssueActivity,
+		findWorkspace: findWorkspaceActivity,
 	},
 	states: {
 		find: findStates,
