@@ -92,9 +92,12 @@ export const searchIssues = base
 		const query = input.query.trim();
 		if (query.length < 2) return [];
 
-		// The same rule as reading a project's issues: a member of the project, in any
-		// role, or an instance admin. Being in the workspace alone isn't enough.
-		const seesEverything = (await auth.isInstanceAdmin(session.userId)) ? 1 : 0;
+		// Members of a project, in any role, find its issues. Being in the workspace alone
+		// isn't enough. Instance admins also find public projects' issues, but never a
+		// private project's unless they're in it: searching shouldn't reach past that.
+		const isInstanceAdmin = (await auth.isInstanceAdmin(session.userId))
+			? 1
+			: 0;
 		const pattern = `%${escapeLike(query)}%`;
 
 		return (await sql`
@@ -116,7 +119,7 @@ export const searchIssues = base
 			LEFT JOIN auth_user assignee ON assignee.id = issue.assignee
 			WHERE project.workspaceId = ${input.workspaceId}
 				AND (
-					${seesEverything} = 1
+					(${isInstanceAdmin} = 1 AND project.access = 'public')
 					OR EXISTS (
 						SELECT 1 FROM auth_space_member
 						WHERE auth_space_member.spaceId = project.spaceId
