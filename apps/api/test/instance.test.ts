@@ -95,7 +95,7 @@ describe("first run", () => {
 });
 
 describe("sign-up policy", () => {
-	test("only instance admins can change it or list users", async () => {
+	test("only instance admins can change it, list users or see the version", async () => {
 		const invite = await newInvite();
 		const user = await signUp("regular", invite.token);
 
@@ -110,6 +110,14 @@ describe("sign-up policy", () => {
 		);
 		await expectCode(clientFor().instance.users(), "UNAUTHORIZED");
 		expect(await roleOf(user.id)).toBe("user");
+
+		await expectCode(user.client.instance.version(), "FORBIDDEN");
+		await expectCode(clientFor().instance.version(), "UNAUTHORIZED");
+		const { version } = await admin.client.instance.version();
+		expect(version).toBe(
+			(await Bun.file("package.json").json()).version as string,
+		);
+		expect(version).toMatch(/^\d+\.\d+\.\d+$/);
 	});
 
 	test("an admin can open it, and later accounts aren't admins", async () => {

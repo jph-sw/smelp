@@ -9,6 +9,7 @@ import { avatarResponse } from "./lib/avatars";
 import { markServerRunning } from "./lib/backup";
 import { statusResponse } from "./lib/health";
 import { logMailStatus } from "./lib/mail";
+import { version } from "./lib/version";
 import { createWebAppHandler } from "./lib/web-app";
 import { handler } from "./router";
 
@@ -85,7 +86,7 @@ const server = Bun.serve({
 	},
 });
 
-utils.logger.info(`𖹭 Server running at ${server.url}`);
+utils.logger.info(`𖹭 smelp ${version} running at ${server.url}`);
 
 const clearRunningMarker = markServerRunning(databasePath());
 

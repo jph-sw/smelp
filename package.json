@@ -1,5 +1,6 @@
 {
 	"name": "smerp",
+	"version": "0.1.0",
 	"private": true,
 	"license": "AGPL-3.0-only",
 	"scripts": {
@@ -13,6 +14,7 @@
 		"admin:reset-link": "bun run apps/api/scripts/create-reset-link.ts",
 		"backup": "bun run apps/api/scripts/backup.ts",
 		"restore": "bun run apps/api/scripts/restore.ts",
+		"test:upgrade": "bun run scripts/upgrade-test.ts",
 		"test": "bun test",
 		"lint": "bunx --bun @biomejs/biome ci apps packages",
 		"typecheck": "bun run --cwd apps/api tsc --noEmit && bun run --cwd apps/web tsc --noEmit",

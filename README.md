@@ -2,7 +2,7 @@
 
 A self-hosted alternative to Jira for small teams. You run it yourself, and all your data stays in one SQLite database on your own server.
 
-smelp is early software, without tagged releases yet. Back up before upgrading.
+smelp is early software. Each release is a git tag, and [CHANGELOG.md](CHANGELOG.md) lists what changed. Back up before upgrading.
 
 ## What's in it
 
@@ -17,10 +17,10 @@ Not there yet: a list view, workspace-wide search, cycles, attachments, notifica
 
 ## Install
 
-You need Docker with Compose 2.24 or newer. There's no published image yet, so this builds from source.
+You need Docker with Compose 2.24 or newer. There's no published image, so this builds from source. Use the newest version from [CHANGELOG.md](CHANGELOG.md) in place of `v0.1.0`.
 
 ```sh
-git clone https://github.com/jph-sw/smelp.git
+git clone --branch v0.1.0 https://github.com/jph-sw/smelp.git
 cd smelp
 docker compose up -d --build
 ```
@@ -131,11 +131,14 @@ Your current database is set aside in `/data/backups`, not deleted. Restore refu
 
 ```sh
 docker compose exec smelp bun run backup
-git pull
+git fetch --tags
+git checkout v0.2.0
 docker compose up -d --build
 ```
 
-Database changes run automatically when smelp starts, and they can't be undone, so to go back you'd restore the backup you just took with the older version.
+Replace `v0.2.0` with the version you're upgrading to, and read its entry in [CHANGELOG.md](CHANGELOG.md) first. Each release is tested by upgrading a database from the release before it. You can skip versions.
+
+Database changes run automatically when smelp starts, and they can't be undone. To go back, check out the older version and restore the backup you just took. `/ceo` shows which version is running.
 
 ## Logs and health
 
@@ -181,6 +184,19 @@ Open <http://localhost:5173>. The API runs on port 3000 and keeps its data in `.
 | `bun run build:web && bun run start` | Runs the production build without Docker |
 
 Without Docker, `PORT`, `DATABASE_PATH` and `WEB_DIST` set the port, the database file and the built web app's location.
+
+### Releasing
+
+1. Set the new version in `package.json`, and move the changes under it in `CHANGELOG.md`, with the date.
+2. Run `bun run test:upgrade v0.1.0`, using the previous release's tag. It builds that version and this one in Docker, adds data to the old one, upgrades the same volume and checks nothing was lost. Add `--bun` to run them without Docker.
+3. Merge to `main`, then tag that commit and publish the release notes:
+
+```sh
+git tag -a v0.2.0 -m "smelp 0.2.0"
+git push origin v0.2.0
+awk '/^## 0.2.0/{found=1; next} /^## /{found=0} found' CHANGELOG.md > notes.md
+gh release create v0.2.0 --title "smelp 0.2.0" --notes-file notes.md
+```
 
 ## License
 
