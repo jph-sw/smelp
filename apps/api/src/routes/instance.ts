@@ -10,6 +10,7 @@ import {
 	sendPasswordResetEmail,
 } from "../lib/mail";
 import { createPasswordResetLink } from "../lib/password-reset";
+import { version } from "../lib/version";
 import { base } from "../orpc";
 
 const sql = new DB().sqlite;
@@ -21,6 +22,12 @@ export const findInstanceStatus = base.handler(async () => ({
 	emailEnabled: isMailEnabled(),
 	secureCookies: useSecureCookies(),
 }));
+
+// Admins only: a version number tells an attacker which known bugs to try.
+export const findInstanceVersion = base.handler(async ({ context }) => {
+	await requireInstanceAdmin(context.headers);
+	return { version };
+});
 
 export const updateInstance = base
 	.input(v.object({ signupOpen: v.boolean() }))

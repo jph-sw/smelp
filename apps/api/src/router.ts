@@ -19,6 +19,7 @@ import {
 	createPasswordReset,
 	findInstanceStatus,
 	findInstanceUsers,
+	findInstanceVersion,
 	sendTestEmail,
 	updateInstance,
 } from "./routes/instance";
@@ -76,6 +77,7 @@ export const router = {
 		status: findInstanceStatus,
 		update: updateInstance,
 		users: findInstanceUsers,
+		version: findInstanceVersion,
 		createPasswordReset,
 		sendTestEmail,
 	},

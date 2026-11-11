@@ -6,6 +6,12 @@ export const instanceStatusQueryOptions = queryOptions({
 	queryFn: () => orpc.instance.status(),
 });
 
+export const instanceVersionQueryOptions = queryOptions({
+	queryKey: ["instance-version"],
+	queryFn: () => orpc.instance.version(),
+	staleTime: Number.POSITIVE_INFINITY,
+});
+
 export const instanceUsersQueryOptions = queryOptions({
 	queryKey: ["instance-users"],
 	queryFn: () => orpc.instance.users(),

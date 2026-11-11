@@ -16,6 +16,7 @@ import {
 	createPasswordReset,
 	instanceStatusQueryOptions,
 	instanceUsersQueryOptions,
+	instanceVersionQueryOptions,
 	sendTestEmail,
 	updateInstance,
 } from "#/lib/data/instance";
@@ -28,6 +29,7 @@ export const Route = createFileRoute("/ceo/")({
 		Promise.all([
 			queryClient.ensureQueryData(instanceStatusQueryOptions),
 			queryClient.ensureQueryData(instanceUsersQueryOptions),
+			queryClient.ensureQueryData(instanceVersionQueryOptions),
 		]),
 });
 
@@ -41,6 +43,7 @@ function RouteComponent() {
 	} | null>(null);
 	const { data: status } = useSuspenseQuery(instanceStatusQueryOptions);
 	const { data: users } = useSuspenseQuery(instanceUsersQueryOptions);
+	const { data: instance } = useSuspenseQuery(instanceVersionQueryOptions);
 
 	const { mutate: update, isPending } = useMutation({
 		mutationFn: updateInstance,
@@ -80,7 +83,12 @@ function RouteComponent() {
 	return (
 		<div className="space-y-8">
 			<div className="flex items-baseline justify-between gap-4">
-				<h1 className="text-xl font-medium">Instance settings</h1>
+				<div>
+					<h1 className="text-xl font-medium">Instance settings</h1>
+					<p className="text-xs text-muted-foreground">
+						smelp {instance.version}
+					</p>
+				</div>
 				<Link to="/" className="underline underline-offset-3">
 					Back to smelp
 				</Link>
