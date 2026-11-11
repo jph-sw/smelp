@@ -123,7 +123,6 @@ export const createProject = base
 				await tx`INSERT INTO state ${tx(states)}`;
 			});
 		} catch (e) {
-			console.log(e);
 			if (e instanceof SQL.SQLiteError) {
 				if (e.code === "SQLITE_CONSTRAINT_PRIMARYKEY") {
 					throw new ORPCError("CONFLICT", {
