@@ -14,7 +14,12 @@ import { removeAvatar, setAvatar, updateProfile } from "./routes/auth/profile";
 import { signIn } from "./routes/auth/signin";
 import { signOut } from "./routes/auth/signout";
 import { signUp } from "./routes/auth/signup";
-import { createComment, deleteComment, findComments } from "./routes/comment";
+import {
+	createComment,
+	deleteComment,
+	findComments,
+	updateComment,
+} from "./routes/comment";
 import {
 	createPasswordReset,
 	findInstanceStatus,
@@ -29,7 +34,7 @@ import {
 	findIssue,
 	updateIssue,
 } from "./routes/issue";
-import { findIssues, findMyIssues } from "./routes/issues";
+import { findIssues, findMyIssues, searchIssues } from "./routes/issues";
 import {
 	archiveProject,
 	createProject,
@@ -145,10 +150,12 @@ export const router = {
 	issues: {
 		find: findIssues,
 		findMine: findMyIssues,
+		search: searchIssues,
 	},
 	comments: {
 		find: findComments,
 		create: createComment,
+		update: updateComment,
 		delete: deleteComment,
 	},
 	activity: {

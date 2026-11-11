@@ -196,6 +196,49 @@ describe("editing work items", () => {
 	});
 });
 
+describe("assigning on create", () => {
+	test("a project member can be assigned right away", async () => {
+		const created = await member.client.issue.create({
+			...newIssue("Assigned on create"),
+			assignee: guest.id,
+		});
+		expect(created.assignee).toBe(guest.id);
+
+		const issue = await member.client.issue.find({ issueId: created.id });
+		expect(issue.assignee).toBe(guest.id);
+	});
+
+	test("rejects unknown users and people outside the project", async () => {
+		for (const assignee of [crypto.randomUUID(), outsider.id, wsMember.id]) {
+			await expectCode(
+				member.client.issue.create({ ...newIssue(), assignee }),
+				"BAD_REQUEST",
+			);
+		}
+	});
+
+	test("without an assignee it stays unassigned", async () => {
+		const created = await member.client.issue.create(newIssue());
+		const issue = await member.client.issue.find({ issueId: created.id });
+		expect(issue.assignee).toBeNull();
+	});
+
+	test("the timeline shows the assignment", async () => {
+		const { id } = await member.client.issue.create({
+			...newIssue(),
+			assignee: member.id,
+		});
+		await Bun.sleep(30);
+
+		const activity = await member.client.activity.findForIssue({ issueId: id });
+		expect(activity.map((entry) => entry.action)).toEqual([
+			"created",
+			"assigned",
+		]);
+		expect(activity[1]).toMatchObject({ oldValue: null, newValue: member.id });
+	});
+});
+
 describe("comments", () => {
 	let issueId: string;
 
@@ -261,6 +304,107 @@ describe("comments", () => {
 
 		await member.client.comments.delete({ id: mine.id });
 		await admin.client.comments.delete({ id: another.id });
+	});
+
+	describe("editing", () => {
+		test("authors can edit their comments, which marks them edited", async () => {
+			const created = await guest.client.comments.create({
+				issueId,
+				body: "Frist",
+			});
+			expect(created.editedAt).toBeNull();
+
+			const before = Date.now();
+			const updated = await guest.client.comments.update({
+				commentId: created.id,
+				body: "  First  ",
+			});
+			expect(updated.body).toBe("First");
+			expect(updated.editedAt).toBeGreaterThanOrEqual(before);
+
+			const comments = await member.client.comments.find({ issueId });
+			expect(comments.find((c) => c.id === created.id)).toMatchObject({
+				body: "First",
+				editedAt: updated.editedAt,
+				createdAt: created.createdAt,
+				authorName: guest.displayName,
+			});
+		});
+
+		test("logs the edit without the comment's text", async () => {
+			const { id } = await member.client.comments.create({
+				issueId,
+				body: "Old words",
+			});
+			await member.client.comments.update({
+				commentId: id,
+				body: "Secret words",
+			});
+			await Bun.sleep(30);
+
+			const logs = (await sql`
+				SELECT action, actorId, metadata FROM activity_logs
+				WHERE entityType = 'comment' AND entityId = ${id}
+				ORDER BY createdAt ASC
+			`) as { action: string; actorId: string; metadata: string }[];
+			expect(logs.map((log) => log.action)).toEqual([
+				"commented",
+				"comment.updated",
+			]);
+			expect(logs[1]?.actorId).toBe(member.id);
+			expect(JSON.stringify(logs)).not.toContain("Secret words");
+		});
+
+		test("nobody else can edit, not even a project admin", async () => {
+			const { id } = await member.client.comments.create({
+				issueId,
+				body: "Mine",
+			});
+			for (const user of [guest, admin, outsider]) {
+				await expectCode(
+					user.client.comments.update({ commentId: id, body: "Theirs" }),
+					"FORBIDDEN",
+				);
+			}
+			const comments = await member.client.comments.find({ issueId });
+			expect(comments.find((c) => c.id === id)).toMatchObject({
+				body: "Mine",
+				editedAt: null,
+			});
+		});
+
+		test("signed-out people can't edit", async () => {
+			const { id } = await member.client.comments.create({
+				issueId,
+				body: "Mine",
+			});
+			const anonymous = createRouterClient(router, {
+				context: { headers: new Headers(), ip: "198.51.100.9" },
+			});
+			await expectCode(
+				anonymous.comments.update({ commentId: id, body: "Hacked" }),
+				"UNAUTHORIZED",
+			);
+		});
+
+		test("rejects empty and overlong bodies", async () => {
+			const { id } = await member.client.comments.create({
+				issueId,
+				body: "Mine",
+			});
+			for (const body of ["", "   ", "x".repeat(10_001)]) {
+				await expectCode(
+					member.client.comments.update({ commentId: id, body }),
+					"BAD_REQUEST",
+				);
+			}
+		});
+
+		test("editing a missing comment is not found", () =>
+			expectCode(
+				member.client.comments.update({ commentId: "nope", body: "Hi" }),
+				"NOT_FOUND",
+			));
 	});
 });
 

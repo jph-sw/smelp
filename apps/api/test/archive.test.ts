@@ -220,6 +220,11 @@ const writes: Record<string, () => Promise<unknown>> = {
 		await sql`INSERT INTO comment ${sql({ id, issueId, authorId: member.id, body: "Bye", createdAt: Date.now() })}`;
 		return member.client.comments.delete({ id });
 	},
+	"edit a comment": async () => {
+		const id = crypto.randomUUID();
+		await sql`INSERT INTO comment ${sql({ id, issueId, authorId: member.id, body: "Before", createdAt: Date.now() })}`;
+		return member.client.comments.update({ commentId: id, body: "After" });
+	},
 	"create a state": () =>
 		admin.client.state.create({
 			projectId: PROJECT,
