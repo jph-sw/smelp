@@ -137,6 +137,16 @@ docker compose up -d --build
 
 Database changes run automatically when smelp starts, and they can't be undone, so to go back you'd restore the backup you just took with the older version.
 
+## Logs and health
+
+If something goes wrong, the logs show what failed. Routine errors, like a wrong password or an expired session, aren't logged.
+
+```sh
+docker compose logs smelp
+```
+
+`/api/status` checks that the database can be read. It returns `200` when it can and `503` when it can't, and Docker uses it to mark the container unhealthy. Point an uptime monitor at it if you use one.
+
 ## If you're locked out
 
 An instance admin can create a password reset link for anyone at `/ceo`. If you're the only admin and you've lost your password:

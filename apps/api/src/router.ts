@@ -1,6 +1,7 @@
 import { onError } from "@orpc/server";
 import { RPCHandler } from "@orpc/server/fetch";
 import { CORSPlugin, ResponseHeadersPlugin } from "@orpc/server/plugins";
+import { logRequestError } from "./lib/request-errors";
 import { findIssueActivity } from "./routes/activity";
 import { me } from "./routes/auth/me";
 import {
@@ -176,8 +177,8 @@ export const handler = new RPCHandler(router, {
 		new ResponseHeadersPlugin(),
 	],
 	interceptors: [
-		onError((error) => {
-			console.error(error);
+		onError((error, { request }) => {
+			logRequestError(error, request.url);
 		}),
 	],
 });

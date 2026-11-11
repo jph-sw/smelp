@@ -40,7 +40,7 @@ export const findWorkspace = base
 				await sql`SELECT * FROM workspace WHERE id = ${input.workspaceId}`
 			)[0] as tables["workspace"];
 		} catch (e) {
-			console.log(e);
+			utils.logger.error(`Couldn't load workspace ${input.workspaceId}`, e);
 			throw new ORPCError("NOT_FOUND");
 		}
 

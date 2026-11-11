@@ -7,6 +7,7 @@ import { Migrator } from "@smelp/migrate";
 
 import { avatarResponse } from "./lib/avatars";
 import { markServerRunning } from "./lib/backup";
+import { statusResponse } from "./lib/health";
 import { logMailStatus } from "./lib/mail";
 import { createWebAppHandler } from "./lib/web-app";
 import { handler } from "./router";
@@ -70,10 +71,15 @@ if (!webApp && process.env.NODE_ENV === "production") {
 
 const server = Bun.serve({
 	fetch: webApp ?? (() => new Response("Not found", { status: 404 })),
+	// For failures outside the API's own handling, like avatars and static files.
+	error(error) {
+		utils.logger.error("Request failed", error);
+		return new Response("Something went wrong", { status: 500 });
+	},
 	routes: {
 		"/rpc": rpcRouteHandler,
 		"/rpc/*": rpcRouteHandler,
-		"/api/status": new Response("OK"),
+		"/api/status": () => statusResponse(),
 		"/api/avatars/:userId": (request) =>
 			avatarResponse(request.headers, request.params.userId),
 	},

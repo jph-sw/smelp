@@ -2,7 +2,7 @@
   this was inspired by https://raw.githubusercontent.com/lucia-auth/lucia
 */
 
-import { DB, type tables, Utils } from "@smelp/db";
+import { DB, type tables } from "@smelp/db";
 import { eventBus } from "@smelp/events";
 import type { SQL } from "bun";
 import {
@@ -18,11 +18,9 @@ const DUMMY_PASSWORD_HASH = Bun.password.hashSync(crypto.randomUUID(), {
 export class Auth {
 	authSessionExpiresInSeconds = 60 * 60 * 24 * 10; // 10 tage
 	private sql: SQL;
-	private utils;
 
 	constructor() {
 		this.sql = new DB().sqlite;
-		this.utils = new Utils();
 	}
 
 	async isInstanceAdmin(userId: string): Promise<boolean> {
@@ -73,29 +71,15 @@ export class Auth {
 		let user: tables["auth_user"] | null = null;
 		let account: tables["auth_account"] | null = null;
 
-		try {
-			const users = (await this
-				.sql`SELECT * FROM auth_user WHERE email = ${email}`) as tables["auth_user"][];
-			user = users[0] ?? null;
-		} catch (error) {
-			if (error instanceof Error) {
-				this.utils.logger.fatal(error);
-			}
-			throw error;
-		}
+		const users = (await this
+			.sql`SELECT * FROM auth_user WHERE email = ${email}`) as tables["auth_user"][];
+		user = users[0] ?? null;
 
 		if (user != null) {
-			try {
-				// for now only password is supported
-				const accounts = (await this
-					.sql`SELECT * FROM auth_account WHERE userId = ${user.id} AND providerId = 'password'`) as tables["auth_account"][];
-				account = accounts[0] ?? null;
-			} catch (error) {
-				if (error instanceof Error) {
-					this.utils.logger.fatal(error);
-				}
-				throw error;
-			}
+			// for now only password is supported
+			const accounts = (await this
+				.sql`SELECT * FROM auth_account WHERE userId = ${user.id} AND providerId = 'password'`) as tables["auth_account"][];
+			account = accounts[0] ?? null;
 		}
 
 		/* always run a verify, even when the user/account is unknown, so that
@@ -206,14 +190,7 @@ export class Auth {
 			createdAt: now,
 		};
 
-		try {
-			await this.sql`INSERT INTO auth_session ${this.sql(authSession)}`;
-		} catch (error) {
-			if (error instanceof Error) {
-				this.utils.logger.fatal(error);
-			}
-			throw error;
-		}
+		await this.sql`INSERT INTO auth_session ${this.sql(authSession)}`;
 
 		const authSessionAndAuthSessionToken: AuthSessionAndAuthSessionToken = {
 			authSession,
