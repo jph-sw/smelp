@@ -196,49 +196,6 @@ describe("editing work items", () => {
 	});
 });
 
-describe("assigning on create", () => {
-	test("a project member can be assigned right away", async () => {
-		const created = await member.client.issue.create({
-			...newIssue("Assigned on create"),
-			assignee: guest.id,
-		});
-		expect(created.assignee).toBe(guest.id);
-
-		const issue = await member.client.issue.find({ issueId: created.id });
-		expect(issue.assignee).toBe(guest.id);
-	});
-
-	test("rejects unknown users and people outside the project", async () => {
-		for (const assignee of [crypto.randomUUID(), outsider.id, wsMember.id]) {
-			await expectCode(
-				member.client.issue.create({ ...newIssue(), assignee }),
-				"BAD_REQUEST",
-			);
-		}
-	});
-
-	test("without an assignee it stays unassigned", async () => {
-		const created = await member.client.issue.create(newIssue());
-		const issue = await member.client.issue.find({ issueId: created.id });
-		expect(issue.assignee).toBeNull();
-	});
-
-	test("the timeline shows the assignment", async () => {
-		const { id } = await member.client.issue.create({
-			...newIssue(),
-			assignee: member.id,
-		});
-		await Bun.sleep(30);
-
-		const activity = await member.client.activity.findForIssue({ issueId: id });
-		expect(activity.map((entry) => entry.action)).toEqual([
-			"created",
-			"assigned",
-		]);
-		expect(activity[1]).toMatchObject({ oldValue: null, newValue: member.id });
-	});
-});
-
 describe("comments", () => {
 	let issueId: string;
 

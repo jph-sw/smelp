@@ -1,7 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as v from "valibot";
 import { useAppForm } from "#/hooks/form";
-import { projectMembersQueryOptions } from "#/lib/data/project-members";
 import { statesQueryOptions } from "#/lib/data/state";
 import { toastError } from "#/lib/errors";
 import { orpc } from "#/lib/orpc";
@@ -16,10 +15,7 @@ const CreateIssueSchema = v.object({
 		v.maxLength(120, "Use at most 120 characters."),
 	),
 	description: v.string(),
-	assignee: v.string(),
 });
-
-const UNASSIGNED = "unassigned";
 
 export function CreateIssueForm({
 	params,
@@ -31,9 +27,6 @@ export function CreateIssueForm({
 	const { data: states } = useQuery(
 		statesQueryOptions({ projectId: params.projectId }),
 	);
-	const { data: members } = useQuery(
-		projectMembersQueryOptions({ projectId: params.projectId }),
-	);
 	const defaultState = states?.find((state) => state.isDefault);
 	const queryClient = useQueryClient();
 
@@ -41,7 +34,6 @@ export function CreateIssueForm({
 		defaultValues: {
 			title: "",
 			description: "",
-			assignee: UNASSIGNED,
 		},
 		validators: {
 			onSubmit: CreateIssueSchema,
@@ -61,7 +53,6 @@ export function CreateIssueForm({
 					description: value.description,
 					state: defaultState.id,
 					type: "task",
-					assignee: value.assignee === UNASSIGNED ? undefined : value.assignee,
 					parentId: params.parentId,
 					workspaceId: params.workspaceId,
 					projectId: params.projectId,
@@ -73,7 +64,6 @@ export function CreateIssueForm({
 				queryClient.invalidateQueries({
 					queryKey: ["issues", params.projectId],
 				});
-				queryClient.invalidateQueries({ queryKey: ["my-issues"] });
 				onSuccess();
 			} catch (e) {
 				toastError(e);
@@ -96,21 +86,6 @@ export function CreateIssueForm({
 				<form.AppField
 					name="description"
 					children={(field) => <field.TextAreaField label="Description" />}
-				/>
-				<form.AppField
-					name="assignee"
-					children={(field) => (
-						<field.SelectField
-							label="Assignee"
-							items={[
-								{ label: "Unassigned", value: UNASSIGNED },
-								...(members ?? []).map((member) => ({
-									label: member.displayName,
-									value: member.userId,
-								})),
-							]}
-						/>
-					)}
 				/>
 			</FieldGroup>
 			<form.AppForm>

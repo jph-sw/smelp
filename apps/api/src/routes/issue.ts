@@ -280,20 +280,6 @@ export const createIssue = base
 			workspaceId: issue.workspaceId,
 			payload: { title: issue.title, projectId: issue.projectId },
 		});
-		// Logged like an update, so the timeline shows who it was assigned to.
-		if (issue.assignee) {
-			eventBus.emit({
-				type: "issue.assigned",
-				entityId: issue.id,
-				actorId: session.userId,
-				workspaceId: issue.workspaceId,
-				payload: {
-					field: "assignee",
-					oldValue: null,
-					newValue: issue.assignee,
-				},
-			});
-		}
 
 		return issue;
 	});
