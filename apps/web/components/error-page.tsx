@@ -1,10 +1,12 @@
 import { ORPCError } from "@orpc/client";
 import type { ErrorComponentProps } from "@tanstack/react-router";
 import { Button } from "#/components/ui/button";
+import { usePageTitle } from "#/hooks/use-page-title";
 
 export function ErrorPage({ error, reset }: ErrorComponentProps) {
 	const title =
 		error instanceof ORPCError ? orpcErrorTitle(error) : "Something went wrong";
+	usePageTitle(title);
 	const description =
 		error instanceof ORPCError
 			? orpcErrorDescription(error)

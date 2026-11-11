@@ -17,6 +17,7 @@ import {
 } from "#/components/ui/card";
 import { FieldGroup } from "#/components/ui/field";
 import { useAppForm } from "#/hooks/form";
+import { usePageTitle } from "#/hooks/use-page-title";
 import { instanceStatusQueryOptions } from "#/lib/data/instance";
 import { toastError } from "#/lib/errors";
 import { signUp, startSession } from "../../lib/auth";
@@ -64,6 +65,7 @@ export const Route = createFileRoute("/signup")({
 });
 
 function SignUp() {
+	usePageTitle("Sign up");
 	const { invite } = Route.useSearch();
 	const { data: status } = useSuspenseQuery(instanceStatusQueryOptions);
 

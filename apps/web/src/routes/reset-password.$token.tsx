@@ -11,6 +11,7 @@ import {
 import { FieldGroup } from "#/components/ui/field";
 import { toast } from "#/components/ui/toast";
 import { useAppForm } from "#/hooks/form";
+import { usePageTitle } from "#/hooks/use-page-title";
 import { endSession } from "#/lib/auth";
 import { NewPasswordSchema, PASSWORDS_DIFFER } from "#/lib/data/password";
 import { toastError } from "#/lib/errors";
@@ -39,6 +40,7 @@ export const Route = createFileRoute("/reset-password/$token")({
 });
 
 function RouteComponent() {
+	usePageTitle("Reset password");
 	const { token } = Route.useParams();
 	const navigate = useNavigate();
 	const queryClient = useQueryClient();

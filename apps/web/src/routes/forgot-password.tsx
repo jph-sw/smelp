@@ -11,6 +11,7 @@ import {
 } from "#/components/ui/card";
 import { FieldGroup } from "#/components/ui/field";
 import { useAppForm } from "#/hooks/form";
+import { usePageTitle } from "#/hooks/use-page-title";
 import { instanceStatusQueryOptions } from "#/lib/data/instance";
 import { toastError } from "#/lib/errors";
 import { orpc } from "#/lib/orpc";
@@ -31,6 +32,7 @@ export const Route = createFileRoute("/forgot-password")({
 });
 
 function RouteComponent() {
+	usePageTitle("Forgot password");
 	const { data: status } = useSuspenseQuery(instanceStatusQueryOptions);
 	const [sentTo, setSentTo] = useState<string | null>(null);
 

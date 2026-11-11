@@ -12,6 +12,7 @@ import {
 import { FieldGroup } from "#/components/ui/field";
 import { toast } from "#/components/ui/toast";
 import { useAppForm } from "#/hooks/form";
+import { usePageTitle } from "#/hooks/use-page-title";
 import { workspacesQueryOptions } from "#/lib/data/workspace";
 import { toastError } from "#/lib/errors";
 import { orpc } from "#/lib/orpc";
@@ -30,6 +31,7 @@ export const Route = createFileRoute("/(workspace)/create-workspace")({
 });
 
 function RouteComponent() {
+	usePageTitle("Create workspace");
 	const navigate = Route.useNavigate();
 	const queryClient = useQueryClient();
 	const { user } = Route.useRouteContext();

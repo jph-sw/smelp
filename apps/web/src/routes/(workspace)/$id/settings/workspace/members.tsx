@@ -29,6 +29,7 @@ import {
 } from "#/components/ui/select";
 import { toast } from "#/components/ui/toast";
 import { useAppForm } from "#/hooks/form";
+import { usePageTitle } from "#/hooks/use-page-title";
 import {
 	cancelInvite,
 	createInvite,
@@ -300,6 +301,7 @@ function ConfirmButton({
 }
 
 function RouteComponent() {
+	usePageTitle("Workspace members");
 	const { id: workspaceId } = Route.useParams();
 	const navigate = Route.useNavigate();
 	const queryClient = useQueryClient();

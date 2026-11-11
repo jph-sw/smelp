@@ -19,6 +19,7 @@ import {
 	BreadcrumbSeparator,
 } from "#/components/ui/breadcrumb";
 import { Textarea } from "#/components/ui/textarea";
+import { usePageTitle } from "#/hooks/use-page-title";
 import { currentUserQueryOptions } from "#/lib/auth";
 import {
 	commentsQueryOptions,
@@ -125,6 +126,7 @@ function RouteComponent() {
 	const queryClient = useQueryClient();
 
 	const { data: issue } = useSuspenseQuery(issueQueryOptions({ issueId }));
+	usePageTitle(issue.title);
 	const { data: states } = useSuspenseQuery(
 		statesQueryOptions({ projectId: issue.projectId }),
 	);

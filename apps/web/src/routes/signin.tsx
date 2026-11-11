@@ -16,6 +16,7 @@ import {
 } from "#/components/ui/card";
 import { FieldGroup } from "#/components/ui/field";
 import { useAppForm } from "#/hooks/form";
+import { usePageTitle } from "#/hooks/use-page-title";
 import { instanceStatusQueryOptions } from "#/lib/data/instance";
 import { toastError } from "#/lib/errors";
 import { signIn, startSession } from "../../lib/auth";
@@ -46,6 +47,7 @@ export const Route = createFileRoute("/signin")({
 });
 
 function SignIn() {
+	usePageTitle("Sign in");
 	const navigate = useNavigate();
 	const queryClient = useQueryClient();
 	const { invite } = Route.useSearch();
