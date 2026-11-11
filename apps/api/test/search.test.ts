@@ -237,14 +237,22 @@ describe("issues.search access", () => {
 		expect(await search(workspaceGuest, "login")).toEqual([]);
 	});
 
-	test("instance admins see every project in the workspace", async () => {
+	test("instance admins see public projects, but not private ones they aren't in", async () => {
 		expect(idsOf(await search(instanceAdmin, "login"))).toEqual(
 			[
 				keys["Fix the login button"],
 				keys["Login page copy"],
-				keys["Login secrets rotation"],
 			].sort() as string[],
 		);
+		expect(
+			await search(instanceAdmin, keys["Login secrets rotation"] as string),
+		).toEqual([]);
+
+		await addMember(SECRET, instanceAdmin.id, "member");
+		expect(idsOf(await search(instanceAdmin, "login"))).toContain(
+			keys["Login secrets rotation"] as string,
+		);
+		await sql`DELETE FROM auth_space_member WHERE spaceId = ${SECRET} AND userId = ${instanceAdmin.id}`;
 	});
 
 	test("rejects users from another workspace", async () => {
