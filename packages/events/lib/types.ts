@@ -48,6 +48,9 @@ export type DomainEvent =
 			}
 	  >
 	| Event<"issue.deleted", IssueRef>
+	| Event<"issue.link_added", IssueRef>
+	| Event<"issue.link_updated", IssueRef>
+	| Event<"issue.link_removed", IssueRef>
 	| Event<"comment.created", IssueRef & { issueId: string }>
 	| Event<"comment.updated", IssueRef & { issueId: string }>
 	| Event<"auth.signin", { sessionId: string; username: string }>

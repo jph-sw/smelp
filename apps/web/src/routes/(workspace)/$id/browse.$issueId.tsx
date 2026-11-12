@@ -8,6 +8,7 @@ import {
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
 import { IssueActivity } from "#/components/issue/issue-activity";
+import { IssueLinks } from "#/components/issue/issue-links";
 import { IssueProperties } from "#/components/issue/issue-properties";
 import { ArchivedBanner } from "#/components/project/archived-banner";
 import { ProjectHeader } from "#/components/project/project-header";
@@ -26,6 +27,7 @@ import {
 	commentsQueryOptions,
 	issueActivityQueryOptions,
 	issueQueryOptions,
+	linksQueryOptions,
 	updateIssue,
 } from "#/lib/data/issue";
 import {
@@ -44,6 +46,7 @@ export const Route = createFileRoute("/(workspace)/$id/browse/$issueId")({
 		const [issue] = await Promise.all([
 			queryClient.ensureQueryData(issueQueryOptions({ issueId })),
 			queryClient.ensureQueryData(commentsQueryOptions({ issueId })),
+			queryClient.ensureQueryData(linksQueryOptions({ issueId })),
 			queryClient.ensureQueryData(issueActivityQueryOptions({ issueId })),
 			queryClient.ensureQueryData(currentUserQueryOptions),
 		]);
@@ -236,6 +239,7 @@ function RouteComponent() {
 							onUpdate={update}
 						/>
 					</div>
+					<IssueLinks issueId={issue.id} canWrite={canWrite} />
 					<IssueActivity
 						issueId={issue.id}
 						userId={user?.id}

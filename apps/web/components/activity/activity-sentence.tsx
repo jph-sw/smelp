@@ -130,6 +130,12 @@ export function ActivitySentence({
 					{event.issue?.title && ` "${event.issue.title}"`}
 				</>
 			);
+		case "issue.link_added":
+			return <>added a link to {issue}</>;
+		case "issue.link_updated":
+			return <>edited a link on {issue}</>;
+		case "issue.link_removed":
+			return <>removed a link from {issue}</>;
 		case "comment.created":
 			return <>commented on {issue}</>;
 		case "comment.updated":

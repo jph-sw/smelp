@@ -61,6 +61,12 @@ function describeActivity(
 			return entry.field === "title"
 				? `renamed this to "${entry.newValue}"`
 				: "edited the description";
+		case "issue.link_added":
+			return "added a link";
+		case "issue.link_updated":
+			return "edited a link";
+		case "issue.link_removed":
+			return "removed a link";
 		default:
 			return "changed this work item";
 	}
