@@ -464,6 +464,12 @@ function RouteComponent() {
 									{ID_PROBLEMS[project.idProblem]}
 								</p>
 							)}
+							{project.alreadyImported && !edit.include && (
+								<p className="text-xs text-muted-foreground">
+									Already imported into this workspace, so it's left out. To
+									import it again, delete the imported project first.
+								</p>
+							)}
 							<p className="text-xs text-muted-foreground">
 								{project.workItems} work items ({project.subItems} sub-items),{" "}
 								{project.comments} comments, {project.relations} relations,{" "}
