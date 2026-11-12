@@ -2,6 +2,7 @@ import type { ProjectMember, tables } from "@smelp/db";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import { invalidateCycles } from "#/lib/data/cycle";
 import { deleteIssue } from "#/lib/data/issue";
 import { toastError } from "#/lib/errors";
 import { formatDate, formatRelativeTime } from "#/lib/utils";
@@ -28,6 +29,7 @@ import { toast } from "../ui/toast";
 
 const UNASSIGNED = "unassigned";
 const NO_PARENT = "none";
+const NO_CYCLE = "none";
 
 type IssueDetail = tables["issue"] & {
 	createdByName: string | null;
@@ -98,6 +100,7 @@ export function IssueProperties({
 	members,
 	canWrite,
 	parentOptions,
+	cycles,
 	onUpdate,
 }: {
 	issue: IssueDetail;
@@ -107,10 +110,13 @@ export function IssueProperties({
 	canWrite: boolean;
 	/** Work items this one may sit under: same project, never itself or its own sub-items. */
 	parentOptions: { id: string; title: string }[];
+	/** The project's cycles, for the Cycle selector. */
+	cycles: { id: string; name: string }[];
 	onUpdate: (changes: {
 		state?: string;
 		assignee?: string | null;
 		parentId?: string | null;
+		cycleId?: string | null;
 	}) => void;
 }) {
 	const navigate = useNavigate();
@@ -125,6 +131,7 @@ export function IssueProperties({
 					queryKey: ["issues", issue.projectId],
 				}),
 				queryClient.invalidateQueries({ queryKey: ["my-issues"] }),
+				invalidateCycles(queryClient, issue.projectId),
 			]);
 			toast.add({ type: "success", description: `Deleted ${issue.id}.` });
 			navigate({
@@ -163,6 +170,18 @@ export function IssueProperties({
 						label: member.displayName,
 						value: member.userId,
 					})),
+				]}
+			/>
+			<PropertySelect
+				label="Cycle"
+				value={issue.cycleId ?? NO_CYCLE}
+				disabled={!canWrite}
+				onChange={(cycleId) =>
+					onUpdate({ cycleId: cycleId === NO_CYCLE ? null : cycleId })
+				}
+				items={[
+					{ label: "No cycle", value: NO_CYCLE },
+					...cycles.map((cycle) => ({ label: cycle.name, value: cycle.id })),
 				]}
 			/>
 			<PropertySelect

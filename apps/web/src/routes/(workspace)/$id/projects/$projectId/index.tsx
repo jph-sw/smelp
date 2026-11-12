@@ -9,6 +9,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import {
 	BoardFilterBar,
 	type BoardFilters,
+	NO_CYCLE,
 	UNASSIGNED,
 } from "#/components/kanban/board-filters";
 import { IssueItem } from "#/components/kanban/issue-item";
@@ -17,6 +18,7 @@ import { ArchivedBanner } from "#/components/project/archived-banner";
 import { IssueList } from "#/components/project/issue-list";
 import { ProjectHeader } from "#/components/project/project-header";
 import { usePageTitle } from "#/hooks/use-page-title";
+import { cyclesQueryOptions, invalidateCycles } from "#/lib/data/cycle";
 import { issuesQueryOptions, updateIssue } from "#/lib/data/issue";
 import { projectQueryOptions } from "#/lib/data/project";
 import {
@@ -40,6 +42,7 @@ export const Route = createFileRoute("/(workspace)/$id/projects/$projectId/")({
 		q: asString(search.q),
 		assignee: asString(search.assignee),
 		state: asString(search.state),
+		cycle: asString(search.cycle),
 		view: search.view === "list" ? "list" : undefined,
 	}),
 	loader: async ({ context: { queryClient }, params: { projectId } }) => {
@@ -47,6 +50,7 @@ export const Route = createFileRoute("/(workspace)/$id/projects/$projectId/")({
 			queryClient.ensureQueryData(statesQueryOptions({ projectId })),
 			queryClient.ensureQueryData(issuesQueryOptions({ projectId })),
 			queryClient.ensureQueryData(projectMembersQueryOptions({ projectId })),
+			queryClient.ensureQueryData(cyclesQueryOptions({ projectId })),
 		]);
 	},
 });
@@ -62,6 +66,11 @@ function matchesFilters(issue: tables["issue"], filters: BoardFilters) {
 	if (filters.assignee === UNASSIGNED) {
 		if (issue.assignee) return false;
 	} else if (filters.assignee && issue.assignee !== filters.assignee) {
+		return false;
+	}
+	if (filters.cycle === NO_CYCLE) {
+		if (issue.cycleId) return false;
+	} else if (filters.cycle && issue.cycleId !== filters.cycle) {
 		return false;
 	}
 	return true;
@@ -81,6 +90,7 @@ function RouteComponent() {
 	const { data: members } = useSuspenseQuery(
 		projectMembersQueryOptions({ projectId }),
 	);
+	const { data: cycles } = useSuspenseQuery(cyclesQueryOptions({ projectId }));
 
 	const isArchived = project.archivedAt !== null;
 	// Guests can look but not move cards, and nobody moves them while archived.
@@ -108,6 +118,8 @@ function RouteComponent() {
 
 			return { previousIssues };
 		},
+		// A cycle's progress follows the state of its items.
+		onSettled: () => invalidateCycles(queryClient, projectId),
 		onError: (error, _variables, context) => {
 			toastError(error, "Couldn't move the work item. Please try again.");
 			if (context?.previousIssues) {
@@ -125,7 +137,9 @@ function RouteComponent() {
 	const shownCount = visibleIssues.filter((issue) =>
 		visibleStates.some((state) => state.id === issue.state),
 	).length;
-	const isFiltered = Boolean(filters.q || filters.assignee || filters.state);
+	const isFiltered = Boolean(
+		filters.q || filters.assignee || filters.state || filters.cycle,
+	);
 
 	return (
 		<div className="flex h-full w-full min-h-0 flex-col overflow-hidden">
@@ -142,6 +156,7 @@ function RouteComponent() {
 				}
 				members={members}
 				states={states}
+				cycles={cycles}
 			/>
 			{isFiltered && shownCount === 0 && (
 				<p className="px-4 pt-3 text-sm text-muted-foreground">

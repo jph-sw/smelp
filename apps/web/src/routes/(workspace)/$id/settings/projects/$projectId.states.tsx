@@ -33,6 +33,7 @@ import {
 	SelectValue,
 } from "#/components/ui/select";
 import { usePageTitle } from "#/hooks/use-page-title";
+import { invalidateCycles } from "#/lib/data/cycle";
 import {
 	projectMembersQueryOptions,
 	useProjectAccess,
@@ -178,6 +179,8 @@ function RouteComponent() {
 		Promise.all([
 			queryClient.invalidateQueries({ queryKey: statesOptions.queryKey }),
 			queryClient.invalidateQueries({ queryKey: ["issues", projectId] }),
+			// A state's group decides how its items count in a cycle's progress.
+			invalidateCycles(queryClient, projectId),
 		]);
 	const options = { onSettled: refresh, onError: (e: Error) => toastError(e) };
 
