@@ -95,11 +95,13 @@ export const findComments = base
 // them tidy and avoids having to validate arbitrary emoji sequences. They are light
 // participation, so like comments they are open to read-only guests, but not on an
 // archived project. They deliberately leave no activity-feed entry or event.
-export const toggleReaction = base
+export const setReaction = base
 	.input(
 		v.object({
 			commentId: v.string(),
 			emoji: v.picklist(DEFAULTS.REACTION_EMOJIS),
+			// The desired state, so repeated or concurrent calls end up the same.
+			reacted: v.boolean(),
 		}),
 	)
 	.handler(async ({ input, context }) => {
@@ -118,14 +120,15 @@ export const toggleReaction = base
 			{ write: true },
 		);
 
-		const removed = await sql`
-			DELETE FROM comment_reaction
-			WHERE commentId = ${comment.id}
-				AND userId = ${session.userId}
-				AND emoji = ${input.emoji}
-			RETURNING emoji
-		`;
-		if (removed.length > 0) return { reacted: false };
+		if (!input.reacted) {
+			await sql`
+				DELETE FROM comment_reaction
+				WHERE commentId = ${comment.id}
+					AND userId = ${session.userId}
+					AND emoji = ${input.emoji}
+			`;
+			return { reacted: false };
+		}
 
 		const reaction: tables["comment_reaction"] = {
 			commentId: comment.id,
@@ -133,7 +136,6 @@ export const toggleReaction = base
 			emoji: input.emoji,
 			createdAt: Date.now(),
 		};
-		// A concurrent duplicate toggle hits the primary key; treat it as already on.
 		await sql`INSERT OR IGNORE INTO comment_reaction ${sql(reaction)}`;
 		return { reacted: true };
 	});

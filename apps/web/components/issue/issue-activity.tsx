@@ -16,11 +16,11 @@ import {
 	createComment,
 	deleteComment,
 	issueActivityQueryOptions,
-	toggleReaction,
+	setReaction,
 	updateComment,
 } from "#/lib/data/issue";
 import { toastError } from "#/lib/errors";
-import { REACTION_EMOJIS } from "#/lib/reactions";
+import { REACTION_EMOJIS, type ReactionEmoji } from "#/lib/reactions";
 import { cn, formatDate, formatRelativeTime, initials } from "#/lib/utils";
 import {
 	AlertDialog,
@@ -135,7 +135,7 @@ function Reactions({
 }: {
 	reactions: CommentReaction[];
 	canReact: boolean;
-	onToggle: (emoji: string) => void;
+	onToggle: (emoji: ReactionEmoji, reacted: boolean) => void;
 }) {
 	const [pickerOpen, setPickerOpen] = useState(false);
 	if (reactions.length === 0 && !canReact) return null;
@@ -146,11 +146,17 @@ function Reactions({
 				<button
 					key={reaction.emoji}
 					type="button"
-					disabled={!canReact}
+					// aria-disabled rather than disabled, so the "who reacted" title still shows.
+					aria-disabled={!canReact}
 					aria-pressed={reaction.reacted}
 					aria-label={`${reaction.emoji} ${reaction.count}: ${reaction.users.join(", ")}`}
 					title={reaction.users.join(", ")}
-					onClick={() => onToggle(reaction.emoji)}
+					onClick={
+						canReact
+							? () =>
+									onToggle(reaction.emoji as ReactionEmoji, !reaction.reacted)
+							: undefined
+					}
 					className={cn(
 						"flex h-6 items-center gap-1 rounded-full border px-2 text-xs",
 						reaction.reacted
@@ -180,7 +186,8 @@ function Reactions({
 								className="cursor-pointer rounded-md p-1 text-base hover:bg-secondary"
 								onClick={() => {
 									setPickerOpen(false);
-									onToggle(emoji);
+									const existing = reactions.find((r) => r.emoji === emoji);
+									onToggle(emoji, !existing?.reacted);
 								}}
 							>
 								{emoji}
@@ -211,7 +218,7 @@ function CommentItem({
 	canEdit: boolean;
 	canDelete: boolean;
 	canReact: boolean;
-	onToggleReaction: (emoji: string) => void;
+	onToggleReaction: (emoji: ReactionEmoji, reacted: boolean) => void;
 	isRemoving: boolean;
 	onDelete: () => void;
 	onEdited: () => Promise<void>;
@@ -369,10 +376,52 @@ export function IssueActivity({
 		onError: (e) => toastError(e),
 	});
 
+	const myName =
+		members.find((member) => member.userId === userId)?.displayName ?? "You";
+
+	type CachedComments = typeof comments;
 	const { mutate: react } = useMutation({
-		mutationFn: toggleReaction,
-		onSuccess: refreshComments,
-		onError: (e) => toastError(e),
+		mutationFn: setReaction,
+		onMutate: async ({ commentId, emoji, reacted }) => {
+			await queryClient.cancelQueries({ queryKey: commentsOptions.queryKey });
+			const previous = queryClient.getQueryData<CachedComments>(
+				commentsOptions.queryKey,
+			);
+			queryClient.setQueryData<CachedComments>(
+				commentsOptions.queryKey,
+				(current) =>
+					current?.map((comment) => {
+						if (comment.id !== commentId) return comment;
+						const others = comment.reactions.filter(
+							(reaction) => reaction.emoji !== emoji,
+						);
+						const own = comment.reactions.find(
+							(reaction) => reaction.emoji === emoji,
+						) ?? { emoji, count: 0, reacted: false, users: [] };
+						if (own.reacted === reacted) return comment;
+						const users = reacted
+							? [...own.users, myName]
+							: own.users.filter((name) => name !== myName);
+						const updated = { emoji, count: users.length, reacted, users };
+						// Keep the pill where it was; a new one goes last.
+						const reactions = comment.reactions.some((r) => r.emoji === emoji)
+							? comment.reactions.map((r) => (r.emoji === emoji ? updated : r))
+							: [...others, updated];
+						return {
+							...comment,
+							reactions: reactions.filter((reaction) => reaction.count > 0),
+						};
+					}),
+			);
+			return { previous };
+		},
+		onError: (e, _vars, context) => {
+			if (context?.previous) {
+				queryClient.setQueryData(commentsOptions.queryKey, context.previous);
+			}
+			toastError(e);
+		},
+		onSettled: refreshComments,
 	});
 
 	const submit = () => {
@@ -409,8 +458,8 @@ export function IssueActivity({
 							canEdit={!readOnly && entry.authorId === userId}
 							canDelete={!readOnly && (entry.authorId === userId || canManage)}
 							canReact={!readOnly}
-							onToggleReaction={(emoji) =>
-								react({ commentId: entry.id, emoji })
+							onToggleReaction={(emoji, reacted) =>
+								react({ commentId: entry.id, emoji, reacted })
 							}
 							isRemoving={isRemoving}
 							onDelete={() => removeComment({ id: entry.id })}

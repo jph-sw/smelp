@@ -64,8 +64,17 @@ async function reactionsOn(id: string, as: User = member) {
 	return first(comments.filter((comment) => comment.id === id)).reactions;
 }
 
-const toggle = (user: User, emoji: string, id: string = commentId) =>
-	user.client.comments.toggleReaction({ commentId: id, emoji: emoji as "👍" });
+const set = (
+	user: User,
+	emoji: string,
+	reacted: boolean,
+	id: string = commentId,
+) =>
+	user.client.comments.setReaction({
+		commentId: id,
+		emoji: emoji as "👍",
+		reacted,
+	});
 
 beforeAll(async () => {
 	admin = await createUser("admin");
@@ -104,20 +113,31 @@ beforeAll(async () => {
 });
 
 describe("reactions", () => {
-	test("toggling adds then removes a reaction", async () => {
-		expect(await toggle(member, "👍")).toEqual({ reacted: true });
+	test("setting adds then removes a reaction", async () => {
+		expect(await set(member, "👍", true)).toEqual({ reacted: true });
 		expect(await reactionsOn(commentId)).toEqual([
 			{ emoji: "👍", count: 1, reacted: true, users: [member.name] },
 		]);
 
-		expect(await toggle(member, "👍")).toEqual({ reacted: false });
+		expect(await set(member, "👍", false)).toEqual({ reacted: false });
+		expect(await reactionsOn(commentId)).toEqual([]);
+	});
+
+	test("setting the same state twice is a no-op", async () => {
+		await set(member, "👍", true);
+		await set(member, "👍", true);
+		expect(await reactionsOn(commentId)).toEqual([
+			{ emoji: "👍", count: 1, reacted: true, users: [member.name] },
+		]);
+		await set(member, "👍", false);
+		await set(member, "👍", false);
 		expect(await reactionsOn(commentId)).toEqual([]);
 	});
 
 	test("counts per emoji, who reacted, and highlighting is per viewer", async () => {
-		await toggle(member, "🎉");
-		await toggle(other, "🎉");
-		await toggle(other, "👀");
+		await set(member, "🎉", true);
+		await set(other, "🎉", true);
+		await set(other, "👀", true);
 
 		expect(await reactionsOn(commentId, member)).toEqual([
 			{
@@ -142,20 +162,20 @@ describe("reactions", () => {
 	});
 
 	test("only the fixed set of emoji is accepted", async () => {
-		for (const emoji of ["🦄", "", "thumbsup", "👍👍"]) {
-			await expect(toggle(member, emoji)).rejects.toBeDefined();
+		for (const emoji of ["🦄", "", "thumbsup", "👍👍", "\u2764"]) {
+			await expect(set(member, emoji, true)).rejects.toBeDefined();
 		}
 	});
 
 	test("guests may react like they may comment; outsiders may not", async () => {
-		expect(await toggle(guest, "😄")).toEqual({ reacted: true });
-		await expect(toggle(outsider, "😄")).rejects.toMatchObject({
+		expect(await set(guest, "😄", true)).toEqual({ reacted: true });
+		await expect(set(outsider, "😄", true)).rejects.toMatchObject({
 			code: "FORBIDDEN",
 		});
 	});
 
 	test("unknown comments are not found", async () => {
-		await expect(toggle(member, "👍", "nope")).rejects.toMatchObject({
+		await expect(set(member, "👍", true, "nope")).rejects.toMatchObject({
 			code: "NOT_FOUND",
 		});
 	});
@@ -163,18 +183,17 @@ describe("reactions", () => {
 	test("reacting leaves no activity-feed entry", async () => {
 		const count = async () =>
 			first(
-				(await sql`
-					SELECT COUNT(*) AS n FROM activity_logs WHERE entityId = ${commentId}
-				`) as { n: number }[],
+				(await sql`SELECT COUNT(*) AS n FROM activity_logs`) as { n: number }[],
 			).n;
 		const before = await count();
-		await toggle(other, "😕");
+		await set(other, "😕", true);
+		await set(other, "😕", false);
 		expect(await count()).toBe(before);
 	});
 
 	test("archived projects refuse reactions, but still show them", async () => {
 		await admin.client.project.archive({ projectId: PROJECT });
-		await expect(toggle(member, "👍")).rejects.toMatchObject({
+		await expect(set(member, "👍", true)).rejects.toMatchObject({
 			code: "FORBIDDEN",
 			message: "This project is archived",
 		});

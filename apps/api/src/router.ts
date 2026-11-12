@@ -19,7 +19,7 @@ import {
 	createComment,
 	deleteComment,
 	findComments,
-	toggleReaction,
+	setReaction,
 	updateComment,
 } from "./routes/comment";
 import {
@@ -159,7 +159,7 @@ export const router = {
 		create: createComment,
 		update: updateComment,
 		delete: deleteComment,
-		toggleReaction,
+		setReaction,
 	},
 	activity: {
 		findForIssue: findIssueActivity,
