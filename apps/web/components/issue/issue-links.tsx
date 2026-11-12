@@ -178,7 +178,7 @@ export function IssueLinks({
 	return (
 		<section className="space-y-2" aria-label="Links">
 			<div className="flex items-center justify-between">
-				<h2 className="text-sm font-medium">Links</h2>
+				<h2 className="text-lg font-semibold">Links</h2>
 				{canWrite && form === null && (
 					<Button
 						variant="ghost"

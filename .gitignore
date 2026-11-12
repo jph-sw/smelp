@@ -4,6 +4,7 @@ node_modules
 *.sqlite
 *.sqlite.*
 backups
+/attachments
 
 # output
 out

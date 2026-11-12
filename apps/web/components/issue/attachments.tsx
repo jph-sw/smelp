@@ -20,6 +20,16 @@ import {
 	uploadAttachment,
 } from "#/lib/data/issue";
 import { toastError } from "#/lib/errors";
+import {
+	AlertDialog,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+	AlertDialogTrigger,
+} from "../ui/alert-dialog";
 import { Button } from "../ui/button";
 import { toast } from "../ui/toast";
 
@@ -109,6 +119,48 @@ function AttachButton({
 	);
 }
 
+// The file is deleted from disk, so ask first, as removing a link does.
+function RemoveAttachmentButton({
+	name,
+	isPending,
+	onRemove,
+}: {
+	name: string;
+	isPending: boolean;
+	onRemove: () => void;
+}) {
+	return (
+		<AlertDialog>
+			<AlertDialogTrigger
+				aria-label={`Remove ${name}`}
+				disabled={isPending}
+				render={<Button type="button" variant="ghost" size="icon-sm" />}
+			>
+				<HugeiconsIcon icon={Cancel01Icon} />
+			</AlertDialogTrigger>
+			<AlertDialogContent>
+				<AlertDialogHeader>
+					<AlertDialogTitle>Remove this file?</AlertDialogTitle>
+					<AlertDialogDescription>
+						<span className="[overflow-wrap:anywhere]">{name}</span> will be
+						deleted. This action cannot be undone.
+					</AlertDialogDescription>
+				</AlertDialogHeader>
+				<AlertDialogFooter>
+					<AlertDialogCancel>Cancel</AlertDialogCancel>
+					<AlertDialogCancel
+						variant="destructive"
+						disabled={isPending}
+						onClick={onRemove}
+					>
+						Remove file
+					</AlertDialogCancel>
+				</AlertDialogFooter>
+			</AlertDialogContent>
+		</AlertDialog>
+	);
+}
+
 function AttachmentList({
 	attachments,
 	canDelete,
@@ -148,16 +200,11 @@ function AttachmentList({
 							{formatBytes(attachment.size)}
 						</span>
 						{canDelete(attachment) && (
-							<Button
-								type="button"
-								variant="ghost"
-								size="icon-sm"
-								aria-label={`Remove ${attachment.name}`}
-								disabled={isPending}
-								onClick={() => remove({ id: attachment.id })}
-							>
-								<HugeiconsIcon icon={Cancel01Icon} />
-							</Button>
+							<RemoveAttachmentButton
+								name={attachment.name}
+								isPending={isPending}
+								onRemove={() => remove({ id: attachment.id })}
+							/>
 						)}
 					</span>
 				</li>
@@ -192,7 +239,7 @@ export function IssueAttachments({
 	return (
 		<section className="space-y-2" aria-label="Attachments">
 			<div className="flex items-center justify-between gap-2">
-				<h2 className="text-sm font-semibold">Attachments</h2>
+				<h2 className="text-lg font-semibold">Attachments</h2>
 				{canWrite && <AttachButton issueId={issueId} onUploaded={refresh} />}
 			</div>
 			<AttachmentList
