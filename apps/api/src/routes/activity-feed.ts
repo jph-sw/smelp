@@ -140,10 +140,12 @@ function toFeedEvent(row: FeedRow, canSeeInviteEmails: boolean): FeedEvent {
 				relatedId: row.relatedVisibleId,
 			};
 			break;
+		case "issue.attachment_added":
+		case "issue.attachment_removed":
 		case "issue.link_added":
 		case "issue.link_updated":
 		case "issue.link_removed":
-			// The link's title; untitled links have none.
+			// The file name or the link's title; untitled links have none.
 			details = { name: row.newValue ?? row.oldValue };
 			break;
 		case "project.created":

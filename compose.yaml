@@ -9,7 +9,8 @@ services:
       - path: .env
         required: false
     volumes:
-      # All of smelp's data, including photos, is one SQLite database in here.
+      # All of smelp's data is in here: the SQLite database, which includes photos, and
+      # the attachments folder. Nothing else is written, so the rest can stay read-only.
       - smelp-data:/data
     read_only: true
     tmpfs:

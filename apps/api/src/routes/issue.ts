@@ -4,6 +4,10 @@ import { eventBus } from "@smelp/events";
 import { SQL } from "bun";
 import * as v from "valibot";
 import { requireProjectPermission, requireSession } from "../lib/access";
+import {
+	attachmentKeysOfIssue,
+	removeAttachmentFiles,
+} from "../lib/attachments";
 import { displayNameOf } from "../lib/names";
 import { base } from "../orpc";
 
@@ -320,6 +324,7 @@ export const deleteIssue = base
 			"content:write",
 		);
 
+		const files = await attachmentKeysOfIssue(issue.id);
 		// Sub-items stay, as top-level items, rather than pointing at something gone.
 		const detached = await sql.begin(async (tx) => {
 			const children = (await tx`
@@ -335,6 +340,7 @@ export const deleteIssue = base
 			await tx`DELETE FROM issue WHERE id = ${issue.id}`;
 			return children;
 		});
+		await removeAttachmentFiles(files);
 		for (const child of detached) {
 			eventBus.emit({
 				type: "issue.updated",

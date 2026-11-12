@@ -4,6 +4,7 @@ import {
 	existsSync,
 	mkdirSync,
 	mkdtempSync,
+	readdirSync,
 	readFileSync,
 	rmSync,
 	statSync,
@@ -236,5 +237,273 @@ describe("noticing a running server", () => {
 		const stop = markServerRunning(databasePath);
 		expect(isServerRunning(databasePath, Date.now() + 31_000)).toBe(false);
 		stop();
+	});
+});
+
+describe("attachments", () => {
+	let files: string;
+	const restoreWithFiles = (file: string) =>
+		restoreBackup(databasePath, file, migrations, files);
+
+	function attach(key: string, content: string, row = true) {
+		mkdirSync(files, { recursive: true });
+		writeFileSync(path.join(files, key), content, { mode: 0o600 });
+		if (!row) return;
+		const db = new Database(databasePath);
+		db.run("CREATE TABLE IF NOT EXISTS attachment (storageKey TEXT)");
+		db.run("INSERT INTO attachment VALUES (?)", [key]);
+		db.close();
+	}
+
+	beforeEach(() => {
+		files = path.join(directory, "attachments");
+	});
+
+	test("a backup includes the files its database refers to", () => {
+		attach("00000000-0000-4000-8000-000000000001", "first file");
+		attach("00000000-0000-4000-8000-000000000002", "second file");
+		attach(
+			"00000000-0000-4000-8000-000000000003",
+			"added after the snapshot",
+			false,
+		);
+
+		const { file, attachments } = createBackup(databasePath, undefined, files);
+
+		expect(attachments).toBe(2);
+		const copy = `${file}.attachments`;
+		expect(
+			readFileSync(
+				path.join(copy, "00000000-0000-4000-8000-000000000001"),
+				"utf8",
+			),
+		).toBe("first file");
+		expect(
+			readFileSync(
+				path.join(copy, "00000000-0000-4000-8000-000000000002"),
+				"utf8",
+			),
+		).toBe("second file");
+		expect(
+			existsSync(path.join(copy, "00000000-0000-4000-8000-000000000003")),
+		).toBe(false);
+		expect(
+			statSync(path.join(copy, "00000000-0000-4000-8000-000000000001")).mode &
+				0o777,
+		).toBe(0o600);
+		expect(existsSync(`${copy}.partial`)).toBe(false);
+	});
+
+	test("skips a file that was deleted after the database was copied", () => {
+		attach("00000000-0000-4000-8000-000000000004", "x");
+		rmSync(path.join(files, "00000000-0000-4000-8000-000000000004"));
+		expect(createBackup(databasePath, undefined, files).attachments).toBe(0);
+	});
+
+	test("a database without attachments makes the same single-file backup", () => {
+		const { file, attachments } = createBackup(databasePath, undefined, files);
+		expect(attachments).toBe(0);
+		expect(existsSync(`${file}.attachments`)).toBe(false);
+	});
+
+	test("restoring brings the files back and keeps the current ones", () => {
+		attach("00000000-0000-4000-8000-000000000001", "original");
+		const { file } = createBackup(databasePath, undefined, files);
+		// Replaced rather than rewritten, as smelp never changes a file in place.
+		rmSync(path.join(files, "00000000-0000-4000-8000-000000000001"));
+		writeFileSync(
+			path.join(files, "00000000-0000-4000-8000-000000000001"),
+			"changed",
+		);
+		attach("00000000-0000-4000-8000-000000000005", "attached later");
+
+		const { attachmentsSetAside } = restoreWithFiles(file);
+
+		expect(
+			readFileSync(
+				path.join(files, "00000000-0000-4000-8000-000000000001"),
+				"utf8",
+			),
+		).toBe("original");
+		expect(
+			existsSync(path.join(files, "00000000-0000-4000-8000-000000000005")),
+		).toBe(false);
+		expect(
+			readFileSync(
+				path.join(
+					attachmentsSetAside as string,
+					"00000000-0000-4000-8000-000000000005",
+				),
+				"utf8",
+			),
+		).toBe("attached later");
+		expect(existsSync(path.join(files, ".restoring"))).toBe(false);
+	});
+
+	test("restoring a backup without files sets aside the files it doesn't use", () => {
+		const { file } = createBackup(databasePath);
+		attach("00000000-0000-4000-8000-000000000006", "unused now", false);
+		const result = restoreWithFiles(file);
+		expect(result.attachmentsMissing).toBe(false);
+		const aside = result.attachmentsSetAside as string;
+		expect(
+			readFileSync(
+				path.join(aside, "00000000-0000-4000-8000-000000000006"),
+				"utf8",
+			),
+		).toBe("unused now");
+		expect(
+			existsSync(path.join(files, "00000000-0000-4000-8000-000000000006")),
+		).toBe(false);
+	});
+
+	test("files the restored database still refers to stay where they are", () => {
+		attach("00000000-0000-4000-8000-000000000001", "kept");
+		const { file } = createBackup(databasePath, undefined, files);
+		rmSync(`${file}.attachments`, { recursive: true });
+		const result = restoreWithFiles(file);
+		expect(result.attachmentsMissing).toBe(true);
+		expect(result.attachmentsSetAside).toBeNull();
+		expect(
+			readFileSync(
+				path.join(files, "00000000-0000-4000-8000-000000000001"),
+				"utf8",
+			),
+		).toBe("kept");
+	});
+
+	test("a failed undo is reported and deletes nothing", () => {
+		attach("00000000-0000-4000-8000-000000000001", "original");
+		const { file } = createBackup(databasePath, undefined, files);
+		const name = "00000000-0000-4000-8000-000000000005";
+		attach(name, "current", false);
+		let error: unknown;
+		try {
+			restoreBackup(databasePath, file, migrations, files, {
+				afterFilesSetAside: () => {
+					// Blocks moving that file back, then fails the restore.
+					mkdirSync(path.join(files, name));
+					throw new Error("disk is busy");
+				},
+			});
+		} catch (caught) {
+			error = caught;
+		}
+		expect(error).toBeInstanceOf(BackupError);
+		expect((error as Error).message).toContain("couldn't be fully undone");
+		expect((error as Error).message).toContain(name);
+		const aside = readdirSync(files).find((entry) =>
+			entry.startsWith(".before-restore"),
+		);
+		expect(readFileSync(path.join(files, aside as string, name), "utf8")).toBe(
+			"current",
+		);
+	});
+	test("warns when the backup refers to files that weren't kept with it", () => {
+		attach("00000000-0000-4000-8000-000000000001", "original");
+		const { file } = createBackup(databasePath, undefined, files);
+		rmSync(`${file}.attachments`, { recursive: true });
+		expect(restoreWithFiles(file).attachmentsMissing).toBe(true);
+	});
+
+	test("a refused restore doesn't touch the files", () => {
+		attach("00000000-0000-4000-8000-000000000001", "original");
+		const { file } = createBackup(databasePath, undefined, files);
+		const stop = markServerRunning(databasePath);
+		expect(() => restoreWithFiles(file)).toThrow("still running");
+		stop();
+		expect(
+			readFileSync(
+				path.join(files, "00000000-0000-4000-8000-000000000001"),
+				"utf8",
+			),
+		).toBe("original");
+		expect(existsSync(path.join(files, ".restoring"))).toBe(false);
+	});
+
+	test("restore undoes everything when it fails after swapping the database", () => {
+		attach("00000000-0000-4000-8000-000000000001", "original");
+		const { file } = createBackup(databasePath, undefined, files);
+		write(databasePath, "written later");
+		// Replaced rather than rewritten, as smelp never changes a file in place.
+		rmSync(path.join(files, "00000000-0000-4000-8000-000000000001"));
+		writeFileSync(
+			path.join(files, "00000000-0000-4000-8000-000000000001"),
+			"changed",
+		);
+
+		expect(() =>
+			restoreBackup(databasePath, file, migrations, files, {
+				afterDatabaseSwap: () => {
+					throw new Error("disk is busy");
+				},
+			}),
+		).toThrow(BackupError);
+
+		expect(notes(databasePath)).toEqual(["original", "written later"]);
+		expect(
+			readFileSync(
+				path.join(files, "00000000-0000-4000-8000-000000000001"),
+				"utf8",
+			),
+		).toBe("changed");
+		expect(existsSync(`${databasePath}.restoring`)).toBe(false);
+		expect(existsSync(path.join(files, ".restoring"))).toBe(false);
+		const setAside = readdirSync(path.join(directory, "backups")).filter(
+			(name) => name.startsWith("before-restore"),
+		);
+		expect(setAside).toEqual([]);
+	});
+
+	test("restore only moves plain attachment files, leaving other things alone", () => {
+		attach("00000000-0000-4000-8000-000000000001", "original");
+		const { file } = createBackup(databasePath, undefined, files);
+		mkdirSync(path.join(`${file}.attachments`, "folder"));
+		writeFileSync(path.join(`${file}.attachments`, "stray.txt"), "x");
+		mkdirSync(path.join(files, "folder"));
+		writeFileSync(path.join(files, "stray.txt"), "mine");
+
+		restoreWithFiles(file);
+
+		const names = readdirSync(files).filter(
+			(name) => !name.startsWith(".before-restore"),
+		);
+		expect(names.sort()).toEqual([
+			"00000000-0000-4000-8000-000000000001",
+			"folder",
+			"stray.txt",
+		]);
+		expect(readFileSync(path.join(files, "stray.txt"), "utf8")).toBe("mine");
+	});
+
+	test("a backup shares unchanged files by link, and reports missing ones", () => {
+		attach("00000000-0000-4000-8000-000000000001", "linked");
+		attach("00000000-0000-4000-8000-000000000004", "x");
+		rmSync(path.join(files, "00000000-0000-4000-8000-000000000004"));
+		const { file, attachmentsMissing } = createBackup(
+			databasePath,
+			undefined,
+			files,
+		);
+		expect(attachmentsMissing).toBe(1);
+		expect(
+			statSync(
+				path.join(
+					`${file}.attachments`,
+					"00000000-0000-4000-8000-000000000001",
+				),
+			).nlink,
+		).toBe(2);
+	});
+
+	test("names that aren't generated keys are never copied", () => {
+		attach("00000000-0000-4000-8000-000000000001", "fine");
+		const db = new Database(databasePath);
+		db.run("INSERT INTO attachment VALUES ('..')");
+		db.close();
+		const { file } = createBackup(databasePath, undefined, files);
+		expect(readdirSync(`${file}.attachments`)).toEqual([
+			"00000000-0000-4000-8000-000000000001",
+		]);
 	});
 });

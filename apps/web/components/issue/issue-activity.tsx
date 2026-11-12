@@ -37,6 +37,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Button } from "../ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Textarea } from "../ui/textarea";
+import { CommentAttachments } from "./attachments";
 
 const relatedLabel = (entry: { relatedId?: string | null }) =>
 	entry.relatedId ?? "another work item";
@@ -78,6 +79,10 @@ function describeActivity(
 			return entry.field === "title"
 				? `renamed this to "${entry.newValue}"`
 				: "edited the description";
+		case "issue.attachment_added":
+			return `attached ${entry.newValue ?? "a file"}`;
+		case "issue.attachment_removed":
+			return `removed ${entry.oldValue ?? "a file"}`;
 		case "issue.relation_added":
 			return `marked this as ${RELATION_PHRASES[entry.newValue ?? ""] ?? "related to"} ${relatedLabel(entry)}`;
 		case "issue.relation_removed":
@@ -228,6 +233,10 @@ function Reactions({
 
 function CommentItem({
 	comment,
+	issueId,
+	userId,
+	canWrite,
+	canManage,
 	canEdit,
 	canDelete,
 	canReact,
@@ -236,6 +245,10 @@ function CommentItem({
 	onEdited,
 	onToggleReaction,
 }: {
+	issueId: string;
+	userId: string | undefined;
+	canWrite: boolean;
+	canManage: boolean;
 	comment: tables["comment"] & {
 		authorName: string | null;
 		authorImage: string | null;
@@ -349,11 +362,21 @@ function CommentItem({
 					</p>
 				)}
 				{!editing && (
-					<Reactions
-						reactions={comment.reactions}
-						canReact={canReact}
-						onToggle={onToggleReaction}
-					/>
+					<>
+						<CommentAttachments
+							issueId={issueId}
+							commentId={comment.id}
+							userId={userId}
+							canWrite={canWrite}
+							canManage={canManage}
+							canAttach={canWrite && comment.authorId === userId}
+						/>
+						<Reactions
+							reactions={comment.reactions}
+							canReact={canReact}
+							onToggle={onToggleReaction}
+						/>
+					</>
 				)}
 			</div>
 		</li>
@@ -366,6 +389,7 @@ export function IssueActivity({
 	states,
 	members,
 	canManage,
+	canWrite = false,
 	readOnly = false,
 }: {
 	issueId: string;
@@ -373,6 +397,8 @@ export function IssueActivity({
 	states: tables["state"][];
 	members: ProjectMember[];
 	canManage: boolean;
+	/** A member or admin of a project that isn't archived, who can attach files. */
+	canWrite?: boolean;
 	/** Archived project: show the discussion, but no way to add to or remove from it. */
 	readOnly?: boolean;
 }) {
@@ -481,6 +507,10 @@ export function IssueActivity({
 						<CommentItem
 							key={entry.id}
 							comment={entry}
+							issueId={issueId}
+							userId={userId}
+							canWrite={canWrite}
+							canManage={canManage}
 							canEdit={!readOnly && entry.authorId === userId}
 							canDelete={!readOnly && (entry.authorId === userId || canManage)}
 							canReact={!readOnly}

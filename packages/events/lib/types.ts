@@ -55,6 +55,22 @@ export type DomainEvent =
 	  >
 	| Event<"issue.deleted", IssueRef>
 	| Event<
+			"issue.attachment_added",
+			IssueRef & {
+				field: "attachment";
+				oldValue: null;
+				newValue: string;
+			}
+	  >
+	| Event<
+			"issue.attachment_removed",
+			IssueRef & {
+				field: "attachment";
+				oldValue: string;
+				newValue: null;
+			}
+	  >
+	| Event<
 			"issue.relation_added" | "issue.relation_removed",
 			IssueRef & {
 				field: "relation";

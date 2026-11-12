@@ -1,10 +1,13 @@
 import { Database } from "bun:sqlite";
 import {
 	chmodSync,
+	copyFileSync,
 	existsSync,
+	linkSync,
 	mkdirSync,
 	readdirSync,
 	renameSync,
+	rmdirSync,
 	rmSync,
 	statSync,
 	utimesSync,
@@ -26,6 +29,78 @@ function open(file: string, options?: { readonly?: boolean }) {
 	return db;
 }
 
+// Files are kept in a folder beside the backup, named after it, so a backup made
+// before attachments existed is still just the one database file.
+export const attachmentsOf = (backupFile: string) =>
+	`${backupFile}.attachments`;
+
+// A backup that predates attachments has no such table.
+function attachmentKeysIn(file: string) {
+	const db = open(file, { readonly: true });
+	try {
+		return (
+			db.query("SELECT storageKey FROM attachment").all() as {
+				storageKey: string;
+			}[]
+		).map((row) => row.storageKey);
+	} catch {
+		return [];
+	} finally {
+		db.close();
+	}
+}
+
+// Attachment files are named by a generated key. This is also checked on what's read
+// back from a backup, so nothing else is ever copied or used as a path.
+export const STORAGE_KEY =
+	/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+// Files are never changed once written, so a backup can share them with the live
+// folder through a hard link, which costs no space. Restores copy instead.
+function copyAttachments(
+	keys: string[],
+	from: string,
+	to: string,
+	options: { link: boolean },
+) {
+	rmSync(to, { recursive: true, force: true });
+	mkdirSync(to, { recursive: true, mode: 0o700 });
+	let copied = 0;
+	let missing = 0;
+	for (const key of keys) {
+		if (!STORAGE_KEY.test(key)) continue;
+		const source = path.join(from, key);
+		const destination = path.join(to, key);
+		// Deleted since the database was copied, so nothing refers to it any more.
+		if (!existsSync(source)) {
+			missing += 1;
+			continue;
+		}
+		let linked = false;
+		if (options.link) {
+			try {
+				linkSync(source, destination);
+				linked = true;
+			} catch {
+				// Another filesystem, or one that doesn't allow links.
+			}
+		}
+		if (!linked) {
+			copyFileSync(source, destination);
+			chmodSync(destination, 0o600);
+		}
+		copied += 1;
+	}
+	return { copied, missing };
+}
+
+// Only plain files named like attachments; anything else in the folder is not ours.
+function attachmentFilesIn(directory: string) {
+	return readdirSync(directory, { withFileTypes: true })
+		.filter((entry) => entry.isFile() && STORAGE_KEY.test(entry.name))
+		.map((entry) => entry.name);
+}
+
 function checkIntegrity(file: string) {
 	let db: Database | undefined;
 	try {
@@ -44,7 +119,11 @@ function checkIntegrity(file: string) {
 // Safe while smelp is running: VACUUM INTO reads one consistent view of the database,
 // which copying the file wouldn't. A finished backup always has its final name, so a
 // partial one can't be mistaken for it.
-export function createBackup(databasePath: string, destination?: string) {
+export function createBackup(
+	databasePath: string,
+	destination?: string,
+	attachmentsDirectory?: string,
+) {
 	if (!existsSync(databasePath)) {
 		throw new BackupError(`No database found at ${databasePath}`);
 	}
@@ -76,9 +155,39 @@ export function createBackup(databasePath: string, destination?: string) {
 			"The backup failed its integrity check, so it wasn't kept. Your database may be damaged.",
 		);
 	}
+
+	// Only files the copied database refers to are taken, so the two always agree
+	// even if someone attaches a file while this runs. The database gets its final
+	// name last, because that is what marks a backup as complete.
+	let attachments = 0;
+	let attachmentsMissing = 0;
+	if (attachmentsDirectory) {
+		const keys = attachmentKeysIn(partial);
+		if (keys.length > 0) {
+			const folder = attachmentsOf(target);
+			const partialFolder = `${folder}.partial`;
+			const result = copyAttachments(
+				keys,
+				attachmentsDirectory,
+				partialFolder,
+				{
+					link: true,
+				},
+			);
+			attachments = result.copied;
+			attachmentsMissing = result.missing;
+			rmSync(folder, { recursive: true, force: true });
+			renameSync(partialFolder, folder);
+		}
+	}
 	renameSync(partial, target);
 
-	return { file: target, bytes: statSync(target).size };
+	return {
+		file: target,
+		bytes: statSync(target).size,
+		attachments,
+		attachmentsMissing,
+	};
 }
 
 function migrationsIn(file: string) {
@@ -122,6 +231,9 @@ export function restoreBackup(
 	databasePath: string,
 	file: string,
 	migrationsDirectory: string,
+	attachmentsDirectory?: string,
+	// For tests to make a failure happen at a chosen moment.
+	hooks?: { afterDatabaseSwap?: () => void; afterFilesSetAside?: () => void },
 ) {
 	checkBackup(file, migrationsDirectory);
 	if (isServerRunning(databasePath)) {
@@ -146,21 +258,113 @@ export function restoreBackup(
 	}
 	chmodSync(incoming, 0o600);
 
+	// Also copied before anything moves. A backup from before attachments existed has
+	// no folder, and leaves the current one alone. The copy is staged inside the
+	// attachments folder, and the old files are set aside in it too, so everything
+	// moves within one filesystem even when the folder is a mount point of its own.
+	const backedUpFiles = attachmentsOf(path.resolve(file));
+	const restoresFiles =
+		attachmentsDirectory !== undefined && existsSync(backedUpFiles);
+	const files = attachmentsDirectory ? path.resolve(attachmentsDirectory) : "";
+	const incomingFiles = path.join(files, ".restoring");
+	if (restoresFiles) {
+		mkdirSync(files, { recursive: true, mode: 0o700 });
+		copyAttachments(
+			attachmentFilesIn(backedUpFiles),
+			backedUpFiles,
+			incomingFiles,
+			{ link: false },
+		);
+	}
+	const attachmentsMissing =
+		!restoresFiles && attachmentKeysIn(file).length > 0;
+
+	// Every step that has happened can be undone, because a restore that stops halfway
+	// would leave a database and its files from different times.
+	const undo: { what: string; run: () => void }[] = [];
+	const onUndo = (what: string, run: () => void) => undo.push({ what, run });
 	let setAside: string | null = null;
-	if (existsSync(target)) {
-		const directory = backupsDirectory(target);
-		mkdirSync(directory, { recursive: true, mode: 0o700 });
-		setAside = path.join(directory, `before-restore-${stamp()}.sqlite`);
-		renameSync(target, setAside);
-		for (const suffix of SIDECAR_SUFFIXES) {
-			if (existsSync(target + suffix)) {
-				renameSync(target + suffix, setAside + suffix);
+	let attachmentsSetAside: string | null = null;
+	try {
+		if (existsSync(target)) {
+			const directory = backupsDirectory(target);
+			mkdirSync(directory, { recursive: true, mode: 0o700 });
+			const aside = path.join(directory, `before-restore-${stamp()}.sqlite`);
+			renameSync(target, aside);
+			onUndo(`put the database back from ${aside}`, () =>
+				renameSync(aside, target),
+			);
+			for (const suffix of SIDECAR_SUFFIXES) {
+				if (existsSync(target + suffix)) {
+					renameSync(target + suffix, aside + suffix);
+					onUndo(`put ${target + suffix} back from ${aside + suffix}`, () =>
+						renameSync(aside + suffix, target + suffix),
+					);
+				}
+			}
+			setAside = aside;
+		}
+		renameSync(incoming, target);
+		onUndo("remove the restored database", () => renameSync(target, incoming));
+		hooks?.afterDatabaseSwap?.();
+
+		if (attachmentsDirectory && existsSync(files)) {
+			// With files in the backup, the current ones all make way for them. Without,
+			// the ones the restored database doesn't refer to are set aside, so the
+			// startup cleanup can't mistake them for leftovers and delete them.
+			const referenced = new Set(restoresFiles ? [] : attachmentKeysIn(file));
+			const old = attachmentFilesIn(files).filter(
+				(name) => !referenced.has(name),
+			);
+			if (old.length > 0) {
+				const aside = path.join(files, `.before-restore-${stamp()}`);
+				mkdirSync(aside, { mode: 0o700 });
+				// Not recursive: a folder that still holds something is left in place.
+				onUndo(`remove the empty folder ${aside}`, () => rmdirSync(aside));
+				for (const name of old) {
+					renameSync(path.join(files, name), path.join(aside, name));
+					onUndo(`move ${name} back from ${aside}`, () =>
+						renameSync(path.join(aside, name), path.join(files, name)),
+					);
+				}
+				attachmentsSetAside = aside;
 			}
 		}
+		hooks?.afterFilesSetAside?.();
+		if (restoresFiles) {
+			for (const name of attachmentFilesIn(incomingFiles)) {
+				renameSync(path.join(incomingFiles, name), path.join(files, name));
+				onUndo(`move ${name} back out of ${files}`, () =>
+					renameSync(path.join(files, name), path.join(incomingFiles, name)),
+				);
+			}
+			rmSync(incomingFiles, { recursive: true, force: true });
+		}
+	} catch (error) {
+		const failed: string[] = [];
+		for (const step of undo.reverse()) {
+			try {
+				step.run();
+			} catch {
+				failed.push(step.what);
+			}
+		}
+		// Only after the files were moved back, so a failed move never loses one.
+		if (failed.length === 0) {
+			rmSync(incoming, { force: true });
+			if (restoresFiles) {
+				rmSync(incomingFiles, { recursive: true, force: true });
+			}
+		}
+		const reason = error instanceof Error ? error.message : String(error);
+		throw new BackupError(
+			failed.length === 0
+				? `The restore failed (${reason}) and was undone, so your database and attachments are as they were.`
+				: `The restore failed (${reason}) and couldn't be fully undone. Not put back: ${failed.join("; ")}. Nothing was deleted, so your previous data is still in the files named there.`,
+		);
 	}
-	renameSync(incoming, target);
 
-	return { setAside };
+	return { setAside, attachmentsSetAside, attachmentsMissing };
 }
 
 // A running server keeps this file's time fresh. It's a file rather than a process

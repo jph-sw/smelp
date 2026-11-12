@@ -4,6 +4,11 @@ import { CORSPlugin, ResponseHeadersPlugin } from "@orpc/server/plugins";
 import { logRequestError } from "./lib/request-errors";
 import { findIssueActivity } from "./routes/activity";
 import { findWorkspaceActivity } from "./routes/activity-feed";
+import {
+	deleteAttachment,
+	findAttachmentLimits,
+	findAttachments,
+} from "./routes/attachment";
 import { me } from "./routes/auth/me";
 import {
 	changePassword,
@@ -177,6 +182,11 @@ export const router = {
 		update: updateComment,
 		delete: deleteComment,
 		setReaction,
+	},
+	attachments: {
+		find: findAttachments,
+		limits: findAttachmentLimits,
+		delete: deleteAttachment,
 	},
 	activity: {
 		findForIssue: findIssueActivity,

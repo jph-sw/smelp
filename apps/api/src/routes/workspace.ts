@@ -5,6 +5,10 @@ import { DB, type tables, Utils } from "@smelp/db";
 import { eventBus } from "@smelp/events";
 import { SQL } from "bun";
 import * as v from "valibot";
+import {
+	attachmentKeysOfWorkspace,
+	removeAttachmentFiles,
+} from "../lib/attachments";
 import { base } from "../orpc";
 
 const sql = new DB().sqlite;
@@ -127,6 +131,7 @@ export const deleteWorkspace = base
 			SELECT id, spaceId FROM project WHERE workspaceId = ${workspace.id}
 		`) as tables["project"][];
 
+		const files = await attachmentKeysOfWorkspace(workspace.id);
 		await sql.begin(async (tx) => {
 			for (const project of projects) {
 				await tx`DELETE FROM auth_space WHERE id = ${project.spaceId}`;
@@ -136,6 +141,7 @@ export const deleteWorkspace = base
 			// auth_space_member, and auth_space_invite
 			await tx`DELETE FROM auth_space WHERE id = ${workspace.spaceId}`;
 		});
+		await removeAttachmentFiles(files);
 
 		eventBus.emit({
 			type: "workspace.deleted",

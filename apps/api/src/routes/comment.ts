@@ -4,6 +4,10 @@ import { DB, DEFAULTS, type tables } from "@smelp/db";
 import { eventBus } from "@smelp/events";
 import * as v from "valibot";
 import { requireProjectPermission, requireSession } from "../lib/access";
+import {
+	attachmentKeysOfComment,
+	removeAttachmentFiles,
+} from "../lib/attachments";
 import { base } from "../orpc";
 
 const sql = new DB().sqlite;
@@ -265,7 +269,9 @@ export const deleteComment = base
 			));
 		if (!canDelete) throw new ORPCError("FORBIDDEN");
 
+		const files = await attachmentKeysOfComment(comment.id);
 		await sql`DELETE FROM comment WHERE id = ${comment.id}`;
+		await removeAttachmentFiles(files);
 
 		return { id: comment.id };
 	});

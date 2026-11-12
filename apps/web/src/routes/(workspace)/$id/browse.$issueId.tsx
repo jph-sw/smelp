@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-query";
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
+import { IssueAttachments } from "#/components/issue/attachments";
 import { IssueActivity } from "#/components/issue/issue-activity";
 import { IssueLinks } from "#/components/issue/issue-links";
 import { IssueProperties } from "#/components/issue/issue-properties";
@@ -26,6 +27,7 @@ import { Textarea } from "#/components/ui/textarea";
 import { usePageTitle } from "#/hooks/use-page-title";
 import { currentUserQueryOptions } from "#/lib/auth";
 import {
+	attachmentsQueryOptions,
 	commentsQueryOptions,
 	issueActivityQueryOptions,
 	issueQueryOptions,
@@ -52,6 +54,7 @@ export const Route = createFileRoute("/(workspace)/$id/browse/$issueId")({
 			queryClient.ensureQueryData(commentsQueryOptions({ issueId })),
 			queryClient.ensureQueryData(linksQueryOptions({ issueId })),
 			queryClient.ensureQueryData(issueActivityQueryOptions({ issueId })),
+			queryClient.ensureQueryData(attachmentsQueryOptions({ issueId })),
 			queryClient.ensureQueryData(issueRelationsQueryOptions({ issueId })),
 			queryClient.ensureQueryData(currentUserQueryOptions),
 		]);
@@ -303,12 +306,19 @@ function RouteComponent() {
 						canWrite={canWrite}
 					/>
 					<IssueLinks issueId={issue.id} canWrite={canWrite} />
+					<IssueAttachments
+						issueId={issue.id}
+						userId={user?.id}
+						canWrite={canWrite}
+						canManage={canManage}
+					/>
 					<IssueActivity
 						issueId={issue.id}
 						userId={user?.id}
 						states={states}
 						members={members}
 						canManage={canManage}
+						canWrite={canWrite}
 						readOnly={isArchived}
 					/>
 				</div>
