@@ -18,6 +18,16 @@ import {
 	updateLink,
 } from "#/lib/data/issue";
 import { toastError } from "#/lib/errors";
+import {
+	AlertDialog,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+	AlertDialogTrigger,
+} from "../ui/alert-dialog";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 
@@ -78,6 +88,44 @@ function LinkForm({
 	);
 }
 
+function RemoveLinkButton({
+	isPending,
+	onRemove,
+}: {
+	isPending: boolean;
+	onRemove: () => void;
+}) {
+	return (
+		<AlertDialog>
+			<AlertDialogTrigger
+				aria-label="Remove link"
+				disabled={isPending}
+				render={<Button variant="ghost" size="icon-sm" />}
+			>
+				<HugeiconsIcon icon={Delete02Icon} />
+			</AlertDialogTrigger>
+			<AlertDialogContent>
+				<AlertDialogHeader>
+					<AlertDialogTitle>Remove this link?</AlertDialogTitle>
+					<AlertDialogDescription>
+						This action cannot be undone.
+					</AlertDialogDescription>
+				</AlertDialogHeader>
+				<AlertDialogFooter>
+					<AlertDialogCancel>Cancel</AlertDialogCancel>
+					<AlertDialogCancel
+						variant="destructive"
+						disabled={isPending}
+						onClick={onRemove}
+					>
+						Remove link
+					</AlertDialogCancel>
+				</AlertDialogFooter>
+			</AlertDialogContent>
+		</AlertDialog>
+	);
+}
+
 export function IssueLinks({
 	issueId,
 	canWrite,
@@ -88,8 +136,9 @@ export function IssueLinks({
 	const queryClient = useQueryClient();
 	const options = linksQueryOptions({ issueId });
 	const { data: links } = useSuspenseQuery(options);
-	const [adding, setAdding] = useState(false);
-	const [editingId, setEditingId] = useState<string | null>(null);
+	// One form at a time: "new" adds a link, an id edits that one.
+	const [form, setForm] = useState<"new" | string | null>(null);
+	const adding = form === "new";
 
 	const refresh = () =>
 		Promise.all(
@@ -101,7 +150,7 @@ export function IssueLinks({
 	const { mutate: add, isPending: isAdding } = useMutation({
 		mutationFn: createLink,
 		onSuccess: async () => {
-			setAdding(false);
+			setForm(null);
 			await refresh();
 		},
 		onError: (e) => toastError(e, "Couldn't add the link."),
@@ -109,12 +158,16 @@ export function IssueLinks({
 	const { mutate: save, isPending: isSaving } = useMutation({
 		mutationFn: updateLink,
 		onSuccess: async () => {
-			setEditingId(null);
+			setForm(null);
 			await refresh();
 		},
 		onError: (e) => toastError(e, "Couldn't save the link."),
 	});
-	const { mutate: remove, isPending: isRemoving } = useMutation({
+	const {
+		mutate: remove,
+		variables: removing,
+		isPending: isRemoving,
+	} = useMutation({
 		mutationFn: deleteLink,
 		onSuccess: refresh,
 		onError: (e) => toastError(e, "Couldn't remove the link."),
@@ -126,12 +179,12 @@ export function IssueLinks({
 		<section className="space-y-2" aria-label="Links">
 			<div className="flex items-center justify-between">
 				<h2 className="text-sm font-medium">Links</h2>
-				{canWrite && !adding && (
+				{canWrite && form === null && (
 					<Button
 						variant="ghost"
 						size="icon-sm"
 						aria-label="Add a link"
-						onClick={() => setAdding(true)}
+						onClick={() => setForm("new")}
 					>
 						<HugeiconsIcon icon={PlusSignIcon} />
 					</Button>
@@ -142,7 +195,7 @@ export function IssueLinks({
 					submitLabel="Add link"
 					isPending={isAdding}
 					onSubmit={({ url, title }) => add({ issueId, url, title })}
-					onCancel={() => setAdding(false)}
+					onCancel={() => setForm(null)}
 				/>
 			)}
 			{links.length === 0 && !adding && (
@@ -150,14 +203,14 @@ export function IssueLinks({
 			)}
 			<ul className="space-y-1">
 				{links.map((link) =>
-					editingId === link.id ? (
+					form === link.id ? (
 						<li key={link.id}>
 							<LinkForm
 								initial={link}
 								submitLabel="Save"
 								isPending={isSaving}
 								onSubmit={({ url, title }) => save({ id: link.id, url, title })}
-								onCancel={() => setEditingId(null)}
+								onCancel={() => setForm(null)}
 							/>
 						</li>
 					) : (
@@ -177,19 +230,14 @@ export function IssueLinks({
 										variant="ghost"
 										size="icon-sm"
 										aria-label="Edit link"
-										onClick={() => setEditingId(link.id)}
+										onClick={() => setForm(link.id)}
 									>
 										<HugeiconsIcon icon={PencilEdit01Icon} />
 									</Button>
-									<Button
-										variant="ghost"
-										size="icon-sm"
-										aria-label="Remove link"
-										disabled={isRemoving}
-										onClick={() => remove({ id: link.id })}
-									>
-										<HugeiconsIcon icon={Delete02Icon} />
-									</Button>
+									<RemoveLinkButton
+										isPending={isRemoving && removing?.id === link.id}
+										onRemove={() => remove({ id: link.id })}
+									/>
 								</>
 							)}
 						</li>

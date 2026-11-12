@@ -12,6 +12,7 @@ const auth = new Auth();
 
 const WORKSPACE = "link_tests";
 const PROJECT = "LNK";
+const OTHER_PROJECT = "LNB";
 
 function first<T>(items: T[]): T {
 	const [item] = items;
@@ -58,6 +59,7 @@ let admin: User;
 let member: User;
 let guest: User;
 let outsider: User;
+let otherMember: User;
 let stateIds: string[];
 
 const newIssue = () => ({
@@ -74,6 +76,7 @@ beforeAll(async () => {
 	member = await createUser("member");
 	guest = await createUser("guest");
 	outsider = await createUser("outsider");
+	otherMember = await createUser("other");
 
 	await admin.client.workspace.create({ name: "Link tests" });
 	await admin.client.project.create({
@@ -84,7 +87,17 @@ beforeAll(async () => {
 		icon: "AppWindowIcon",
 		workspaceId: WORKSPACE,
 	});
+	await admin.client.project.create({
+		id: OTHER_PROJECT,
+		name: "Other links",
+		description: "",
+		access: "private",
+		icon: "AppWindowIcon",
+		workspaceId: WORKSPACE,
+	});
 	await addMember(WORKSPACE, member.id, "member");
+	await addMember(WORKSPACE, otherMember.id, "member");
+	await addMember(OTHER_PROJECT, otherMember.id, "member");
 	await addMember(PROJECT, member.id, "member");
 	await addMember(PROJECT, guest.id, "guest");
 
@@ -117,11 +130,23 @@ describe("links", () => {
 		const listed = await guest.client.links.find({ issueId: issue.id });
 		expect(listed.map((l) => l.id)).toEqual([link.id, untitled.id]);
 
+		// No title keeps the current one.
 		const edited = await member.client.links.update({
 			id: link.id,
 			url: "https://example.com/c",
 		});
-		expect(edited).toMatchObject({ url: "https://example.com/c", title: null });
+		expect(edited).toMatchObject({
+			url: "https://example.com/c",
+			title: "Docs",
+		});
+
+		// An empty title clears it.
+		const cleared = await member.client.links.update({
+			id: link.id,
+			url: "https://example.com/c",
+			title: "",
+		});
+		expect(cleared.title).toBeNull();
 
 		await member.client.links.delete({ id: link.id });
 		const left = await member.client.links.find({ issueId: issue.id });
@@ -140,6 +165,8 @@ describe("links", () => {
 			"example.com",
 			"",
 			"   ",
+			"http://",
+			"https://",
 		]) {
 			await expectCode(
 				member.client.links.create({ issueId: issue.id, url }),
@@ -154,6 +181,34 @@ describe("links", () => {
 			member.client.links.update({ id: link.id, url: "javascript:void(0)" }),
 			"BAD_REQUEST",
 		);
+	});
+
+	test("urls are stored normalised", async () => {
+		const issue = await member.client.issue.create(newIssue());
+		const stored = async (url: string) =>
+			(await member.client.links.create({ issueId: issue.id, url })).url;
+
+		// Would resolve against the smelp host if it were rendered as written.
+		expect(await stored("https:x.test")).toBe("https://x.test/");
+		expect(await stored("HTTPS://Example.COM/Path")).toBe(
+			"https://example.com/Path",
+		);
+		expect(await stored("\u0001https://example.com")).toBe(
+			"https://example.com/",
+		);
+		expect(await stored("https://exa\nmple.com/a b")).toBe(
+			"https://example.com/a%20b",
+		);
+
+		const link = await member.client.links.create({
+			issueId: issue.id,
+			url: "https://example.com",
+		});
+		const edited = await member.client.links.update({
+			id: link.id,
+			url: "https:y.test",
+		});
+		expect(edited.url).toBe("https://y.test/");
 	});
 
 	test("length limits", async () => {
@@ -196,6 +251,32 @@ describe("links", () => {
 			outsider.client.links.find({ issueId: issue.id }),
 			"FORBIDDEN",
 		);
+	});
+
+	test("members of another project cannot touch the link", async () => {
+		const issue = await member.client.issue.create(newIssue());
+		const link = await member.client.links.create({
+			issueId: issue.id,
+			url: "https://example.com",
+		});
+		await expectCode(
+			otherMember.client.links.update({ id: link.id, url: "https://x.test" }),
+			"FORBIDDEN",
+		);
+		await expectCode(
+			otherMember.client.links.delete({ id: link.id }),
+			"FORBIDDEN",
+		);
+		await expectCode(
+			otherMember.client.links.create({
+				issueId: issue.id,
+				url: "https://x.test",
+			}),
+			"FORBIDDEN",
+		);
+		expect(await member.client.links.find({ issueId: issue.id })).toEqual([
+			link,
+		]);
 	});
 
 	test("archived projects are read-only", async () => {
@@ -246,16 +327,19 @@ describe("links", () => {
 		const issue = await member.client.issue.create(newIssue());
 		const link = await member.client.links.create({
 			issueId: issue.id,
-			url: "https://example.com",
+			url: "https://example.com/?token=secret",
+			title: "Docs",
 		});
 		await member.client.links.update({
 			id: link.id,
-			url: "https://example.org",
+			url: "https://example.org/?token=secret",
+			title: "Handbook",
 		});
 		// No change, no event.
 		await member.client.links.update({
 			id: link.id,
-			url: "https://example.org",
+			url: "https://example.org/?token=secret",
+			title: "Handbook",
 		});
 		await member.client.links.delete({ id: link.id });
 
@@ -270,5 +354,15 @@ describe("links", () => {
 			"issue.link_updated",
 			"issue.link_removed",
 		]);
+
+		// The log names the link by its title; the URL never reaches it.
+		const [, added, updated, removed] = activity;
+		expect(added).toMatchObject({ oldValue: null, newValue: "Docs" });
+		expect(updated).toMatchObject({ oldValue: "Docs", newValue: "Handbook" });
+		expect(removed).toMatchObject({ oldValue: "Handbook", newValue: null });
+		const rows = (await sql`
+			SELECT metadata FROM activity_logs WHERE entityId = ${issue.id}
+		`) as { metadata: string }[];
+		for (const row of rows) expect(row.metadata).not.toContain("secret");
 	});
 });

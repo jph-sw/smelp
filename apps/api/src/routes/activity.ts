@@ -35,7 +35,7 @@ export const findIssueActivity = base
 			LEFT JOIN auth_user ON auth_user.id = activity_logs.actorId
 			WHERE activity_logs.entityType = 'issue'
 				AND activity_logs.entityId = ${input.issueId}
-			ORDER BY activity_logs.createdAt ASC
+			ORDER BY activity_logs.createdAt ASC, activity_logs.rowid ASC
 		`) as (Pick<
 			tables["activity_logs"],
 			"id" | "action" | "field" | "oldValue" | "newValue" | "createdAt"

@@ -131,11 +131,29 @@ export function ActivitySentence({
 				</>
 			);
 		case "issue.link_added":
-			return <>added a link to {issue}</>;
+			return d.name ? (
+				<>
+					added the link <Strong>{d.name}</Strong> to {issue}
+				</>
+			) : (
+				<>added a link to {issue}</>
+			);
 		case "issue.link_updated":
-			return <>edited a link on {issue}</>;
+			return d.name ? (
+				<>
+					edited the link <Strong>{d.name}</Strong> on {issue}
+				</>
+			) : (
+				<>edited a link on {issue}</>
+			);
 		case "issue.link_removed":
-			return <>removed a link from {issue}</>;
+			return d.name ? (
+				<>
+					removed the link <Strong>{d.name}</Strong> from {issue}
+				</>
+			) : (
+				<>removed a link from {issue}</>
+			);
 		case "comment.created":
 			return <>commented on {issue}</>;
 		case "comment.updated":
