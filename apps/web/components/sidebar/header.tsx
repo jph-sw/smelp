@@ -46,7 +46,7 @@ export function SiteHeader({
 	};
 
 	return (
-		<header className="sticky top-0 z-50 flex w-full items-center bg-sidebar">
+		<header className="sticky top-0 z-50 flex w-full items-center bg-sidebar pt-[env(safe-area-inset-top)] pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)]">
 			<div className="flex h-(--header-height) w-full items-center gap-2 px-4">
 				<div className="flex min-w-0 flex-1 items-center gap-1">
 					<SidebarTrigger className="md:hidden" />

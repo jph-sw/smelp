@@ -52,10 +52,10 @@ function RouteComponent() {
 	}
 
 	return (
-		<div className="h-dvh [--header-height:calc(--spacing(10))]">
+		<div className="h-dvh [--header-height:calc(--spacing(10))] pointer-coarse:[--header-height:calc(--spacing(14))]">
 			<SidebarProvider className="flex h-full min-h-0 flex-col">
 				<SiteHeader workspace={workspace} workspaces={workspaces} user={user} />
-				<div className="flex flex-1 min-h-0">
+				<div className="flex flex-1 min-h-0 pr-[env(safe-area-inset-right)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)]">
 					<AppSidebar workspace={workspace} projects={projects} />
 					<SidebarInset className="min-h-0 min-w-0">
 						<div className="flex flex-1 min-h-0 flex-col">
