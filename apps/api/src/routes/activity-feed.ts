@@ -18,6 +18,9 @@ const LEGACY_ACTIONS: Record<string, string> = {
 	commented: "comment.created",
 };
 
+// issue.updated fields whose new value is short enough to show in the feed.
+const FIELDS_WITH_VALUE = new Set(["title", "parent"]);
+
 type FeedRow = Pick<
 	tables["activity_logs"],
 	| "id"
@@ -123,8 +126,7 @@ function toFeedEvent(row: FeedRow, canSeeInviteEmails: boolean): FeedEvent {
 		case "issue.updated":
 			details = {
 				field: row.field,
-				to:
-					row.field === "title" || row.field === "parent" ? row.newValue : null,
+				to: row.field && FIELDS_WITH_VALUE.has(row.field) ? row.newValue : null,
 			};
 			break;
 		case "project.created":

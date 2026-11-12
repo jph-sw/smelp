@@ -216,3 +216,115 @@ describe("sub-items", () => {
 		expect(detached.parentId).toBeNull();
 	});
 });
+
+describe("sub-item hardening", () => {
+	test("an empty parentId or assignee is rejected, not stored", async () => {
+		const a = await member.client.issue.create(newIssue("Empty A"));
+		await expectCode(
+			member.client.issue.update({ id: a.id, parentId: "" }),
+			"BAD_REQUEST",
+		);
+		await expectCode(
+			member.client.issue.update({ id: a.id, assignee: "" }),
+			"BAD_REQUEST",
+		);
+		// On create an empty value still means "none".
+		const created = await member.client.issue.create(newIssue("Empty C", ""));
+		expect(created.parentId).toBeNull();
+		const after = await member.client.issue.find({ issueId: a.id });
+		expect(after.parentId).toBeNull();
+		expect(after.assignee).toBeNull();
+	});
+
+	test("refuses a loop through a deep chain", async () => {
+		const chain = [await member.client.issue.create(newIssue("Deep 0"))];
+		for (let i = 1; i < 5; i++) {
+			chain.push(
+				await member.client.issue.create(
+					newIssue(`Deep ${i}`, first(chain.slice(-1)).id),
+				),
+			);
+		}
+		const root = first(chain);
+		const leaf = first(chain.slice(-1));
+		await expectCode(
+			member.client.issue.update({ id: root.id, parentId: leaf.id }),
+			"BAD_REQUEST",
+		);
+		// Moving a middle item under the leaf is a loop too.
+		const middle = first(chain.slice(2, 3));
+		await expectCode(
+			member.client.issue.update({ id: middle.id, parentId: leaf.id }),
+			"BAD_REQUEST",
+		);
+	});
+
+	test("two opposite moves at once can't make a loop", async () => {
+		const a = await member.client.issue.create(newIssue("Race A"));
+		const b = await member.client.issue.create(newIssue("Race B"));
+		await Promise.allSettled([
+			member.client.issue.update({ id: a.id, parentId: b.id }),
+			member.client.issue.update({ id: b.id, parentId: a.id }),
+		]);
+		const [ia, ib] = await Promise.all([
+			member.client.issue.find({ issueId: a.id }),
+			member.client.issue.find({ issueId: b.id }),
+		]);
+		expect(ia.parentId === b.id && ib.parentId === a.id).toBe(false);
+	});
+
+	test("creating under a parent logs the parent", async () => {
+		const parent = await member.client.issue.create(newIssue("Create parent"));
+		const child = await member.client.issue.create(
+			newIssue("Create child", parent.id),
+		);
+		await Bun.sleep(30);
+		const activity = await member.client.activity.findForIssue({
+			issueId: child.id,
+		});
+		const logged = activity.find((entry) => entry.field === "parent");
+		expect(logged).toMatchObject({ oldValue: null, newValue: parent.id });
+	});
+
+	test("the workspace feed shows a parent change", async () => {
+		const parent = await member.client.issue.create(newIssue("Feed parent"));
+		const child = await member.client.issue.create(newIssue("Feed child"));
+		await member.client.issue.update({ id: child.id, parentId: parent.id });
+		await Bun.sleep(30);
+
+		const { events } = await member.client.activity.findWorkspace({
+			workspaceId: WORKSPACE,
+		});
+		const event = events.find(
+			(e) =>
+				e.type === "issue.updated" &&
+				e.issue?.id === child.id &&
+				e.details.field === "parent",
+		);
+		expect(event?.details.to).toBe(parent.id);
+	});
+
+	test("deleting a parent detaches and logs its children", async () => {
+		const parent = await member.client.issue.create(newIssue("Del parent"));
+		const child = await member.client.issue.create(
+			newIssue("Del child", parent.id),
+		);
+		await Bun.sleep(5);
+		await member.client.issue.delete({ id: parent.id });
+		await Bun.sleep(30);
+
+		const detached = await member.client.issue.find({ issueId: child.id });
+		expect(detached.parentId).toBeNull();
+		expect(detached.updatedBy).toBe(member.id);
+		expect(detached.updatedAt).toBeGreaterThan(child.updatedAt);
+
+		const activity = await member.client.activity.findForIssue({
+			issueId: child.id,
+		});
+		const parentLogs = activity.filter((entry) => entry.field === "parent");
+		expect(parentLogs.map((entry) => entry.newValue)).toEqual([
+			parent.id,
+			null,
+		]);
+	});
+});

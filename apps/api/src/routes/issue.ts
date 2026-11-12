@@ -66,6 +66,8 @@ async function requireValidParent(
 	}
 }
 
+// An empty id would be stored as-is and skip the checks that guard real ones.
+const NonEmpty = v.pipe(v.string(), v.minLength(1));
 const Title = v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(120));
 const Description = v.pipe(v.string(), v.maxLength(20_000));
 
@@ -123,8 +125,8 @@ export const updateIssue = base
 			state: v.optional(v.string()),
 			title: v.optional(Title),
 			description: v.optional(Description),
-			assignee: v.optional(v.nullable(v.string())),
-			parentId: v.optional(v.nullable(v.string())),
+			assignee: v.optional(v.nullable(NonEmpty)),
+			parentId: v.optional(v.nullable(NonEmpty)),
 		}),
 	)
 	.handler(async ({ input, context }) => {
@@ -175,7 +177,10 @@ export const updateIssue = base
 			await requireValidParent(next.parentId, project.id, oldIssue.id);
 		}
 
-		await sql`
+		// The parent checks run again inside this one statement, so a concurrent move or
+		// delete can't slip in between the checks above and the write: the new parent must
+		// still exist in this project and must not have this item among its ancestors.
+		const written = await sql`
 			UPDATE issue SET
 				state = ${next.state},
 				title = ${next.title},
@@ -185,7 +190,33 @@ export const updateIssue = base
 				updatedAt = ${Date.now()},
 				updatedBy = ${session.userId}
 			WHERE id = ${input.id}
+				AND (
+					${next.parentId} IS NULL
+					OR (
+						EXISTS (
+							SELECT 1 FROM issue AS p
+							WHERE p.id = ${next.parentId} AND p.projectId = ${project.id}
+						)
+						AND NOT EXISTS (
+							WITH RECURSIVE ancestors(id) AS (
+								SELECT ${next.parentId}
+								UNION
+								SELECT issue.parentId FROM issue
+								JOIN ancestors ON issue.id = ancestors.id
+								WHERE issue.parentId IS NOT NULL
+							)
+							SELECT 1 FROM ancestors WHERE id = ${input.id}
+						)
+					)
+				)
+			RETURNING id
 		`;
+		if (written.length === 0) {
+			throw new ORPCError("BAD_REQUEST", {
+				message:
+					"The parent must be a work item in the same project, and not below this one",
+			});
+		}
 
 		const issue = (
 			await sql`SELECT * FROM issue WHERE id = ${input.id}`
@@ -284,8 +315,35 @@ export const deleteIssue = base
 		);
 
 		// Sub-items stay, as top-level items, rather than pointing at something gone.
-		await sql`UPDATE issue SET parentId = NULL WHERE parentId = ${issue.id}`;
-		await sql`DELETE FROM issue WHERE id = ${issue.id}`;
+		const detached = await sql.begin(async (tx) => {
+			const children = (await tx`
+				SELECT id, title FROM issue WHERE parentId = ${issue.id}
+			`) as Pick<tables["issue"], "id" | "title">[];
+			await tx`
+				UPDATE issue SET
+					parentId = NULL,
+					updatedAt = ${Date.now()},
+					updatedBy = ${session.userId}
+				WHERE parentId = ${issue.id}
+			`;
+			await tx`DELETE FROM issue WHERE id = ${issue.id}`;
+			return children;
+		});
+		for (const child of detached) {
+			eventBus.emit({
+				type: "issue.updated",
+				entityId: child.id,
+				workspaceId: issue.workspaceId,
+				actorId: session.userId,
+				payload: {
+					projectId: issue.projectId,
+					title: child.title,
+					field: "parent",
+					oldValue: issue.id,
+					newValue: null,
+				},
+			});
+		}
 
 		eventBus.emit({
 			type: "issue.deleted",
