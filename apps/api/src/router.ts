@@ -4,6 +4,7 @@ import { CORSPlugin, ResponseHeadersPlugin } from "@orpc/server/plugins";
 import { logRequestError } from "./lib/request-errors";
 import { findIssueActivity } from "./routes/activity";
 import { findWorkspaceActivity } from "./routes/activity-feed";
+import { deleteAttachment, findAttachments } from "./routes/attachment";
 import { me } from "./routes/auth/me";
 import {
 	changePassword,
@@ -158,6 +159,10 @@ export const router = {
 		create: createComment,
 		update: updateComment,
 		delete: deleteComment,
+	},
+	attachments: {
+		find: findAttachments,
+		delete: deleteAttachment,
 	},
 	activity: {
 		findForIssue: findIssueActivity,

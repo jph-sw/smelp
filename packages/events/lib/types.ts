@@ -48,6 +48,22 @@ export type DomainEvent =
 			}
 	  >
 	| Event<"issue.deleted", IssueRef>
+	| Event<
+			"issue.attachment_added",
+			IssueRef & {
+				field: "attachment";
+				oldValue: null;
+				newValue: string;
+			}
+	  >
+	| Event<
+			"issue.attachment_removed",
+			IssueRef & {
+				field: "attachment";
+				oldValue: string;
+				newValue: null;
+			}
+	  >
 	| Event<"comment.created", IssueRef & { issueId: string }>
 	| Event<"comment.updated", IssueRef & { issueId: string }>
 	| Event<"auth.signin", { sessionId: string; username: string }>

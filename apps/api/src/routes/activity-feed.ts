@@ -126,6 +126,10 @@ function toFeedEvent(row: FeedRow, canSeeInviteEmails: boolean): FeedEvent {
 				to: row.field === "title" ? row.newValue : null,
 			};
 			break;
+		case "issue.attachment_added":
+		case "issue.attachment_removed":
+			details = { name: row.newValue ?? row.oldValue };
+			break;
 		case "project.created":
 		case "project.deleted":
 		case "project.archived":

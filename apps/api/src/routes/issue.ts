@@ -4,6 +4,10 @@ import { eventBus } from "@smelp/events";
 import { SQL } from "bun";
 import * as v from "valibot";
 import { requireProjectPermission, requireSession } from "../lib/access";
+import {
+	attachmentKeysOfIssue,
+	removeAttachmentFiles,
+} from "../lib/attachments";
 import { displayNameOf } from "../lib/names";
 import { base } from "../orpc";
 
@@ -222,7 +226,9 @@ export const deleteIssue = base
 			"content:write",
 		);
 
+		const files = await attachmentKeysOfIssue(issue.id);
 		await sql`DELETE FROM issue WHERE id = ${issue.id}`;
+		await removeAttachmentFiles(files);
 
 		eventBus.emit({
 			type: "issue.deleted",

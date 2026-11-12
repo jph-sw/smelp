@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { type BunFile, SQL } from "bun";
 import { Logger } from "tslog";
 import type { activity_logs } from "../types/tables/activity";
+import type { attachment } from "../types/tables/attachment";
 import type {
 	auth_account,
 	auth_password_reset,
@@ -160,6 +161,7 @@ export type tables = {
 	issue: issue;
 	state: state;
 	comment: comment;
+	attachment: attachment;
 };
 
 export const DEFAULTS = {

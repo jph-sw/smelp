@@ -5,6 +5,11 @@ import type { FriendlyStandardHandleOptions } from "@orpc/server/standard";
 import { databasePath, Utils } from "@smelp/db";
 import { Migrator } from "@smelp/migrate";
 
+import {
+	attachmentResponse,
+	maxRequestBytes,
+	uploadAttachment,
+} from "./lib/attachments";
 import { avatarResponse } from "./lib/avatars";
 import { markServerRunning } from "./lib/backup";
 import { statusResponse } from "./lib/health";
@@ -71,6 +76,9 @@ if (!webApp && process.env.NODE_ENV === "production") {
 }
 
 const server = Bun.serve({
+	// Bigger bodies are refused by Bun itself. Its 128 MB default is raised when the
+	// file limit is set higher.
+	maxRequestBodySize: Math.max(maxRequestBytes(), 128 * 1024 * 1024),
 	fetch: webApp ?? (() => new Response("Not found", { status: 404 })),
 	// For failures outside the API's own handling, like avatars and static files.
 	error(error) {
@@ -81,6 +89,9 @@ const server = Bun.serve({
 		"/rpc": rpcRouteHandler,
 		"/rpc/*": rpcRouteHandler,
 		"/api/status": () => statusResponse(),
+		"/api/attachments": (request) => uploadAttachment(request),
+		"/api/attachments/:id": (request) =>
+			attachmentResponse(request.headers, request.params.id),
 		"/api/avatars/:userId": (request) =>
 			avatarResponse(request.headers, request.params.userId),
 	},
