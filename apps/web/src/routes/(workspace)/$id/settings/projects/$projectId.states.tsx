@@ -179,6 +179,8 @@ function RouteComponent() {
 		Promise.all([
 			queryClient.invalidateQueries({ queryKey: statesOptions.queryKey }),
 			queryClient.invalidateQueries({ queryKey: ["issues", projectId] }),
+			queryClient.invalidateQueries({ queryKey: ["modules", projectId] }),
+			queryClient.invalidateQueries({ queryKey: ["module"] }),
 			// A state's group decides how its items count in a cycle's progress.
 			invalidateCycles(queryClient, projectId),
 		]);

@@ -317,6 +317,8 @@ function RouteComponent() {
 				queryKey: ["workspace-invites", workspaceId],
 			}),
 			queryClient.invalidateQueries({ queryKey: ["issues"] }),
+			queryClient.invalidateQueries({ queryKey: ["modules"] }),
+			queryClient.invalidateQueries({ queryKey: ["module"] }),
 		]);
 
 	const { mutate: changeRole } = useMutation({

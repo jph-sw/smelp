@@ -126,6 +126,18 @@ export function ActivitySentence({
 					<>made {issue} a top-level item</>
 				);
 			}
+			if (d.field === "module") {
+				return d.to ? (
+					<>
+						added {issue} to the module <Strong>{d.to}</Strong>
+					</>
+				) : (
+					<>
+						removed {issue} from the module{" "}
+						<Strong>{d.from ?? "a deleted module"}</Strong>
+					</>
+				);
+			}
 			if (d.field === "cycle") {
 				return d.to ? (
 					<>
@@ -311,6 +323,34 @@ export function ActivitySentence({
 			);
 		case "state.reordered":
 			return <>reordered the states in {project}</>;
+		case "module.created":
+			return (
+				<>
+					created the module <Strong>{d.name}</Strong> in {project}
+				</>
+			);
+		case "module.updated": {
+			const changes = d.changes ?? [];
+			if (changes.length === 1 && changes[0] === "name") {
+				return (
+					<>
+						renamed the module <Strong>{d.oldName}</Strong> to{" "}
+						<Strong>{d.name}</Strong> in {project}
+					</>
+				);
+			}
+			return (
+				<>
+					updated the module <Strong>{d.name}</Strong> in {project}
+				</>
+			);
+		}
+		case "module.deleted":
+			return (
+				<>
+					deleted the module <Strong>{d.name}</Strong> in {project}
+				</>
+			);
 		case "workspace.created":
 			return <>created the workspace</>;
 		case "workspace.member_invited":

@@ -16,10 +16,12 @@ export type BoardFilters = {
 	assignee?: string;
 	state?: string;
 	cycle?: string;
+	module?: string;
 };
 
 export const UNASSIGNED = "unassigned";
 export const NO_CYCLE = "none";
+export const NO_MODULE = "none";
 const ALL = "all";
 
 function FilterSelect({
@@ -60,12 +62,14 @@ export function BoardFilterBar({
 	onChange,
 	members,
 	states,
+	modules,
 	cycles,
 }: {
 	filters: BoardFilters;
 	onChange: (filters: BoardFilters) => void;
 	members: ProjectMember[];
 	states: tables["state"][];
+	modules: { id: string; name: string }[];
 	cycles: { id: string; name: string }[];
 }) {
 	const [search, setSearch] = useState(filters.q ?? "");
@@ -84,7 +88,11 @@ export function BoardFilterBar({
 	}, [filters.q]);
 
 	const isFiltered = Boolean(
-		filters.q || filters.assignee || filters.state || filters.cycle,
+		filters.q ||
+			filters.assignee ||
+			filters.state ||
+			filters.cycle ||
+			filters.module,
 	);
 
 	return (
@@ -117,6 +125,16 @@ export function BoardFilterBar({
 				items={[
 					{ label: "All states", value: ALL },
 					...states.map((state) => ({ label: state.name, value: state.id })),
+				]}
+			/>
+			<FilterSelect
+				label="Filter by module"
+				value={filters.module}
+				onChange={(module) => onChange({ ...filters, module })}
+				items={[
+					{ label: "All modules", value: ALL },
+					{ label: "No module", value: NO_MODULE },
+					...modules.map((item) => ({ label: item.name, value: item.id })),
 				]}
 			/>
 			{cycles.length > 0 && (

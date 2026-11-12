@@ -37,6 +37,7 @@ import {
 	linksQueryOptions,
 	updateIssue,
 } from "#/lib/data/issue";
+import { moduleQueryKeys, modulesQueryOptions } from "#/lib/data/module";
 import { markIssueNotificationRead } from "#/lib/data/notifications";
 import {
 	projectMembersQueryOptions,
@@ -69,6 +70,9 @@ export const Route = createFileRoute("/(workspace)/$id/browse/$issueId")({
 			),
 			queryClient.ensureQueryData(
 				issuesQueryOptions({ projectId: issue.projectId }),
+			),
+			queryClient.ensureQueryData(
+				modulesQueryOptions({ projectId: issue.projectId }),
 			),
 			queryClient.ensureQueryData(
 				cyclesQueryOptions({ projectId: issue.projectId }),
@@ -153,6 +157,9 @@ function RouteComponent() {
 	const { data: projectIssues } = useSuspenseQuery(
 		issuesQueryOptions({ projectId: issue.projectId }),
 	);
+	const { data: modules } = useSuspenseQuery(
+		modulesQueryOptions({ projectId: issue.projectId }),
+	);
 	const { data: cycles } = useSuspenseQuery(
 		cyclesQueryOptions({ projectId: issue.projectId }),
 	);
@@ -179,6 +186,7 @@ function RouteComponent() {
 			state?: string;
 			assignee?: string | null;
 			parentId?: string | null;
+			moduleId?: string | null;
 			cycleId?: string | null;
 		}) => updateIssue({ id: issue.id, ...changes }),
 		onError: (e) => toastError(e, "Couldn't save your change."),
@@ -189,6 +197,7 @@ function RouteComponent() {
 					["activity", issue.id],
 					["issues", issue.projectId],
 					["my-issues"],
+					...moduleQueryKeys(issue.projectId),
 				].map((queryKey) => queryClient.invalidateQueries({ queryKey })),
 				// Cycle progress follows an item's state and cycle.
 				invalidateCycles(queryClient, issue.projectId),
@@ -320,6 +329,7 @@ function RouteComponent() {
 							members={members}
 							canWrite={canWrite}
 							parentOptions={parentOptions}
+							modules={modules}
 							cycles={cycles}
 							onUpdate={update}
 						/>
@@ -354,6 +364,7 @@ function RouteComponent() {
 						members={members}
 						canWrite={canWrite}
 						parentOptions={parentOptions}
+						modules={modules}
 						cycles={cycles}
 						onUpdate={update}
 					/>

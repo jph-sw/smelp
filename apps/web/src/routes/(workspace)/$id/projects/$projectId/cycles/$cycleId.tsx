@@ -58,6 +58,7 @@ import {
 	updateCycle,
 } from "#/lib/data/cycle";
 import { issuesQueryOptions } from "#/lib/data/issue";
+import { moduleQueryKeys } from "#/lib/data/module";
 import {
 	projectMembersQueryOptions,
 	useProjectAccess,
@@ -118,6 +119,10 @@ function MoveUnfinished({
 			});
 			await Promise.all([
 				invalidateCycles(queryClient, projectId),
+				// Module progress follows the same items.
+				...moduleQueryKeys(projectId).map((queryKey) =>
+					queryClient.invalidateQueries({ queryKey }),
+				),
 				queryClient.invalidateQueries({ queryKey: ["issues", projectId] }),
 				queryClient.invalidateQueries({ queryKey: ["issue"] }),
 				queryClient.invalidateQueries({ queryKey: ["activity"] }),
@@ -202,6 +207,10 @@ function RouteComponent() {
 			});
 			await Promise.all([
 				invalidateCycles(queryClient, projectId),
+				// Module progress follows the same items.
+				...moduleQueryKeys(projectId).map((queryKey) =>
+					queryClient.invalidateQueries({ queryKey }),
+				),
 				queryClient.invalidateQueries({ queryKey: ["issues", projectId] }),
 				queryClient.invalidateQueries({ queryKey: ["issue"] }),
 				queryClient.invalidateQueries({ queryKey: ["activity"] }),

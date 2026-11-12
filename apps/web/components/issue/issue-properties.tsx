@@ -4,6 +4,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { invalidateCycles } from "#/lib/data/cycle";
 import { deleteIssue } from "#/lib/data/issue";
+import { moduleQueryKeys } from "#/lib/data/module";
 import { toastError } from "#/lib/errors";
 import { formatDate, formatRelativeTime } from "#/lib/utils";
 import {
@@ -29,6 +30,7 @@ import { toast } from "../ui/toast";
 
 const UNASSIGNED = "unassigned";
 const NO_PARENT = "none";
+const NO_MODULE = "none";
 const NO_CYCLE = "none";
 
 type IssueDetail = tables["issue"] & {
@@ -100,6 +102,7 @@ export function IssueProperties({
 	members,
 	canWrite,
 	parentOptions,
+	modules,
 	cycles,
 	onUpdate,
 }: {
@@ -110,12 +113,14 @@ export function IssueProperties({
 	canWrite: boolean;
 	/** Work items this one may sit under: same project, never itself or its own sub-items. */
 	parentOptions: { id: string; title: string }[];
+	modules: { id: string; name: string }[];
 	/** The project's cycles, for the Cycle selector. */
 	cycles: { id: string; name: string }[];
 	onUpdate: (changes: {
 		state?: string;
 		assignee?: string | null;
 		parentId?: string | null;
+		moduleId?: string | null;
 		cycleId?: string | null;
 	}) => void;
 }) {
@@ -130,6 +135,9 @@ export function IssueProperties({
 				queryClient.invalidateQueries({
 					queryKey: ["issues", issue.projectId],
 				}),
+				...moduleQueryKeys(issue.projectId).map((queryKey) =>
+					queryClient.invalidateQueries({ queryKey }),
+				),
 				queryClient.invalidateQueries({ queryKey: ["my-issues"] }),
 				invalidateCycles(queryClient, issue.projectId),
 			]);
@@ -197,6 +205,18 @@ export function IssueProperties({
 						label: `${option.id} ${option.title}`,
 						value: option.id,
 					})),
+				]}
+			/>
+			<PropertySelect
+				label="Module"
+				value={issue.moduleId ?? NO_MODULE}
+				disabled={!canWrite}
+				onChange={(moduleId) =>
+					onUpdate({ moduleId: moduleId === NO_MODULE ? null : moduleId })
+				}
+				items={[
+					{ label: "No module", value: NO_MODULE },
+					...modules.map((item) => ({ label: item.name, value: item.id })),
 				]}
 			/>
 			<PersonAndTime
