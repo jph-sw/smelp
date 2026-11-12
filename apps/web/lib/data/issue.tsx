@@ -1,5 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 import { orpc } from "../orpc";
+import type { ReactionEmoji } from "../reactions";
 
 export const issuesQueryOptions = ({ projectId }: { projectId: string }) =>
 	queryOptions({
@@ -55,10 +56,31 @@ export const updateIssue = (input: {
 	title?: string;
 	description?: string;
 	assignee?: string | null;
+	parentId?: string | null;
 }) => orpc.issue.update(input);
 
 export const deleteIssue = ({ id }: { id: string }) =>
 	orpc.issue.delete({ id });
+
+export const linksQueryOptions = ({ issueId }: { issueId: string }) =>
+	queryOptions({
+		queryKey: ["links", issueId],
+		queryFn: () => orpc.links.find({ issueId }),
+	});
+
+export const createLink = (input: {
+	issueId: string;
+	url: string;
+	title?: string;
+}) => orpc.links.create(input);
+
+export const updateLink = (input: {
+	id: string;
+	url: string;
+	title?: string;
+}) => orpc.links.update(input);
+
+export const deleteLink = ({ id }: { id: string }) => orpc.links.delete({ id });
 
 export const createComment = (input: { issueId: string; body: string }) =>
 	orpc.comments.create(input);
@@ -68,3 +90,76 @@ export const updateComment = (input: { commentId: string; body: string }) =>
 
 export const deleteComment = ({ id }: { id: string }) =>
 	orpc.comments.delete({ id });
+
+export const attachmentsQueryOptions = ({ issueId }: { issueId: string }) =>
+	queryOptions({
+		queryKey: ["attachments", issueId],
+		queryFn: () => orpc.attachments.find({ issueId }),
+	});
+
+export const deleteAttachment = ({ id }: { id: string }) =>
+	orpc.attachments.delete({ id });
+
+export const attachmentLimitsQueryOptions = queryOptions({
+	queryKey: ["attachment-limits"],
+	queryFn: () => orpc.attachments.limits(),
+	staleTime: Number.POSITIVE_INFINITY,
+});
+
+export const attachmentUrl = (id: string) => `/api/attachments/${id}`;
+
+// Its message is written for the user, like the server's own refusals.
+export class AttachmentUploadError extends Error {}
+
+// Not an RPC call, because the file goes up as a plain multipart request.
+export async function uploadAttachment(input: {
+	issueId: string;
+	commentId?: string;
+	file: File;
+}) {
+	const query = new URLSearchParams({ issueId: input.issueId });
+	if (input.commentId) query.set("commentId", input.commentId);
+	const body = new FormData();
+	body.set("file", input.file);
+
+	let response: Response;
+	try {
+		response = await fetch(`/api/attachments?${query}`, {
+			method: "POST",
+			// The server only takes uploads that carry this, which a page on another
+			// site can't add.
+			headers: { "X-Smelp-Upload": "1" },
+			body,
+			credentials: "include",
+		});
+	} catch {
+		throw new AttachmentUploadError(
+			"The upload failed. Check your connection.",
+		);
+	}
+	if (!response.ok) {
+		const message = (await response.text().catch(() => "")).slice(0, 200);
+		throw new AttachmentUploadError(message || "The upload failed.");
+	}
+}
+
+export const setReaction = (input: {
+	commentId: string;
+	emoji: ReactionEmoji;
+	reacted: boolean;
+}) => orpc.comments.setReaction(input);
+
+export const issueRelationsQueryOptions = ({ issueId }: { issueId: string }) =>
+	queryOptions({
+		queryKey: ["issue-relations", issueId],
+		queryFn: () => orpc.issueRelations.find({ issueId }),
+	});
+
+export const addIssueRelation = (input: {
+	issueId: string;
+	relatedId: string;
+	kind: "blocks" | "blocked_by" | "relates" | "duplicates" | "duplicated_by";
+}) => orpc.issueRelations.add(input);
+
+export const removeIssueRelation = (input: { issueId: string; id: string }) =>
+	orpc.issueRelations.remove(input);

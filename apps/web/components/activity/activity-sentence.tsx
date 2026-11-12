@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import type { FeedEvent } from "#/lib/data/activity";
+import { RELATION_PHRASES } from "#/lib/relations";
 
 const linkClass =
 	"font-medium text-foreground underline-offset-3 hover:underline";
@@ -116,6 +117,15 @@ export function ActivitySentence({
 				<>unassigned {issue}</>
 			);
 		case "issue.updated":
+			if (d.field === "parent") {
+				return d.to ? (
+					<>
+						made {issue} a sub-item of <Strong>{d.to}</Strong>
+					</>
+				) : (
+					<>made {issue} a top-level item</>
+				);
+			}
 			return d.field === "title" ? (
 				<>
 					renamed {issue} to {`"${d.to}"`}
@@ -129,6 +139,56 @@ export function ActivitySentence({
 					deleted {issue}
 					{event.issue?.title && ` "${event.issue.title}"`}
 				</>
+			);
+		case "issue.attachment_added":
+			return (
+				<>
+					attached <Strong>{d.name ?? "a file"}</Strong> to {issue}
+				</>
+			);
+		case "issue.attachment_removed":
+			return (
+				<>
+					removed <Strong>{d.name ?? "a file"}</Strong> from {issue}
+				</>
+			);
+		case "issue.relation_added":
+			return (
+				<>
+					marked {issue} as {RELATION_PHRASES[d.relation ?? ""] ?? "related to"}{" "}
+					<Strong>{d.relatedId ?? "another work item"}</Strong>
+				</>
+			);
+		case "issue.relation_removed":
+			return (
+				<>
+					removed the relation between {issue} and{" "}
+					<Strong>{d.relatedId ?? "another work item"}</Strong>
+				</>
+			);
+		case "issue.link_added":
+			return d.name ? (
+				<>
+					added the link <Strong>{d.name}</Strong> to {issue}
+				</>
+			) : (
+				<>added a link to {issue}</>
+			);
+		case "issue.link_updated":
+			return d.name ? (
+				<>
+					edited the link <Strong>{d.name}</Strong> on {issue}
+				</>
+			) : (
+				<>edited a link on {issue}</>
+			);
+		case "issue.link_removed":
+			return d.name ? (
+				<>
+					removed the link <Strong>{d.name}</Strong> from {issue}
+				</>
+			) : (
+				<>removed a link from {issue}</>
 			);
 		case "comment.created":
 			return <>commented on {issue}</>;

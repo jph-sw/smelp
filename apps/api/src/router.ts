@@ -5,6 +5,11 @@ import "./lib/notifications";
 import { logRequestError } from "./lib/request-errors";
 import { findIssueActivity } from "./routes/activity";
 import { findWorkspaceActivity } from "./routes/activity-feed";
+import {
+	deleteAttachment,
+	findAttachmentLimits,
+	findAttachments,
+} from "./routes/attachment";
 import { me } from "./routes/auth/me";
 import {
 	changePassword,
@@ -25,6 +30,7 @@ import {
 	createComment,
 	deleteComment,
 	findComments,
+	setReaction,
 	updateComment,
 } from "./routes/comment";
 import {
@@ -41,7 +47,13 @@ import {
 	findIssue,
 	updateIssue,
 } from "./routes/issue";
+import {
+	addIssueRelation,
+	findIssueRelations,
+	removeIssueRelation,
+} from "./routes/issue-relation";
 import { findIssues, findMyIssues, searchIssues } from "./routes/issues";
+import { createLink, deleteLink, findLinks, updateLink } from "./routes/link";
 import {
 	countUnreadNotifications,
 	findNotifications,
@@ -162,16 +174,33 @@ export const router = {
 		update: updateIssue,
 		delete: deleteIssue,
 	},
+	issueRelations: {
+		find: findIssueRelations,
+		add: addIssueRelation,
+		remove: removeIssueRelation,
+	},
 	issues: {
 		find: findIssues,
 		findMine: findMyIssues,
 		search: searchIssues,
+	},
+	links: {
+		find: findLinks,
+		create: createLink,
+		update: updateLink,
+		delete: deleteLink,
 	},
 	comments: {
 		find: findComments,
 		create: createComment,
 		update: updateComment,
 		delete: deleteComment,
+		setReaction,
+	},
+	attachments: {
+		find: findAttachments,
+		limits: findAttachmentLimits,
+		delete: deleteAttachment,
 	},
 	activity: {
 		findForIssue: findIssueActivity,

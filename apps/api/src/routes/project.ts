@@ -10,6 +10,10 @@ import {
 	requireProjectPermission,
 	requireWorkspacePermission,
 } from "../lib/access";
+import {
+	attachmentKeysOfProject,
+	removeAttachmentFiles,
+} from "../lib/attachments";
 import { base } from "../orpc";
 
 const sql = new DB().sqlite;
@@ -267,7 +271,9 @@ export const deleteProject = base
 
 		// deleting the space cascades to project, issue, state, project_counter,
 		// auth_space_member, and auth_space_invite
+		const files = await attachmentKeysOfProject(project.id);
 		await sql`DELETE FROM auth_space WHERE id = ${project.spaceId}`;
+		await removeAttachmentFiles(files);
 
 		eventBus.emit({
 			type: "project.deleted",
