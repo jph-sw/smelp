@@ -243,14 +243,13 @@ export function buildPlan(
 	// Keys that can be used as they are are kept back, so a suggestion made for an
 	// unusable key never takes one of them.
 	const chosenIds = new Set<string>(
-		parsed.projects
-			.filter(
-				(jira) =>
-					!mapping.projects?.[jira.key]?.id &&
-					ID_PATTERN.test(jira.key) &&
-					!ctx.takenIds.has(jira.key),
-			)
-			.map((jira) => jira.key),
+		parsed.projects.flatMap((jira) => {
+			const explicit = mapping.projects?.[jira.key]?.id?.trim().toUpperCase();
+			if (explicit) return [explicit];
+			return ID_PATTERN.test(jira.key) && !ctx.takenIds.has(jira.key)
+				? [jira.key]
+				: [];
+		}),
 	);
 	const projectPlans = parsed.projects.map((jira) => {
 		const choice = mapping.projects?.[jira.key] ?? {};
