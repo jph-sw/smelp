@@ -137,6 +137,52 @@
     }
 }
 
+/* Touch screens: everything people tap gets a hit area of at least 44px, and
+   text fields stay at 16px so iOS doesn't zoom in on focus. Inline links in
+   running text are inline boxes, which min-size doesn't affect. Mouse and
+   trackpad layouts are untouched. */
+@media (pointer: coarse) {
+  :is(
+      button,
+      [role="button"],
+      [role="menuitem"],
+      [role="menuitemcheckbox"],
+      [role="menuitemradio"],
+      [role="option"],
+      [role="tab"],
+      [role="combobox"],
+      summary,
+      select,
+      a[href]
+    ):not([data-compact]) {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  :is(input, textarea, select):not(
+      [type="checkbox"],
+      [type="radio"],
+      [type="color"],
+      [type="file"],
+      [type="hidden"],
+      [type="range"]
+    ),
+  [data-slot="input-group"] {
+    min-height: 44px;
+  }
+  /* Only fields styled smaller than 16px are raised, bigger ones (like the work
+     item title) keep their size. */
+  :is(input, textarea, select):not([type="checkbox"], [type="radio"]):is(
+      [class*="text-xs"],
+      [class*="text-sm"],
+      [class*="text-[0."]
+    ) {
+    font-size: 1rem;
+  }
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+}
+
 /* Reduced motion keeps fades and color changes but removes movement. */
 @media (prefers-reduced-motion: reduce) {
   [data-slot] {
