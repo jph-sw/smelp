@@ -130,6 +130,7 @@ export class Auth {
 			updatedAt: now,
 			role: "user",
 			image: null,
+			notifyByEmail: 0,
 		};
 
 		const account: tables["auth_account"] = {

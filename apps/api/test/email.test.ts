@@ -456,6 +456,92 @@ describe("test email", () => {
 	});
 });
 
+describe("notification emails", () => {
+	const setup = async (wantsEmail: boolean) => {
+		const owner = await createUser();
+		const person = await createUser();
+		const workspaceId = `notify_mail_${counter}`;
+		const projectId = `NM${counter}`;
+		await owner.client.workspace.create({ name: `Notify mail ${counter}` });
+		await owner.client.project.create({
+			id: projectId,
+			name: "Notify",
+			description: "",
+			access: "public",
+			icon: "AppWindowIcon",
+			workspaceId,
+		});
+		await sql`INSERT INTO auth_space_member ${sql({
+			id: crypto.randomUUID(),
+			spaceId: projectId,
+			userId: person.id,
+			role: "member",
+			createdAt: Date.now(),
+		})}`;
+		const [state] = await owner.client.states.find({ projectId });
+		if (wantsEmail) {
+			await person.client.auth.updateNotificationPreferences({
+				emailNotifications: true,
+			});
+		}
+		const assign = () =>
+			owner.client.issue.create({
+				title: "Mail me",
+				description: "",
+				state: state?.id ?? "",
+				type: "task",
+				workspaceId,
+				projectId,
+				assignee: person.id,
+			});
+		return { person, workspaceId, assign };
+	};
+
+	test("nothing is sent unless the person turned it on", async () => {
+		const { assign } = await setup(false);
+		await assign();
+		await Bun.sleep(300);
+		expect(received.length).toBe(0);
+	});
+
+	test("sends a link to the item when it is on", async () => {
+		const { person, workspaceId, assign } = await setup(true);
+		const issue = await assign();
+		await waitForMail(1);
+		expect(received[0]?.to[0]).toContain(person.email);
+		expect(received[0]?.text).toContain("assigned you");
+		expect(received[0]?.text).toContain(
+			`https://smelp.example.test/${workspaceId}/browse/${issue.id}`,
+		);
+	});
+
+	test("a failing mail server doesn't fail the request", async () => {
+		const { person, workspaceId, assign } = await setup(true);
+		failNextData = true;
+		const issue = await assign();
+		expect(issue.assignee).toBe(person.id);
+		await Bun.sleep(300);
+		expect(received.length).toBe(0);
+		// The inbox still has it.
+		const { notifications } = await person.client.notifications.find({
+			workspaceId,
+		});
+		expect(notifications).toHaveLength(1);
+	});
+
+	test("with email off the inbox still works", async () => {
+		const { person, workspaceId, assign } = await setup(true);
+		clearMailEnv();
+		await assign();
+		await Bun.sleep(300);
+		expect(received.length).toBe(0);
+		const { count } = await person.client.notifications.countUnread({
+			workspaceId,
+		});
+		expect(count).toBe(1);
+	});
+});
+
 test("the status endpoint never exposes mail settings", async () => {
 	process.env.SMTP_USER = "login";
 	process.env.SMTP_PASSWORD = "hunter2-secret";

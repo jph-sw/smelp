@@ -150,3 +150,27 @@ export async function sendPasswordResetEmail(reset: {
 		].join("\n"),
 	});
 }
+
+export async function sendNotificationEmail(notification: {
+	to: string;
+	workspaceId: string;
+	issueId: string;
+	summary: string;
+	excerpt?: string;
+}): Promise<EmailDelivery> {
+	const { config } = readConfig();
+	if (!config) return "none";
+
+	return deliver({
+		to: notification.to,
+		subject: oneLine(notification.summary),
+		text: [
+			oneLine(notification.summary),
+			...(notification.excerpt ? ["", notification.excerpt] : []),
+			"",
+			`${config.appUrl}/${notification.workspaceId}/browse/${notification.issueId}`,
+			"",
+			"You get this because you turned on email notifications in your account settings.",
+		].join("\n"),
+	});
+}

@@ -16,6 +16,7 @@ import type {
 import type { comment } from "../types/tables/comment";
 import type { issue } from "../types/tables/issue";
 import type { schema_migrations } from "../types/tables/migration";
+import type { notification } from "../types/tables/notification";
 import type { project } from "../types/tables/project";
 import type { project_counter } from "../types/tables/project_counter";
 import { STATE_GROUPS, type state } from "../types/tables/state";
@@ -160,6 +161,7 @@ export type tables = {
 	issue: issue;
 	state: state;
 	comment: comment;
+	notification: notification;
 };
 
 export const DEFAULTS = {
