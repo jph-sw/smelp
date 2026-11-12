@@ -1,5 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 import { orpc } from "../orpc";
+import type { ReactionEmoji } from "../reactions";
 
 export const issuesQueryOptions = ({ projectId }: { projectId: string }) =>
 	queryOptions({
@@ -89,6 +90,12 @@ export const updateComment = (input: { commentId: string; body: string }) =>
 
 export const deleteComment = ({ id }: { id: string }) =>
 	orpc.comments.delete({ id });
+
+export const setReaction = (input: {
+	commentId: string;
+	emoji: ReactionEmoji;
+	reacted: boolean;
+}) => orpc.comments.setReaction(input);
 
 export const issueRelationsQueryOptions = ({ issueId }: { issueId: string }) =>
 	queryOptions({

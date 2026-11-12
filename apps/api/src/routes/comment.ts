@@ -1,6 +1,6 @@
 import { ORPCError } from "@orpc/server";
 import { Auth } from "@smelp/auth";
-import { DB, type tables } from "@smelp/db";
+import { DB, DEFAULTS, type tables } from "@smelp/db";
 import { eventBus } from "@smelp/events";
 import * as v from "valibot";
 import { requireProjectPermission, requireSession } from "../lib/access";
@@ -17,10 +17,19 @@ async function findIssueOrThrow(issueId: string) {
 	return issue;
 }
 
+export type CommentReaction = {
+	emoji: string;
+	count: number;
+	/** Whether the current user is one of the people who reacted. */
+	reacted: boolean;
+	/** Display names of everyone who reacted, oldest reaction first. */
+	users: string[];
+};
+
 export const findComments = base
 	.input(v.object({ issueId: v.string() }))
 	.handler(async ({ input, context }) => {
-		await requireSession(context.headers);
+		const session = await requireSession(context.headers);
 		const issue = await findIssueOrThrow(input.issueId);
 		await requireProjectPermission(
 			context.headers,
@@ -28,7 +37,7 @@ export const findComments = base
 			"space:read",
 		);
 
-		return (await sql`
+		const comments = (await sql`
 			SELECT
 				comment.*,
 				auth_user.displayName AS authorName,
@@ -41,6 +50,94 @@ export const findComments = base
 			authorName: string | null;
 			authorImage: string | null;
 		})[];
+
+		const rows = (await sql`
+			SELECT
+				comment_reaction.commentId,
+				comment_reaction.emoji,
+				comment_reaction.userId,
+				auth_user.displayName AS userName
+			FROM comment_reaction
+			JOIN comment ON comment.id = comment_reaction.commentId
+			JOIN auth_user ON auth_user.id = comment_reaction.userId
+			WHERE comment.issueId = ${issue.id}
+			ORDER BY comment_reaction.createdAt ASC, comment_reaction.rowid ASC
+		`) as {
+			commentId: string;
+			emoji: string;
+			userId: string;
+			userName: string;
+		}[];
+
+		const byComment = new Map<string, Map<string, CommentReaction>>();
+		for (const row of rows) {
+			const reactions = byComment.get(row.commentId) ?? new Map();
+			const reaction: CommentReaction = reactions.get(row.emoji) ?? {
+				emoji: row.emoji,
+				count: 0,
+				reacted: false,
+				users: [],
+			};
+			reaction.count += 1;
+			reaction.reacted ||= row.userId === session.userId;
+			reaction.users.push(row.userName);
+			reactions.set(row.emoji, reaction);
+			byComment.set(row.commentId, reactions);
+		}
+
+		return comments.map((comment) => ({
+			...comment,
+			reactions: [...(byComment.get(comment.id)?.values() ?? [])],
+		}));
+	});
+
+// Reactions are limited to a small fixed set (DEFAULTS.REACTION_EMOJIS), which keeps
+// them tidy and avoids having to validate arbitrary emoji sequences. They are light
+// participation, so like comments they are open to read-only guests, but not on an
+// archived project. They deliberately leave no activity-feed entry or event.
+export const setReaction = base
+	.input(
+		v.object({
+			commentId: v.string(),
+			emoji: v.picklist(DEFAULTS.REACTION_EMOJIS),
+			// The desired state, so repeated or concurrent calls end up the same.
+			reacted: v.boolean(),
+		}),
+	)
+	.handler(async ({ input, context }) => {
+		const session = await requireSession(context.headers);
+
+		const comment = (
+			await sql`SELECT * FROM comment WHERE id = ${input.commentId}`
+		)[0] as tables["comment"] | undefined;
+		if (!comment) throw new ORPCError("NOT_FOUND");
+
+		const issue = await findIssueOrThrow(comment.issueId);
+		await requireProjectPermission(
+			context.headers,
+			issue.projectId,
+			"space:read",
+			{ write: true },
+		);
+
+		if (!input.reacted) {
+			await sql`
+				DELETE FROM comment_reaction
+				WHERE commentId = ${comment.id}
+					AND userId = ${session.userId}
+					AND emoji = ${input.emoji}
+			`;
+			return { reacted: false };
+		}
+
+		const reaction: tables["comment_reaction"] = {
+			commentId: comment.id,
+			userId: session.userId,
+			emoji: input.emoji,
+			createdAt: Date.now(),
+		};
+		await sql`INSERT OR IGNORE INTO comment_reaction ${sql(reaction)}`;
+		return { reacted: true };
 	});
 
 export const createComment = base
