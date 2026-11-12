@@ -13,6 +13,9 @@ export const linkedAccountsQueryOptions = queryOptions({
 
 export const unlinkOidc = () => orpc.auth.unlinkOidc();
 
+export const setPassword = (newPassword: string) =>
+	orpc.auth.setPassword({ newPassword });
+
 // What the sign-in page says when a single sign-on attempt ends without a session.
 // The server only sends these codes, never text.
 export const OIDC_ERROR_MESSAGES: Record<string, string> = {

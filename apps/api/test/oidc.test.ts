@@ -15,7 +15,9 @@ const { Auth } = await import("@smelp/auth");
 const { DB } = await import("@smelp/db");
 const { router } = await import("../src/router");
 const { oidcStart, oidcCallback } = await import("../src/routes/auth/oidc");
-const { resetOidcCache, safeLocalPath } = await import("../src/lib/oidc");
+const { oidcCookieName, resetOidcCache, safeLocalPath } = await import(
+	"../src/lib/oidc"
+);
 
 const sql = new DB().sqlite;
 const auth = new Auth();
@@ -37,6 +39,8 @@ type Scenario = {
 	expiresInSeconds?: number;
 	nonce?: string | null;
 	signWithOtherKey?: boolean;
+	// Signed with the client secret, the way a forged HS256 token would be.
+	hmac?: boolean;
 };
 
 // --- The fake provider -----------------------------------------------------------
@@ -136,7 +140,10 @@ async function startProvider() {
 					claims.nonce = scenario.nonce ?? entry.nonce;
 				}
 				const idToken = await new SignJWT(claims)
-					.setProtectedHeader({ alg: "RS256", kid: KEY_ID })
+					.setProtectedHeader({
+						alg: scenario.hmac ? "HS256" : "RS256",
+						kid: KEY_ID,
+					})
 					.setIssuer(scenario.issuer ?? issuer)
 					.setAudience(scenario.audience ?? CLIENT_ID)
 					.setSubject(scenario.sub)
@@ -144,7 +151,13 @@ async function startProvider() {
 					.setExpirationTime(
 						Math.floor(Date.now() / 1000) + (scenario.expiresInSeconds ?? 300),
 					)
-					.sign(scenario.signWithOtherKey ? otherKey : signingKey);
+					.sign(
+						scenario.hmac
+							? new TextEncoder().encode(CLIENT_SECRET)
+							: scenario.signWithOtherKey
+								? otherKey
+								: signingKey,
+					);
 				return Response.json({
 					access_token: "not-used",
 					token_type: "Bearer",
@@ -186,13 +199,10 @@ type Outcome = {
 	loginCookie: string;
 };
 
-// Start, visit the provider, and come back to the callback, like a browser would.
-async function signInWith(
-	scenario: Scenario,
-	options: { query?: string; cookie?: "keep" | "drop" | string } = {},
-): Promise<Outcome> {
+// Start and visit the provider, which hands back the address to return to.
+async function begin(scenario: Scenario, query = "") {
 	const started = await oidcStart(
-		new Request(`http://app.test/api/auth/oidc/start${options.query ?? ""}`),
+		new Request(`http://app.test/api/auth/oidc/start${query}`),
 		nextIp(),
 	);
 	expect(started.status).toBe(302);
@@ -201,9 +211,20 @@ async function signInWith(
 	scenarios.set(state, scenario);
 
 	const visited = await fetch(authorizeUrl, { redirect: "manual" });
-	const callbackUrl = visited.headers.get("location") ?? "";
-	const loginCookie = cookieValue(cookieOf(started, "oidc_login")) ?? "";
+	return {
+		started,
+		state,
+		callbackUrl: visited.headers.get("location") ?? "",
+		loginCookie: cookieValue(cookieOf(started, oidcCookieName(state))) ?? "",
+	};
+}
 
+// Start, visit the provider, and come back to the callback, like a browser would.
+async function signInWith(
+	scenario: Scenario,
+	options: { query?: string; cookie?: "keep" | "drop" | string } = {},
+): Promise<Outcome> {
+	const { callbackUrl, loginCookie } = await begin(scenario, options.query);
 	return await finishAt(callbackUrl, loginCookie, options.cookie);
 }
 
@@ -212,9 +233,12 @@ async function finishAt(
 	loginCookie: string,
 	cookie: "keep" | "drop" | string = "keep",
 ): Promise<Outcome> {
+	const name = oidcCookieName(
+		new URL(callbackUrl).searchParams.get("state") ?? "",
+	);
 	const headers = new Headers();
-	if (cookie === "keep") headers.set("cookie", `oidc_login=${loginCookie}`);
-	else if (cookie !== "drop") headers.set("cookie", `oidc_login=${cookie}`);
+	if (cookie === "keep") headers.set("cookie", `${name}=${loginCookie}`);
+	else if (cookie !== "drop") headers.set("cookie", `${name}=${cookie}`);
 	const response = await oidcCallback(
 		new Request(callbackUrl, { headers }),
 		nextIp(),
@@ -358,7 +382,10 @@ describe("setup", () => {
 		expect(params.get("nonce")?.length).toBeGreaterThanOrEqual(32);
 		expect(params.get("scope")).toContain("openid");
 
-		const cookie = cookieOf(response, "oidc_login") ?? "";
+		const cookie =
+			response.headers
+				.getSetCookie()
+				.find((value) => value.startsWith("oidc_login_")) ?? "";
 		expect(cookie).toContain("HttpOnly");
 		expect(cookie).toContain("SameSite=Lax");
 		expect(cookie).toContain("Path=/api/auth/oidc");
@@ -420,15 +447,22 @@ describe("signing in to an account that is already linked", () => {
 		// without proving it was theirs.
 		const result = await signInWith(verified(sub, person.email));
 		expect(result.error).toBeNull();
-		expect(result.location).toBe("/");
+		// Sent to account settings, because the old password was removed.
+		expect(result.location).toBe("/account");
 		expect(await sessionUser(result.sessionToken)).toBe(person.id);
 		expect(await sessionUser(person.token)).toBeUndefined();
 		expect(await identitiesOf(person.id)).toHaveLength(1);
+		await expect(
+			clientFor().auth.signIn({ email: person.email, password: PASSWORD }),
+		).rejects.toMatchObject({ code: "UNAUTHORIZED" });
 
-		// The password still works.
+		// Setting a new password gives them both ways in.
+		await clientFor(result.sessionToken).auth.setPassword({
+			newPassword: "a-brand-new-password-9",
+		});
 		const viaPassword = await clientFor().auth.signIn({
 			email: person.email,
-			password: PASSWORD,
+			password: "a-brand-new-password-9",
 		});
 		expect(viaPassword.user.id).toBe(person.id);
 
@@ -442,6 +476,34 @@ describe("signing in to an account that is already linked", () => {
 		expect(later.error).toBeNull();
 		expect(await sessionUser(later.sessionToken)).toBe(person.id);
 		expect(await userByEmail(`somebody-else@${EMAIL_DOMAIN}`)).toBeUndefined();
+	});
+
+	test("an account someone registered first can't be used through its old password", async () => {
+		// Sign-up doesn't check that an address is the person's own, so an attacker
+		// could register a victim's address ahead of time and know its password.
+		const victim = await passwordUser("preregistered");
+		const resetToken = crypto.randomUUID();
+		await sql`INSERT INTO auth_password_reset ${sql({
+			id: crypto.randomUUID(),
+			userId: victim.id,
+			tokenHash: resetToken,
+			createdByUserId: null,
+			createdAt: Date.now(),
+			expiresAt: Date.now() + 60_000,
+			usedAt: null,
+		})}`;
+
+		const result = await signInWith(verified(unique("sub"), victim.email));
+		expect(await sessionUser(result.sessionToken)).toBe(victim.id);
+
+		// The attacker's password, their session and any reset link are all dead.
+		await expect(
+			clientFor().auth.signIn({ email: victim.email, password: PASSWORD }),
+		).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+		expect(await sessionUser(victim.token)).toBeUndefined();
+		const resets =
+			await sql`SELECT 1 FROM auth_password_reset WHERE userId = ${victim.id}`;
+		expect(resets).toHaveLength(0);
 	});
 
 	test("matches the email without regard to case", async () => {
@@ -707,6 +769,8 @@ describe("ID token validation", () => {
 		rejects({ issuer: "https://evil.example.test" }));
 	test("a wrong audience is refused", () =>
 		rejects({ audience: "some-other-client" }));
+	test("a token signed with a shared secret instead of the provider's key is refused", () =>
+		rejects({ hmac: true }));
 	test("a token signed with the wrong key is refused", () =>
 		rejects({ signWithOtherKey: true }));
 	test("an expired token is refused", () =>
@@ -739,6 +803,18 @@ describe("the callback", () => {
 		expect(replay.sessionToken).toBeUndefined();
 	});
 
+	test("two logins started in different tabs can finish in either order", async () => {
+		const a = await passwordUser("tab-a");
+		const b = await passwordUser("tab-b");
+		const first = await begin(verified(unique("sub"), a.email));
+		const second = await begin(verified(unique("sub"), b.email));
+
+		const secondDone = await finishAt(second.callbackUrl, second.loginCookie);
+		const firstDone = await finishAt(first.callbackUrl, first.loginCookie);
+		expect(await sessionUser(secondDone.sessionToken)).toBe(b.id);
+		expect(await sessionUser(firstDone.sessionToken)).toBe(a.id);
+	});
+
 	test("a state nobody issued is refused", async () => {
 		const result = await finishAt(
 			"https://smelp.example.test/api/auth/oidc/callback?code=abc&state=forged",
@@ -767,7 +843,7 @@ describe("the callback", () => {
 			new URL(started.headers.get("location") ?? "").searchParams.get(
 				"state",
 			) ?? "";
-		const cookie = cookieValue(cookieOf(started, "oidc_login")) ?? "";
+		const cookie = cookieValue(cookieOf(started, oidcCookieName(state))) ?? "";
 		const denied = await finishAt(
 			`https://smelp.example.test/api/auth/oidc/callback?error=access_denied&state=${state}`,
 			cookie,
@@ -817,6 +893,7 @@ describe("where people are sent afterwards", () => {
 	test("only paths on this site are followed", async () => {
 		const person = await passwordUser("redirect");
 		const sub = unique("sub");
+		await signInWith(verified(sub, person.email));
 		const cases: [string, string][] = [
 			["/projects/abc?tab=1", "/projects/abc?tab=1"],
 			["https://evil.example.test/", "/"],
@@ -853,6 +930,13 @@ describe("account settings", () => {
 		const result = await signInWith(verified(unique("sub"), person.email));
 		const client = clientFor(result.sessionToken);
 
+		// The link removed the old password, so unlinking waits for a new one.
+		expect((await client.auth.linkedAccounts()).hasPassword).toBe(false);
+		await expect(client.auth.unlinkOidc()).rejects.toMatchObject({
+			code: "BAD_REQUEST",
+		});
+		await client.auth.setPassword({ newPassword: "unlink-test-password-3" });
+
 		expect(await client.auth.linkedAccounts()).toEqual({
 			hasPassword: true,
 			providers: [{ label: "Testprovider" }],
@@ -882,6 +966,31 @@ describe("account settings", () => {
 		}
 	});
 
+	test("setting a password works once, and then Change password takes over", async () => {
+		await setSignupOpen(true);
+		try {
+			const email = `${unique("setpw")}@${EMAIL_DOMAIN}`;
+			const result = await signInWith(verified(unique("sub"), email));
+			const client = clientFor(result.sessionToken);
+
+			await client.auth.setPassword({ newPassword: "first-password-123" });
+			await expect(
+				client.auth.setPassword({ newPassword: "second-password-123" }),
+			).rejects.toMatchObject({ code: "BAD_REQUEST" });
+			// The first one still stands.
+			const viaPassword = await clientFor().auth.signIn({
+				email,
+				password: "first-password-123",
+			});
+			expect(viaPassword.user.email).toBe(email);
+			await expect(
+				clientFor().auth.setPassword({ newPassword: "whatever-password-1" }),
+			).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+		} finally {
+			await setSignupOpen(false);
+		}
+	});
+
 	test("needs a session", async () => {
 		await expect(clientFor().auth.unlinkOidc()).rejects.toMatchObject({
 			code: "UNAUTHORIZED",
@@ -897,7 +1006,9 @@ describe("account settings", () => {
 		await signInWith(verified(unique("sub"), a.email));
 		const bSession = await signInWith(verified(unique("sub"), b.email));
 
-		await clientFor(bSession.sessionToken).auth.unlinkOidc();
+		const bClient = clientFor(bSession.sessionToken);
+		await bClient.auth.setPassword({ newPassword: "owner-b-password-1" });
+		await bClient.auth.unlinkOidc();
 		expect(await identitiesOf(a.id)).toHaveLength(1);
 	});
 });

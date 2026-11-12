@@ -17,7 +17,7 @@ export type OidcAccountError =
 	| "no_match";
 
 export type OidcAccountResult =
-	| { ok: true; userId: string; created: boolean }
+	| { ok: true; userId: string; created: boolean; passwordRemoved?: boolean }
 	| { ok: false; error: OidcAccountError };
 
 const isUniqueViolation = (error: unknown) =>
@@ -37,6 +37,9 @@ async function freeDisplayName(tx: typeof sql, wanted: string) {
 	return clip(wanted, 30) + auth.generateRandomId().slice(0, 8);
 }
 
+// The helpers below that read through `sql` instead of `tx` still run inside the
+// transaction, since code inside one is routed to its connection.
+//
 // Finds or makes the account for a validated sign-in. The whole decision and its
 // write happen in one transaction, so two sign-ins can't both pass the checks and
 // then both write.
@@ -116,10 +119,24 @@ async function resolve(
 		if (alreadyLinked.length > 0) return { ok: false, error: "no_match" };
 
 		await tx`INSERT INTO auth_account ${tx(identity(match.id))}`;
-		// Someone may have registered this address first, without proving they own it.
-		// Whoever holds their sessions now has to sign in again.
+		// Sign-up doesn't prove that an address is the person's own, so someone may
+		// have registered this one first and chosen the password. The provider has
+		// just shown that the address really belongs to the person signing in, so
+		// anything that came from before is cut off: the password, the sessions and
+		// any reset link. They can set a new password in their account settings.
+		const removed = await tx`
+			UPDATE auth_account SET password = NULL, updatedAt = ${now}
+			WHERE userId = ${match.id} AND providerId = 'password' AND password IS NOT NULL
+			RETURNING id
+		`;
 		await tx`DELETE FROM auth_session WHERE userId = ${match.id}`;
-		return { ok: true, userId: match.id, created: false };
+		await tx`DELETE FROM auth_password_reset WHERE userId = ${match.id}`;
+		return {
+			ok: true,
+			userId: match.id,
+			created: false,
+			passwordRemoved: removed.length > 0,
+		};
 	}
 
 	const firstRun = await isFirstRun();

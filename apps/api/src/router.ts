@@ -14,6 +14,7 @@ import { me } from "./routes/auth/me";
 import {
 	findLinkedAccounts,
 	findSignInOptions,
+	setPassword,
 	unlinkOidc,
 } from "./routes/auth/oidc";
 import {
@@ -143,6 +144,7 @@ export const router = {
 		signInOptions: findSignInOptions,
 		linkedAccounts: findLinkedAccounts,
 		unlinkOidc,
+		setPassword,
 		previewPasswordReset,
 		resetPassword,
 		requestPasswordReset,

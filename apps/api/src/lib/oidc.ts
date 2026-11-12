@@ -14,7 +14,10 @@ import * as oauth from "oauth4webapi";
 const utils = new Utils();
 
 export const OIDC_CALLBACK_PATH = "/api/auth/oidc/callback";
-export const OIDC_COOKIE = "oidc_login";
+// One cookie per login in progress, so starting a second login in another tab
+// doesn't break the first.
+export const oidcCookieName = (state: string) =>
+	`oidc_login_${state.slice(0, 16).replace(/[^A-Za-z0-9_-]/g, "")}`;
 const LOGIN_LIFETIME_MS = 10 * 60 * 1000;
 const DISCOVERY_LIFETIME_MS = 10 * 60 * 1000;
 const REQUEST_TIMEOUT_MS = 10_000;
@@ -271,7 +274,7 @@ export async function beginOidcLogin(
 	);
 	url.searchParams.set("code_challenge_method", "S256");
 
-	return { url: url.href, binding };
+	return { url: url.href, binding, state };
 }
 
 export type OidcClaims = {

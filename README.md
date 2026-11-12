@@ -104,9 +104,10 @@ One OpenID Connect provider (Google, GitLab, Authentik, Keycloak and so on) can 
 
 Register `APP_URL/api/auth/oidc/callback` as the redirect URI with your provider. smelp asks for the `openid email profile` scopes and uses the authorization code flow with PKCE.
 
-- **Existing accounts:** a sign-in is linked to an account when the provider reports a verified email (`email_verified` set to `true`) that matches exactly one account. An unverified email never links. After that the account is matched by the provider's own id, so a changed email doesn't matter. Signing in this way ends the account's other sessions, and the password keeps working.
+- **Existing accounts:** a sign-in is linked to an account when the provider reports a verified email (`email_verified` set to `true`) that matches exactly one account. An unverified email never links. After that the account is matched by the provider's own id, so a changed email doesn't matter. Sign-up doesn't prove that an email address belongs to whoever typed it, so when a provider links to a password account, that account's old password, sessions and reset links are removed. The person is taken to their account settings, where they can set a new password and keep using both.
 - **New accounts:** they follow the same rule as sign-up. A person with no account gets one only if public sign-up is open at `/ceo`, or if they came through an invite link. The first account on a new install becomes the admin. Otherwise they see a message saying sign-ups are closed.
-- **Unlinking:** the account settings show the linked provider. It can be unlinked only by someone who also has a password.
+- **Unlinking:** the account settings show the linked provider. It can be unlinked only by someone who also has a password, and people without one can set one there.
+- Logins in progress are kept in memory, like the rate limits, so a restart cancels any that are half done.
 - Changing `OIDC_ISSUER_URL` to a different provider starts fresh. Existing links to the old one stop matching, and their owners can sign in by email again.
 
 ## Backup

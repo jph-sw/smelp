@@ -20,6 +20,7 @@ import { instanceStatusQueryOptions } from "#/lib/data/instance";
 import { NewPasswordSchema, PASSWORDS_DIFFER } from "#/lib/data/password";
 import {
 	linkedAccountsQueryOptions,
+	setPassword,
 	unlinkOidc,
 } from "#/lib/data/sign-in-options";
 import { toastError } from "#/lib/errors";
@@ -108,6 +109,7 @@ function RouteComponent() {
 			{accounts && accounts.providers.length > 0 && (
 				<SignInMethodsCard accounts={accounts} />
 			)}
+			{accounts?.hasPassword === false && <SetPasswordCard />}
 			{/* Someone who only signs in through a provider has no password to change. */}
 			{accounts?.hasPassword !== false && (
 				<Card>
@@ -161,6 +163,84 @@ function RouteComponent() {
 				</Card>
 			)}
 		</div>
+	);
+}
+
+const SetPasswordSchema = v.pipe(
+	v.object({ password: NewPasswordSchema, confirm: v.string() }),
+	v.forward(
+		v.partialCheck(
+			[["password"], ["confirm"]],
+			(input) => input.password === input.confirm,
+			PASSWORDS_DIFFER,
+		),
+		["confirm"],
+	),
+);
+
+function SetPasswordCard() {
+	const queryClient = useQueryClient();
+	const form = useAppForm({
+		defaultValues: { password: "", confirm: "" },
+		validators: { onSubmit: SetPasswordSchema },
+		onSubmit: async ({ value, formApi }) => {
+			try {
+				await setPassword(value.password);
+				formApi.reset();
+				await queryClient.invalidateQueries({
+					queryKey: linkedAccountsQueryOptions.queryKey,
+				});
+				toast.add({ type: "success", description: "Password set." });
+			} catch (e) {
+				toastError(e);
+			}
+		},
+	});
+
+	return (
+		<Card>
+			<CardHeader>
+				<CardTitle className="text-sm">Set a password</CardTitle>
+			</CardHeader>
+			<CardContent className="space-y-4">
+				<p className="text-xs text-muted-foreground">
+					Your account has no password. A password lets you sign in without the
+					provider.
+				</p>
+				<form
+					onSubmit={(e) => {
+						e.preventDefault();
+						form.handleSubmit();
+					}}
+				>
+					<FieldGroup>
+						<form.AppField
+							name="password"
+							children={(field) => (
+								<field.TextField
+									label="New password"
+									type="password"
+									autoComplete="new-password"
+								/>
+							)}
+						/>
+						<form.AppField
+							name="confirm"
+							children={(field) => (
+								<field.TextField
+									label="Confirm new password"
+									type="password"
+									autoComplete="new-password"
+								/>
+							)}
+						/>
+					</FieldGroup>
+					<form.AppForm>
+						<form.SubscribeButton label="Set password" />
+					</form.AppForm>
+				</form>
+			</CardContent>
+		</Card>
 	);
 }
 
