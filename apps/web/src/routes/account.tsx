@@ -18,6 +18,10 @@ import { type AuthUser, currentUserQueryOptions } from "#/lib/auth";
 import { AvatarFileError, avatarAsBase64 } from "#/lib/data/avatar";
 import { instanceStatusQueryOptions } from "#/lib/data/instance";
 import { NewPasswordSchema, PASSWORDS_DIFFER } from "#/lib/data/password";
+import {
+	linkedAccountsQueryOptions,
+	unlinkOidc,
+} from "#/lib/data/sign-in-options";
 import { toastError } from "#/lib/errors";
 import { orpc } from "#/lib/orpc";
 import { initials } from "#/lib/utils";
@@ -66,6 +70,7 @@ export const Route = createFileRoute("/account")({
 function RouteComponent() {
 	usePageTitle("Account");
 	const { data: user } = useSuspenseQuery(currentUserQueryOptions);
+	const { data: accounts } = useQuery(linkedAccountsQueryOptions);
 
 	const form = useAppForm({
 		defaultValues: { currentPassword: "", password: "", confirm: "" },
@@ -100,56 +105,122 @@ function RouteComponent() {
 			</p>
 			{user && <ProfileCard user={user} />}
 			{user && <NotificationsCard user={user} />}
-			<Card>
-				<CardHeader>
-					<CardTitle className="text-sm">Change password</CardTitle>
-				</CardHeader>
-				<CardContent>
-					<form
-						onSubmit={(e) => {
-							e.preventDefault();
-							form.handleSubmit();
-						}}
-					>
-						<FieldGroup>
-							<form.AppField
-								name="currentPassword"
-								children={(field) => (
-									<field.TextField
-										label="Current password"
-										type="password"
-										autoComplete="current-password"
-									/>
-								)}
-							/>
-							<form.AppField
-								name="password"
-								children={(field) => (
-									<field.TextField
-										label="New password"
-										type="password"
-										autoComplete="new-password"
-									/>
-								)}
-							/>
-							<form.AppField
-								name="confirm"
-								children={(field) => (
-									<field.TextField
-										label="Confirm new password"
-										type="password"
-										autoComplete="new-password"
-									/>
-								)}
-							/>
-						</FieldGroup>
-						<form.AppForm>
-							<form.SubscribeButton label="Change password" />
-						</form.AppForm>
-					</form>
-				</CardContent>
-			</Card>
+			{accounts && accounts.providers.length > 0 && (
+				<SignInMethodsCard accounts={accounts} />
+			)}
+			{/* Someone who only signs in through a provider has no password to change. */}
+			{accounts?.hasPassword !== false && (
+				<Card>
+					<CardHeader>
+						<CardTitle className="text-sm">Change password</CardTitle>
+					</CardHeader>
+					<CardContent>
+						<form
+							onSubmit={(e) => {
+								e.preventDefault();
+								form.handleSubmit();
+							}}
+						>
+							<FieldGroup>
+								<form.AppField
+									name="currentPassword"
+									children={(field) => (
+										<field.TextField
+											label="Current password"
+											type="password"
+											autoComplete="current-password"
+										/>
+									)}
+								/>
+								<form.AppField
+									name="password"
+									children={(field) => (
+										<field.TextField
+											label="New password"
+											type="password"
+											autoComplete="new-password"
+										/>
+									)}
+								/>
+								<form.AppField
+									name="confirm"
+									children={(field) => (
+										<field.TextField
+											label="Confirm new password"
+											type="password"
+											autoComplete="new-password"
+										/>
+									)}
+								/>
+							</FieldGroup>
+							<form.AppForm>
+								<form.SubscribeButton label="Change password" />
+							</form.AppForm>
+						</form>
+					</CardContent>
+				</Card>
+			)}
 		</div>
+	);
+}
+
+function SignInMethodsCard({
+	accounts,
+}: {
+	accounts: { hasPassword: boolean; providers: { label: string }[] };
+}) {
+	const queryClient = useQueryClient();
+	const [isUnlinking, setIsUnlinking] = useState(false);
+
+	const unlink = async () => {
+		setIsUnlinking(true);
+		try {
+			await unlinkOidc();
+			await queryClient.invalidateQueries({
+				queryKey: linkedAccountsQueryOptions.queryKey,
+			});
+			toast.add({ type: "success", description: "Provider unlinked." });
+		} catch (e) {
+			toastError(e);
+		} finally {
+			setIsUnlinking(false);
+		}
+	};
+
+	return (
+		<Card>
+			<CardHeader>
+				<CardTitle className="text-sm">Single sign-on</CardTitle>
+			</CardHeader>
+			<CardContent className="space-y-2">
+				{accounts.providers.map((provider) => (
+					<div
+						key={provider.label}
+						className="flex items-center justify-between gap-4"
+					>
+						<span className="text-sm [overflow-wrap:anywhere]">
+							Linked to {provider.label}
+						</span>
+						{accounts.hasPassword && (
+							<Button
+								type="button"
+								variant="outline"
+								disabled={isUnlinking}
+								onClick={unlink}
+							>
+								Unlink
+							</Button>
+						)}
+					</div>
+				))}
+				{!accounts.hasPassword && (
+					<p className="text-xs text-muted-foreground">
+						This is the only way you can sign in, because your account has no
+						password, so it can't be unlinked.
+					</p>
+				)}
+			</CardContent>
+		</Card>
 	);
 }
 

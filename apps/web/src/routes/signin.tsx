@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-router";
 import * as v from "valibot";
 import { InsecureCookieWarning } from "#/components/insecure-cookie-warning";
+import { OidcButton } from "#/components/oidc-button";
 import {
 	Card,
 	CardContent,
@@ -18,6 +19,10 @@ import { FieldGroup } from "#/components/ui/field";
 import { useAppForm } from "#/hooks/form";
 import { usePageTitle } from "#/hooks/use-page-title";
 import { instanceStatusQueryOptions } from "#/lib/data/instance";
+import {
+	OIDC_ERROR_MESSAGES,
+	signInOptionsQueryOptions,
+} from "#/lib/data/sign-in-options";
 import { toastError } from "#/lib/errors";
 import { signIn, startSession } from "../../lib/auth";
 
@@ -27,8 +32,12 @@ const SignInSchema = v.object({
 });
 
 export const Route = createFileRoute("/signin")({
-	validateSearch: (search: Record<string, unknown>): { invite?: string } => ({
+	validateSearch: (
+		search: Record<string, unknown>,
+	): { invite?: string; oidcError?: string } => ({
 		invite: typeof search.invite === "string" ? search.invite : undefined,
+		oidcError:
+			typeof search.oidcError === "string" ? search.oidcError : undefined,
 	}),
 	beforeLoad: ({ context, search }) => {
 		if (context.user != null) {
@@ -38,9 +47,10 @@ export const Route = createFileRoute("/signin")({
 		}
 	},
 	loader: async ({ context: { queryClient } }) => {
-		const status = await queryClient.ensureQueryData(
-			instanceStatusQueryOptions,
-		);
+		const [status] = await Promise.all([
+			queryClient.ensureQueryData(instanceStatusQueryOptions),
+			queryClient.ensureQueryData(signInOptionsQueryOptions),
+		]);
 		if (status.needsSetup) throw redirect({ to: "/signup" });
 	},
 	component: SignIn,
@@ -50,7 +60,7 @@ function SignIn() {
 	usePageTitle("Sign in");
 	const navigate = useNavigate();
 	const queryClient = useQueryClient();
-	const { invite } = Route.useSearch();
+	const { invite, oidcError } = Route.useSearch();
 	const { data: status } = useSuspenseQuery(instanceStatusQueryOptions);
 	const form = useAppForm({
 		defaultValues: {
@@ -83,6 +93,11 @@ function SignIn() {
 				</CardHeader>
 				<CardContent className="space-y-4">
 					<InsecureCookieWarning />
+					{oidcError && (
+						<p role="alert" className="text-sm text-destructive">
+							{OIDC_ERROR_MESSAGES[oidcError] ?? OIDC_ERROR_MESSAGES.failed}
+						</p>
+					)}
 					<form
 						onSubmit={(e) => {
 							e.preventDefault();
@@ -115,6 +130,7 @@ function SignIn() {
 							<form.SubscribeButton label="Sign in" className="w-full" />
 						</form.AppForm>
 					</form>
+					<OidcButton invite={invite} />
 				</CardContent>
 				{(status.signupOpen || invite || status.emailEnabled) && (
 					<CardFooter className="flex-col items-start gap-2">
