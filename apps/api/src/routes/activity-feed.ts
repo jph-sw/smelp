@@ -123,7 +123,8 @@ function toFeedEvent(row: FeedRow, canSeeInviteEmails: boolean): FeedEvent {
 		case "issue.updated":
 			details = {
 				field: row.field,
-				to: row.field === "title" ? row.newValue : null,
+				to:
+					row.field === "title" || row.field === "parent" ? row.newValue : null,
 			};
 			break;
 		case "project.created":

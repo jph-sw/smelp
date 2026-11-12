@@ -27,6 +27,45 @@ async function stateName(stateId: string) {
 	return state?.name ?? null;
 }
 
+// A parent must be in the same project, and an item can't sit below itself.
+async function requireValidParent(
+	parentId: string,
+	projectId: string,
+	itemId?: string,
+) {
+	if (parentId === itemId) {
+		throw new ORPCError("BAD_REQUEST", {
+			message: "A work item can't be its own parent",
+		});
+	}
+	const parent = (
+		await sql`SELECT id, projectId, parentId FROM issue WHERE id = ${parentId}`
+	)[0] as Pick<tables["issue"], "id" | "projectId" | "parentId"> | undefined;
+	if (!parent || parent.projectId !== projectId) {
+		throw new ORPCError("BAD_REQUEST", {
+			message: "The parent must be a work item in the same project",
+		});
+	}
+	if (!itemId) return;
+
+	// Walk up from the new parent: meeting the item means it would become its own ancestor.
+	const seen = new Set<string>([parent.id]);
+	let ancestor: string | null = parent.parentId;
+	while (ancestor) {
+		if (ancestor === itemId) {
+			throw new ORPCError("BAD_REQUEST", {
+				message: "A work item can't be moved below one of its own sub-items",
+			});
+		}
+		if (seen.has(ancestor)) break;
+		seen.add(ancestor);
+		const next = (
+			await sql`SELECT parentId FROM issue WHERE id = ${ancestor}`
+		)[0] as Pick<tables["issue"], "parentId"> | undefined;
+		ancestor = next?.parentId ?? null;
+	}
+}
+
 const Title = v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(120));
 const Description = v.pipe(v.string(), v.maxLength(20_000));
 
@@ -85,6 +124,7 @@ export const updateIssue = base
 			title: v.optional(Title),
 			description: v.optional(Description),
 			assignee: v.optional(v.nullable(v.string())),
+			parentId: v.optional(v.nullable(v.string())),
 		}),
 	)
 	.handler(async ({ input, context }) => {
@@ -107,18 +147,22 @@ export const updateIssue = base
 			description: input.description ?? oldIssue.description,
 			assignee:
 				input.assignee === undefined ? oldIssue.assignee : input.assignee,
+			parentId:
+				input.parentId === undefined ? oldIssue.parentId : input.parentId,
 		};
 
 		const stateChanged = next.state !== oldIssue.state;
 		const titleChanged = next.title !== oldIssue.title;
 		const descriptionChanged = next.description !== oldIssue.description;
 		const assigneeChanged = next.assignee !== oldIssue.assignee;
+		const parentChanged = next.parentId !== oldIssue.parentId;
 
 		if (
 			!stateChanged &&
 			!titleChanged &&
 			!descriptionChanged &&
-			!assigneeChanged
+			!assigneeChanged &&
+			!parentChanged
 		) {
 			return oldIssue;
 		}
@@ -127,6 +171,9 @@ export const updateIssue = base
 		if (assigneeChanged && next.assignee) {
 			await requireAssigneeInProject(next.assignee, project);
 		}
+		if (parentChanged && next.parentId) {
+			await requireValidParent(next.parentId, project.id, oldIssue.id);
+		}
 
 		await sql`
 			UPDATE issue SET
@@ -134,6 +181,7 @@ export const updateIssue = base
 				title = ${next.title},
 				description = ${next.description},
 				assignee = ${next.assignee},
+				parentId = ${next.parentId},
 				updatedAt = ${Date.now()},
 				updatedBy = ${session.userId}
 			WHERE id = ${input.id}
@@ -203,6 +251,19 @@ export const updateIssue = base
 			});
 		}
 
+		if (parentChanged) {
+			eventBus.emit({
+				...event,
+				type: "issue.updated",
+				payload: {
+					...ref,
+					field: "parent",
+					oldValue: oldIssue.parentId,
+					newValue: issue.parentId,
+				},
+			});
+		}
+
 		return issue;
 	});
 
@@ -222,6 +283,8 @@ export const deleteIssue = base
 			"content:write",
 		);
 
+		// Sub-items stay, as top-level items, rather than pointing at something gone.
+		await sql`UPDATE issue SET parentId = NULL WHERE parentId = ${issue.id}`;
 		await sql`DELETE FROM issue WHERE id = ${issue.id}`;
 
 		eventBus.emit({
@@ -257,6 +320,9 @@ export const createIssue = base
 		await requireStateInProject(input.state, project.id);
 		if (input.assignee) {
 			await requireAssigneeInProject(input.assignee, project);
+		}
+		if (input.parentId) {
+			await requireValidParent(input.parentId, project.id);
 		}
 
 		const project_counter = (
@@ -301,6 +367,21 @@ export const createIssue = base
 			workspaceId: issue.workspaceId,
 			payload: { title: issue.title, projectId: issue.projectId },
 		});
+		if (issue.parentId) {
+			eventBus.emit({
+				type: "issue.updated",
+				entityId: issue.id,
+				actorId: session.userId,
+				workspaceId: issue.workspaceId,
+				payload: {
+					title: issue.title,
+					projectId: issue.projectId,
+					field: "parent",
+					oldValue: null,
+					newValue: issue.parentId,
+				},
+			});
+		}
 		// Logged like an update, so the timeline shows who it was assigned to.
 		if (issue.assignee) {
 			eventBus.emit({

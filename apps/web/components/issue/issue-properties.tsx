@@ -27,6 +27,7 @@ import {
 import { toast } from "../ui/toast";
 
 const UNASSIGNED = "unassigned";
+const NO_PARENT = "none";
 
 type IssueDetail = tables["issue"] & {
 	createdByName: string | null;
@@ -96,6 +97,7 @@ export function IssueProperties({
 	states,
 	members,
 	canWrite,
+	parentOptions,
 	onUpdate,
 }: {
 	issue: IssueDetail;
@@ -103,7 +105,13 @@ export function IssueProperties({
 	states: tables["state"][];
 	members: ProjectMember[];
 	canWrite: boolean;
-	onUpdate: (changes: { state?: string; assignee?: string | null }) => void;
+	/** Work items this one may sit under: same project, never itself or its own sub-items. */
+	parentOptions: { id: string; title: string }[];
+	onUpdate: (changes: {
+		state?: string;
+		assignee?: string | null;
+		parentId?: string | null;
+	}) => void;
 }) {
 	const navigate = useNavigate();
 	const queryClient = useQueryClient();
@@ -154,6 +162,21 @@ export function IssueProperties({
 					...members.map((member) => ({
 						label: member.displayName,
 						value: member.userId,
+					})),
+				]}
+			/>
+			<PropertySelect
+				label="Parent"
+				value={issue.parentId ?? NO_PARENT}
+				disabled={!canWrite}
+				onChange={(parentId) =>
+					onUpdate({ parentId: parentId === NO_PARENT ? null : parentId })
+				}
+				items={[
+					{ label: "No parent", value: NO_PARENT },
+					...parentOptions.map((option) => ({
+						label: `${option.id} ${option.title}`,
+						value: option.id,
 					})),
 				]}
 			/>

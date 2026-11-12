@@ -116,6 +116,15 @@ export function ActivitySentence({
 				<>unassigned {issue}</>
 			);
 		case "issue.updated":
+			if (d.field === "parent") {
+				return d.to ? (
+					<>
+						made {issue} a sub-item of <Strong>{d.to}</Strong>
+					</>
+				) : (
+					<>made {issue} a top-level item</>
+				);
+			}
 			return d.field === "title" ? (
 				<>
 					renamed {issue} to {`"${d.to}"`}
