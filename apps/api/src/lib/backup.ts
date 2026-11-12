@@ -1,6 +1,7 @@
 import { Database } from "bun:sqlite";
 import {
 	chmodSync,
+	copyFileSync,
 	existsSync,
 	mkdirSync,
 	readdirSync,
@@ -26,6 +27,44 @@ function open(file: string, options?: { readonly?: boolean }) {
 	return db;
 }
 
+// Files are kept in a folder beside the backup, named after it, so a backup made
+// before attachments existed is still just the one database file.
+export const attachmentsOf = (backupFile: string) =>
+	`${backupFile}.attachments`;
+
+// A backup that predates attachments has no such table.
+function attachmentKeysIn(file: string) {
+	const db = open(file, { readonly: true });
+	try {
+		return (
+			db.query("SELECT storageKey FROM attachment").all() as {
+				storageKey: string;
+			}[]
+		).map((row) => row.storageKey);
+	} catch {
+		return [];
+	} finally {
+		db.close();
+	}
+}
+
+function copyAttachments(keys: string[], from: string, to: string) {
+	rmSync(to, { recursive: true, force: true });
+	mkdirSync(to, { recursive: true, mode: 0o700 });
+	let copied = 0;
+	for (const key of keys) {
+		// Keys are generated names, but this folder is also read back from a backup.
+		if (path.basename(key) !== key) continue;
+		const source = path.join(from, key);
+		// Deleted since the database was copied, so nothing refers to it any more.
+		if (!existsSync(source)) continue;
+		copyFileSync(source, path.join(to, key));
+		chmodSync(path.join(to, key), 0o600);
+		copied += 1;
+	}
+	return copied;
+}
+
 function checkIntegrity(file: string) {
 	let db: Database | undefined;
 	try {
@@ -44,7 +83,11 @@ function checkIntegrity(file: string) {
 // Safe while smelp is running: VACUUM INTO reads one consistent view of the database,
 // which copying the file wouldn't. A finished backup always has its final name, so a
 // partial one can't be mistaken for it.
-export function createBackup(databasePath: string, destination?: string) {
+export function createBackup(
+	databasePath: string,
+	destination?: string,
+	attachmentsDirectory?: string,
+) {
 	if (!existsSync(databasePath)) {
 		throw new BackupError(`No database found at ${databasePath}`);
 	}
@@ -76,9 +119,24 @@ export function createBackup(databasePath: string, destination?: string) {
 			"The backup failed its integrity check, so it wasn't kept. Your database may be damaged.",
 		);
 	}
+
+	// Only files the copied database refers to are taken, so the two always agree
+	// even if someone attaches a file while this runs. The database gets its final
+	// name last, because that is what marks a backup as complete.
+	let attachments = 0;
+	if (attachmentsDirectory) {
+		const keys = attachmentKeysIn(partial);
+		if (keys.length > 0) {
+			const folder = attachmentsOf(target);
+			const partialFolder = `${folder}.partial`;
+			attachments = copyAttachments(keys, attachmentsDirectory, partialFolder);
+			rmSync(folder, { recursive: true, force: true });
+			renameSync(partialFolder, folder);
+		}
+	}
 	renameSync(partial, target);
 
-	return { file: target, bytes: statSync(target).size };
+	return { file: target, bytes: statSync(target).size, attachments };
 }
 
 function migrationsIn(file: string) {
@@ -122,6 +180,7 @@ export function restoreBackup(
 	databasePath: string,
 	file: string,
 	migrationsDirectory: string,
+	attachmentsDirectory?: string,
 ) {
 	checkBackup(file, migrationsDirectory);
 	if (isServerRunning(databasePath)) {
@@ -146,6 +205,20 @@ export function restoreBackup(
 	}
 	chmodSync(incoming, 0o600);
 
+	// Also copied before anything moves. A backup from before attachments existed has
+	// no folder, and leaves the current one alone.
+	const backedUpFiles = attachmentsOf(path.resolve(file));
+	const restoresFiles =
+		attachmentsDirectory !== undefined && existsSync(backedUpFiles);
+	const incomingFiles = attachmentsDirectory
+		? `${path.resolve(attachmentsDirectory)}.restoring`
+		: "";
+	if (restoresFiles) {
+		copyAttachments(readdirSync(backedUpFiles), backedUpFiles, incomingFiles);
+	}
+	const attachmentsMissing =
+		!restoresFiles && attachmentKeysIn(file).length > 0;
+
 	let setAside: string | null = null;
 	if (existsSync(target)) {
 		const directory = backupsDirectory(target);
@@ -160,7 +233,17 @@ export function restoreBackup(
 	}
 	renameSync(incoming, target);
 
-	return { setAside };
+	let attachmentsSetAside: string | null = null;
+	if (restoresFiles && attachmentsDirectory) {
+		const current = path.resolve(attachmentsDirectory);
+		if (existsSync(current)) {
+			attachmentsSetAside = `${current}.before-restore-${stamp()}`;
+			renameSync(current, attachmentsSetAside);
+		}
+		renameSync(incomingFiles, current);
+	}
+
+	return { setAside, attachmentsSetAside, attachmentsMissing };
 }
 
 // A running server keeps this file's time fresh. It's a file rather than a process
