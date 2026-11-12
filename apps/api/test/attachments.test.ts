@@ -568,24 +568,24 @@ describe("deleting", () => {
 
 	test("deleting a project removes its files", async () => {
 		await admin.client.project.create({
-			id: "GONE",
-			name: "Gone",
+			id: "ATGON",
+			name: "Attachments gone",
 			description: "",
 			access: "private",
 			icon: "AppWindowIcon",
 			workspaceId: WORKSPACE,
 		});
 		const goneState = first(
-			await admin.client.states.find({ projectId: "GONE" }),
+			await admin.client.states.find({ projectId: "ATGON" }),
 		);
 		const issue = await admin.client.issue.create({
 			...issueInput("In a doomed project", goneState.id),
-			projectId: "GONE",
+			projectId: "ATGON",
 		});
 		const response = await upload(admin, text("x"), { issueId: issue.id });
 		const key = await keyOf((await readSaved(response)).id);
 
-		await admin.client.project.delete({ projectId: "GONE" });
+		await admin.client.project.delete({ projectId: "ATGON" });
 
 		expect(existsSync(path.join(attachmentsPath(), key))).toBe(false);
 	});
