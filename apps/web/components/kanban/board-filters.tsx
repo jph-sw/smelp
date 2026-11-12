@@ -100,7 +100,7 @@ export function BoardFilterBar({
 
 	return (
 		<div className="flex shrink-0 flex-wrap items-center gap-2 px-4 pt-3">
-			<div className="flex w-full min-w-0 items-center gap-2 overflow-x-auto sm:contents">
+			<div className="-m-1 flex w-[calc(100%+0.5rem)] min-w-0 items-center gap-2 overflow-x-auto p-1 sm:contents">
 				<Input
 					type="search"
 					aria-label="Search work items"

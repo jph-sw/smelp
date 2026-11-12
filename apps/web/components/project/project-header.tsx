@@ -85,7 +85,7 @@ export function ProjectHeader({
 					{project.name}
 				</h3>
 			</Link>
-			<div className="order-last flex w-full items-center gap-2 overflow-x-auto sm:order-none sm:ms-4 sm:w-auto sm:shrink-0 sm:overflow-visible">
+			<div className="order-last -m-1 flex w-[calc(100%+0.5rem)] items-center gap-2 overflow-x-auto p-1 sm:order-none sm:my-0 sm:me-0 sm:p-0 sm:ms-4 sm:w-auto sm:shrink-0 sm:overflow-visible">
 				<Button
 					render={
 						<Link
