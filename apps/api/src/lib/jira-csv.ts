@@ -206,7 +206,10 @@ export function parseComment(cell: string): JiraComment | null {
 	}
 	return {
 		createdAt,
-		author: cell.slice(first + 1, second).trim(),
+		author: cell
+			.slice(first + 1, second)
+			.trim()
+			.slice(0, 255),
 		body: cell.slice(second + 1),
 	};
 }
@@ -231,7 +234,7 @@ function columnsOf(header: string[]): Columns {
 	};
 }
 
-const ISSUE_KEY = /^([A-Za-z][A-Za-z0-9_]*)-(\d{1,9})$/;
+const ISSUE_KEY = /^([A-Za-z][A-Za-z0-9_]{0,99})-(\d{1,9})$/;
 
 export function parseJiraCsv(text: string): ParsedJira {
 	if (text.length > LIMITS.fileChars) {
@@ -319,14 +322,19 @@ export function parseJiraCsv(text: string): ParsedJira {
 			: [];
 	});
 
-	const cell = (row: string[], index: number) =>
-		index < 0 ? "" : (row[index] ?? "").trim();
+	// Cells that become names, keys and mapping entries are capped, so nothing in the
+	// file can grow a mapping key past what the API accepts.
+	const cell = (row: string[], index: number, max = 255) =>
+		index < 0 ? "" : (row[index] ?? "").trim().slice(0, max);
 
 	const warnings: string[] = [];
 	const projects = new Map<string, JiraProject>();
 	const issues: JiraIssue[] = [];
 	const userNames = new Map<string, string>();
 	const seenKeys = new Set<string>();
+	// Items moved between projects keep their old key, so two keys can end up as the
+	// same number in the same project.
+	const seenNumbers = new Set<string>();
 	let badRows = 0;
 	let duplicateRows = 0;
 	let badDates = 0;
@@ -341,7 +349,7 @@ export function parseJiraCsv(text: string): ParsedJira {
 		}
 		const number = Number(match[2]);
 		const projectKey = (
-			cell(row, col.projectKey) || (match[1] as string)
+			cell(row, col.projectKey, 100) || (match[1] as string)
 		).toUpperCase();
 		if (!Number.isSafeInteger(number) || number < 1) {
 			badRows++;
@@ -352,7 +360,13 @@ export function parseJiraCsv(text: string): ParsedJira {
 			duplicateRows++;
 			return;
 		}
+		const numberKey = `${projectKey}-${number}`;
+		if (seenNumbers.has(numberKey)) {
+			duplicateRows++;
+			return;
+		}
 		seenKeys.add(normalizedKey);
+		seenNumbers.add(numberKey);
 
 		if (!projects.has(projectKey)) {
 			if (projects.size >= LIMITS.projects) {
@@ -363,7 +377,7 @@ export function parseJiraCsv(text: string): ParsedJira {
 			projects.set(projectKey, {
 				key: projectKey,
 				name: cell(row, col.projectName) || projectKey,
-				description: cell(row, col.projectDescription),
+				description: cell(row, col.projectDescription, 2000),
 			});
 		}
 
@@ -405,7 +419,7 @@ export function parseJiraCsv(text: string): ParsedJira {
 			number,
 			projectKey,
 			id: cell(row, col.issueId) || null,
-			summary: cell(row, summary),
+			summary: cell(row, summary, 1000),
 			type: cell(row, col.type),
 			status: cell(row, status),
 			statusCategory: cell(row, col.category) || null,

@@ -32,11 +32,11 @@ const MappingInput = v.object({
 		),
 	),
 	statuses: v.optional(
-		v.record(v.pipe(v.string(), v.maxLength(200)), v.picklist(STATE_TARGETS)),
+		v.record(v.pipe(v.string(), v.maxLength(300)), v.picklist(STATE_TARGETS)),
 	),
 	users: v.optional(
 		v.record(
-			v.pipe(v.string(), v.maxLength(200)),
+			v.pipe(v.string(), v.maxLength(300)),
 			v.nullable(v.pipe(v.string(), v.maxLength(100))),
 		),
 	),
@@ -182,7 +182,7 @@ export const applyJiraImport = base
 			) {
 				throw new ORPCError("CONFLICT", {
 					message:
-						"A project with one of these ids, or an earlier import of one of these Jira projects, already exists. Check the preview again.",
+						"Something in this import already exists: a project id, or an earlier import of one of these Jira projects. Check the preview again.",
 				});
 			}
 			throw e;

@@ -143,8 +143,12 @@ const nameKey = (name: string) =>
 const looksLikeEmail = (value: string) =>
 	/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value);
 
+// Never cuts a character in half (emoji take two UTF-16 units).
 function clip(text: string, max: number) {
-	return text.length <= max ? text : text.slice(0, max);
+	if (text.length <= max) return text;
+	const code = text.charCodeAt(max - 1);
+	const splitsPair = code >= 0xd800 && code <= 0xdbff;
+	return text.slice(0, splitsPair ? max - 1 : max);
 }
 
 // Without a Status Category column, the status name is all there is to go on.
@@ -236,7 +240,18 @@ export function buildPlan(
 	};
 
 	// ---- Projects ---------------------------------------------------------------
-	const chosenIds = new Set<string>();
+	// Keys that can be used as they are are kept back, so a suggestion made for an
+	// unusable key never takes one of them.
+	const chosenIds = new Set<string>(
+		parsed.projects
+			.filter(
+				(jira) =>
+					!mapping.projects?.[jira.key]?.id &&
+					ID_PATTERN.test(jira.key) &&
+					!ctx.takenIds.has(jira.key),
+			)
+			.map((jira) => jira.key),
+	);
 	const projectPlans = parsed.projects.map((jira) => {
 		const choice = mapping.projects?.[jira.key] ?? {};
 		const imported = ctx.importedKeys.has(jira.key);
@@ -249,7 +264,7 @@ export function buildPlan(
 		const id = (choice.id ?? (wanted ? jira.key : suggested))
 			.trim()
 			.toUpperCase();
-		if (include) chosenIds.add(id);
+		chosenIds.add(id);
 		const name = clip(
 			(choice.name ?? jira.name).trim() || jira.key,
 			PROJECT_NAME_MAX,
@@ -441,21 +456,26 @@ export function buildPlan(
 		}
 		parentOf.set(issue.key, parent.key);
 	}
-	// A loop in the export would leave two items each other's parent.
+	// A loop in the export would leave items as each other's ancestors. Each item is
+	// visited once, so a long chain of parents stays cheap.
 	let loops = 0;
+	const done = new Set<string>();
 	for (const start of parentOf.keys()) {
-		const seen = new Set<string>([start]);
-		let at = parentOf.get(start);
-		while (at) {
-			if (at === start) {
-				parentOf.delete(start);
+		if (done.has(start)) continue;
+		const path = new Set<string>();
+		let at: string | undefined = start;
+		let last = start;
+		while (at && !done.has(at)) {
+			if (path.has(at)) {
+				parentOf.delete(last);
 				loops++;
 				break;
 			}
-			if (seen.has(at)) break;
-			seen.add(at);
+			path.add(at);
+			last = at;
 			at = parentOf.get(at);
 		}
+		for (const key of path) done.add(key);
 	}
 	if (orphanedSubTasks > 0) {
 		warnings.push(
@@ -596,7 +616,7 @@ export function buildPlan(
 				id,
 				assignee: assigneeId,
 				state: stateId(targetOf(issue.status)),
-				title: longTitle ? `${title.slice(0, TITLE_MAX - 1)}…` : title,
+				title: longTitle ? `${clip(title, TITLE_MAX - 1)}…` : title,
 				description,
 				type: "task",
 				parentId: parentOf.has(issue.key)

@@ -71,6 +71,34 @@ const ID_PROBLEMS: Record<string, string> = {
 	duplicate: "Chosen for more than one project.",
 };
 
+function changedFrom<T>(now: Record<string, T>, base: Record<string, T>) {
+	return Object.fromEntries(
+		Object.entries(now).filter(([key, value]) => base[key] !== value),
+	);
+}
+
+function seedFrom(next: JiraDryRun) {
+	return {
+		p: Object.fromEntries(
+			next.projects.map((project) => [
+				project.jiraKey,
+				{
+					include: project.include,
+					id: project.id,
+					name: project.name,
+					access: project.access,
+				},
+			]),
+		) as Record<string, ProjectEdit>,
+		s: Object.fromEntries(
+			next.statuses.map((status) => [status.name, status.target]),
+		) as Record<string, StateTarget>,
+		u: Object.fromEntries(
+			next.users.map((user) => [user.key, user.userId]),
+		) as Record<string, string | null>,
+	};
+}
+
 function SectionTitle({ children }: { children: React.ReactNode }) {
 	return (
 		<h3 className="text-xs font-medium text-muted-foreground">{children}</h3>
@@ -92,6 +120,11 @@ function RouteComponent() {
 	const [projects, setProjects] = useState<Record<string, ProjectEdit>>({});
 	const [statuses, setStatuses] = useState<Record<string, StateTarget>>({});
 	const [users, setUsers] = useState<Record<string, string | null>>({});
+	// What the server chose on its own, so only the importer's changes are sent back.
+	const [baseline, setBaseline] = useState<{
+		s: Record<string, StateTarget>;
+		u: Record<string, string | null>;
+	}>({ s: {}, u: {} });
 	const [isWorking, setIsWorking] = useState(false);
 	const [result, setResult] = useState<JiraImportResult | null>(null);
 
@@ -107,63 +140,46 @@ function RouteComponent() {
 		p = projects,
 		s = statuses,
 		u = users,
+		base = baseline,
 	): JiraImportMapping => ({
 		projects: p,
-		statuses: s,
-		users: u,
+		// Only what the importer changed: the rest is the server's own default.
+		statuses: changedFrom(s, base.s),
+		users: changedFrom(u, base.u),
 		...(baseUrl.trim() ? { jiraBaseUrl: baseUrl.trim() } : {}),
 	});
 	const mappingKey = JSON.stringify(buildMapping());
 	const isStale = plan !== null && mappingKey !== checked;
 
-	const seed = (next: JiraDryRun) => {
-		const p = Object.fromEntries(
-			next.projects.map((project) => [
-				project.jiraKey,
-				{
-					include: project.include,
-					id: project.id,
-					name: project.name,
-					access: project.access,
-				},
-			]),
-		);
-		const s = Object.fromEntries(
-			next.statuses.map((status) => [status.name, status.target]),
-		);
-		const u = Object.fromEntries(
-			next.users.map((user) => [user.key, user.userId]),
-		);
-		return { p, s, u };
+	// Takes a new dry run in. On a re-check the importer's choices stay, and only
+	// what is new (say, a status of a project they just switched on) is filled in.
+	const absorb = (next: JiraDryRun, keepEdits: boolean) => {
+		const fresh = seedFrom(next);
+		const p = keepEdits ? { ...fresh.p, ...projects } : fresh.p;
+		const s = keepEdits ? { ...fresh.s, ...statuses } : fresh.s;
+		const u = keepEdits ? { ...fresh.u, ...users } : fresh.u;
+		const base = keepEdits
+			? {
+					s: { ...fresh.s, ...baseline.s },
+					u: { ...fresh.u, ...baseline.u },
+				}
+			: { s: fresh.s, u: fresh.u };
+		setPlan(next);
+		setProjects(p);
+		setStatuses(s);
+		setUsers(u);
+		setBaseline(base);
+		setChecked(JSON.stringify(buildMapping(p, s, u, base)));
 	};
 
-	const check = async (mapping?: JiraImportMapping) => {
+	const check = async () => {
 		if (csv === null) return;
 		setIsWorking(true);
 		try {
-			const next = await previewJiraImport({
-				workspaceId,
-				csv,
-				...(mapping ? { mapping } : {}),
-			});
-			setPlan(next);
-			if (mapping) {
-				// Keep the importer's choices; only fill in what is new.
-				const fresh = seed(next);
-				const p = { ...fresh.p, ...projects };
-				const s = { ...fresh.s, ...statuses };
-				const u = { ...fresh.u, ...users };
-				setProjects(p);
-				setStatuses(s);
-				setUsers(u);
-				setChecked(JSON.stringify(buildMapping(p, s, u)));
-			} else {
-				const fresh = seed(next);
-				setProjects(fresh.p);
-				setStatuses(fresh.s);
-				setUsers(fresh.u);
-				setChecked(JSON.stringify(buildMapping(fresh.p, fresh.s, fresh.u)));
-			}
+			absorb(
+				await previewJiraImport({ workspaceId, csv, mapping: buildMapping() }),
+				true,
+			);
 		} catch (e) {
 			toastError(e);
 		} finally {
@@ -183,15 +199,14 @@ function RouteComponent() {
 		setIsWorking(true);
 		try {
 			const text = await file.text();
+			const next = await previewJiraImport({
+				workspaceId,
+				csv: text,
+				...(baseUrl.trim() ? { mapping: { jiraBaseUrl: baseUrl.trim() } } : {}),
+			});
 			setCsv(text);
 			setFileName(file.name);
-			const next = await previewJiraImport({ workspaceId, csv: text });
-			setPlan(next);
-			const fresh = seed(next);
-			setProjects(fresh.p);
-			setStatuses(fresh.s);
-			setUsers(fresh.u);
-			setChecked(JSON.stringify(buildMapping(fresh.p, fresh.s, fresh.u)));
+			absorb(next, false);
 		} catch (e) {
 			setCsv(null);
 			setPlan(null);
@@ -364,6 +379,15 @@ function RouteComponent() {
 					</AlertDescription>
 				</Alert>
 			)}
+
+			<label className="flex flex-col gap-1 text-xs font-medium">
+				Jira site address (optional)
+				<Input
+					value={baseUrl}
+					onChange={(e) => setBaseUrl(e.target.value)}
+					placeholder="https://your-team.atlassian.net"
+				/>
+			</label>
 
 			<section className="flex flex-col gap-2">
 				<SectionTitle>Projects</SectionTitle>
@@ -565,11 +589,7 @@ function RouteComponent() {
 					</p>
 				)}
 				<div className="flex flex-wrap gap-2">
-					<Button
-						variant="outline"
-						disabled={isWorking}
-						onClick={() => check(buildMapping())}
-					>
+					<Button variant="outline" disabled={isWorking} onClick={check}>
 						{isWorking && <Spinner />}
 						Check again
 					</Button>

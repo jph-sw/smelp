@@ -100,6 +100,8 @@ const HEADER = [
 type Row = {
 	summary: string;
 	key: string;
+	/** Defaults to the key's prefix; differs for items moved between projects. */
+	projectKey?: string;
 	id?: string;
 	type?: string;
 	status?: string;
@@ -139,7 +141,7 @@ function jiraCsv(rows: Row[], options: { bom?: boolean; eol?: string } = {}) {
 			}
 			throw new Error(`No column ${header} #${nth}`);
 		};
-		const projectKey = row.key.split("-")[0] as string;
+		const projectKey = row.projectKey ?? (row.key.split("-")[0] as string);
 		put("Summary", row.summary);
 		put("Issue key", row.key);
 		put("Issue id", row.id);
@@ -986,6 +988,83 @@ describe("jira import: mapping", () => {
 		expect(parents.find((p) => p.id === "ZQP-3")?.parentId).toBeNull();
 		expect(parents.find((p) => p.id === "ZQP-4")?.parentId).toBeNull();
 		expect(parents).toHaveLength(5);
+	});
+});
+
+describe("jira import: awkward exports", () => {
+	test("an item moved from another project can't collide with a native one", async () => {
+		// ZQY-5 was moved into ZQZ and keeps its old key, so it is ZQZ's number 5 too.
+		const csv = jiraCsv([
+			{ summary: "Native", key: "ZQZ-5", projectName: "Moved into" },
+			{
+				summary: "Moved",
+				key: "ZQY-5",
+				projectKey: "ZQZ",
+				projectName: "Moved into",
+			},
+		]);
+		const plan = await admin.client.jiraImport.preview({
+			workspaceId: WORKSPACE,
+			csv,
+		});
+		expect(plan.totals.workItems).toBe(1);
+		expect(plan.warnings.join("\n")).toContain("repeat an issue key");
+		await admin.client.jiraImport.apply({
+			workspaceId: WORKSPACE,
+			csv,
+			mapping: {},
+		});
+		expect(await count("issue", "projectId = 'ZQZ'")).toBe(1);
+	});
+
+	test("a long chain of sub-tasks is handled quickly", async () => {
+		const rows: Row[] = Array.from({ length: 3000 }, (_, i) => ({
+			summary: `Link ${i + 1}`,
+			key: `ZQC-${i + 1}`,
+			id: String(i + 1),
+			projectName: "Chain",
+			parent: i === 0 ? undefined : [String(i), `ZQC-${i}`],
+		}));
+		const started = performance.now();
+		const plan = await admin.client.jiraImport.preview({
+			workspaceId: WORKSPACE,
+			csv: jiraCsv(rows),
+		});
+		expect(plan.totals.subItems).toBe(2999);
+		expect(performance.now() - started).toBeLessThan(3000);
+	});
+
+	test("suggestions for unusable keys never take a usable key", async () => {
+		const plan = await admin.client.jiraImport.preview({
+			workspaceId: WORKSPACE,
+			csv: jiraCsv([
+				{ summary: "a", key: "ZQ_Q-1", projectName: "Underscore" },
+				{ summary: "b", key: "ZQQ-1", projectName: "Plain" },
+			]),
+		});
+		expect(plan.errors).toEqual([]);
+		const by = Object.fromEntries(plan.projects.map((p) => [p.jiraKey, p.id]));
+		expect(by.ZQQ).toBe("ZQQ");
+		expect(by.ZQ_Q).not.toBe("ZQQ");
+	});
+
+	test("very long status names still import", async () => {
+		const status = "S".repeat(400);
+		const csv = jiraCsv([
+			{ summary: "Long", key: "ZQS-1", projectName: "Statuses", status },
+		]);
+		const plan = await admin.client.jiraImport.preview({
+			workspaceId: WORKSPACE,
+			csv,
+		});
+		const name = plan.statuses[0]?.name as string;
+		expect(name.length).toBe(255);
+		await admin.client.jiraImport.apply({
+			workspaceId: WORKSPACE,
+			csv,
+			mapping: { statuses: { [name]: "done" } },
+		});
+		expect(await count("issue", "projectId = 'ZQS'")).toBe(1);
 	});
 });
 
