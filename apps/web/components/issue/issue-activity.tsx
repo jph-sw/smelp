@@ -29,6 +29,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
+import { CommentBody, MentionTextarea } from "./mentions";
 
 type Activity = {
 	action: string;
@@ -118,6 +119,7 @@ function CommentItem({
 	comment,
 	canEdit,
 	canDelete,
+	currentUserId,
 	isRemoving,
 	onDelete,
 	onEdited,
@@ -128,6 +130,7 @@ function CommentItem({
 	};
 	canEdit: boolean;
 	canDelete: boolean;
+	currentUserId: string | undefined;
 	isRemoving: boolean;
 	onDelete: () => void;
 	onEdited: () => Promise<void>;
@@ -227,9 +230,7 @@ function CommentItem({
 						</div>
 					</form>
 				) : (
-					<p className="text-sm/relaxed whitespace-pre-wrap [overflow-wrap:anywhere]">
-						{comment.body}
-					</p>
+					<CommentBody body={comment.body} currentUserId={currentUserId} />
 				)}
 			</div>
 		</li>
@@ -311,6 +312,7 @@ export function IssueActivity({
 							comment={entry}
 							canEdit={!readOnly && entry.authorId === userId}
 							canDelete={!readOnly && (entry.authorId === userId || canManage)}
+							currentUserId={userId}
 							isRemoving={isRemoving}
 							onDelete={() => removeComment({ id: entry.id })}
 							onEdited={refreshComments}
@@ -326,17 +328,13 @@ export function IssueActivity({
 						submit();
 					}}
 				>
-					<Textarea
+					<MentionTextarea
 						aria-label="Add a comment"
-						placeholder="Add a comment"
+						placeholder="Add a comment. Type @ to mention someone."
 						value={draft}
-						onChange={(event) => setDraft(event.target.value)}
-						onKeyDown={(event) => {
-							if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
-								event.preventDefault();
-								submit();
-							}
-						}}
+						onValueChange={setDraft}
+						members={members}
+						onSubmit={submit}
 					/>
 					<Button type="submit" disabled={!draft.trim() || isAdding}>
 						Comment

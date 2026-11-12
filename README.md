@@ -71,7 +71,7 @@ All of these are optional. Put them in `.env`, which `.env.example` has a starti
 
 ### Email
 
-Email turns on when `SMTP_HOST`, `SMTP_FROM` and `APP_URL` are all set. Invites and admin-created reset links are then emailed, and sign-in gains "Forgot your password?". Without email, you copy those links and send them yourself.
+Email turns on when `SMTP_HOST`, `SMTP_FROM` and `APP_URL` are all set. Invites and admin-created reset links are then emailed, and sign-in gains "Forgot your password?". Without email, you copy those links and send them yourself. People can also opt in to email for their inbox notifications in their account settings; it is off by default.
 
 | Setting | What it does |
 | --- | --- |
