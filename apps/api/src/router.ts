@@ -12,6 +12,11 @@ import {
 } from "./routes/attachment";
 import { me } from "./routes/auth/me";
 import {
+	findLinkedAccounts,
+	findSignInOptions,
+	unlinkOidc,
+} from "./routes/auth/oidc";
+import {
 	changePassword,
 	previewPasswordReset,
 	requestPasswordReset,
@@ -135,6 +140,9 @@ export const router = {
 		signUp,
 		signOut,
 		me,
+		signInOptions: findSignInOptions,
+		linkedAccounts: findLinkedAccounts,
+		unlinkOidc,
 		previewPasswordReset,
 		resetPassword,
 		requestPasswordReset,
