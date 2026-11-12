@@ -334,6 +334,74 @@ try {
 		);
 	}
 
+	// Phase 3 features, on the project and work item from before the upgrade.
+	const day = (offset: number) =>
+		new Date(Date.now() + offset * 86_400_000).toISOString().slice(0, 10);
+	const cycle = await rpc<{ id: string }>("cycles/create", {
+		projectId: "UPG",
+		name: "First cycle",
+		startDate: day(-1),
+		endDate: day(6),
+	});
+	if (!missing(cycle.status)) {
+		check(cycle.status === 200, "the old project can get a cycle");
+		const next = await ok<{ id: string }>("cycles/create", {
+			projectId: "UPG",
+			name: "Second cycle",
+			startDate: day(7),
+			endDate: day(13),
+		});
+		await ok("issue/update", { id: issue.id, cycleId: cycle.data.id });
+		await ok("cycles/moveUnfinished", {
+			fromCycleId: cycle.data.id,
+			toCycleId: next.id,
+		});
+		const moved = await ok<{ cycleId: string | null }>("issue/find", {
+			issueId: issue.id,
+		});
+		check(
+			moved.cycleId === next.id,
+			"the old work item joins a cycle and moves to the next one",
+		);
+	}
+	const module = await rpc<{ id: string }>("modules/create", {
+		projectId: "UPG",
+		name: "Upgrade epic",
+	});
+	if (!missing(module.status)) {
+		check(module.status === 200, "the old project can get a module");
+		await ok("issue/update", { id: issue.id, moduleId: module.data.id });
+		const grouped = await ok<{ moduleId: string | null }>("issue/find", {
+			issueId: issue.id,
+		});
+		check(
+			grouped.moduleId === module.data.id,
+			"the old work item joins a module",
+		);
+	}
+	const jiraCsv = [
+		"Summary,Issue key,Issue id,Issue Type,Status,Project key,Project name,Status Category",
+		"Imported after the upgrade,UPJ-1,30001,Task,To Do,UPJ,Upgrade Jira,To Do",
+	].join("\r\n");
+	const preview = await rpc("jiraImport/preview", {
+		workspaceId: workspace.id,
+		csv: jiraCsv,
+	});
+	if (!missing(preview.status)) {
+		check(preview.status === 200, "a Jira CSV can be previewed");
+		const imported = await rpc("jiraImport/apply", {
+			workspaceId: workspace.id,
+			csv: jiraCsv,
+			mapping: {},
+		});
+		check(imported.status === 200, "and imported into the old workspace");
+		const item = await ok("issue/find", { issueId: "UPJ-1" });
+		check(
+			item.title === "Imported after the upgrade",
+			"the imported work item is there",
+		);
+	}
+
 	if (!useBun) {
 		const backup = await $`docker exec ${name} bun run --silent backup`.text();
 		check(backup.includes("Backup saved"), "backups still work");

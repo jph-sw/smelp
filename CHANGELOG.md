@@ -2,6 +2,16 @@
 
 Each release is a git tag. To upgrade, follow [Upgrade](README.md#upgrade) in the README.
 
+## 0.4.0 (2026-11-12)
+
+Plan time-boxed work, group it into features, and bring your projects across from Jira.
+
+- **Cycles:** time-boxed iterations per project, with a start and end date. The Cycles tab groups them as current, upcoming and completed, with progress for each. Put a work item in a cycle from its side panel, filter the board and list by cycle, and move a cycle's unfinished items to another cycle in one step. Cycles in one project can't overlap. Project admins create and edit cycles; members put items in them.
+- **Modules:** named groups of work items for a feature or epic, with an optional lead and target date, and progress. A work item is in at most one module. Filter the board and list by module. Project admins create and edit modules; members put items in them.
+- **Import from Jira:** workspace admins can upload a Jira CSV export under workspace settings. A dry run shows the projects, how Jira statuses map to states and how Jira users match people here, and you can change the mapping before anything is saved. Work items keep their Jira numbers, sub-tasks become sub-items, issue links become relations, and comments come across. Attachments and sprints don't. The import is all or nothing, imported projects are private by default, and the same Jira project can't be imported twice.
+
+Upgrading runs three database changes automatically: tables for cycles, modules and imported Jira projects, plus a cycle and a module column on work items. Back up first, as the README describes.
+
 ## 0.3.0 (2026-11-12)
 
 Work items connect to each other and to people: they nest, point at each other, carry files and links, and tell you when something needs you.
