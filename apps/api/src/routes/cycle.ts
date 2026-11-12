@@ -352,22 +352,20 @@ export const moveUnfinishedToCycle = base
 			const source = (await tx`SELECT id FROM cycle WHERE id = ${from.id}`)[0];
 			if (!source) throw new ORPCError("NOT_FOUND");
 
+			// One statement picks and moves the items, so what is logged is exactly
+			// what moved, even if an item's state changes at the same moment.
 			const items = (await tx`
-				SELECT issue.id, issue.title FROM issue
-				JOIN state ON state.id = issue.state
-				WHERE issue.cycleId = ${from.id}
-					AND state."group" NOT IN ('completed', 'cancelled')
-				ORDER BY issue.id
+				UPDATE issue SET
+					cycleId = ${target.id},
+					updatedAt = ${Date.now()},
+					updatedBy = ${session.userId}
+				WHERE cycleId = ${from.id}
+					AND state IN (
+						SELECT id FROM state WHERE "group" NOT IN ('completed', 'cancelled')
+					)
+				RETURNING id, title
 			`) as Pick<tables["issue"], "id" | "title">[];
-			if (items.length > 0) {
-				await tx`
-					UPDATE issue SET
-						cycleId = ${target.id},
-						updatedAt = ${Date.now()},
-						updatedBy = ${session.userId}
-					WHERE id IN ${sql(items.map((item) => item.id))}
-				`;
-			}
+			items.sort((a, b) => a.id.localeCompare(b.id));
 			return { items, target };
 		});
 

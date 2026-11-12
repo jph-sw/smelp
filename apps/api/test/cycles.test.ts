@@ -404,6 +404,14 @@ describe("permissions", () => {
 			outsider.client.cycles.findOne({ id: "never-existed" }),
 			"NOT_FOUND",
 		);
+		// The assignment is logged, but only people in the project see it in the feed.
+		await activityOf(item.id, 1);
+		const seenBy = async (user: User) =>
+			(
+				await user.client.activity.findWorkspace({ workspaceId: WORKSPACE })
+			).events.filter((event) => event.issue?.id === item.id);
+		expect((await seenBy(member)).length).toBeGreaterThan(0);
+		expect(await seenBy(outsider)).toEqual([]);
 		// And nothing happened to the item.
 		expect((await admin.client.issue.find({ issueId: item.id })).cycleId).toBe(
 			cycle.id,

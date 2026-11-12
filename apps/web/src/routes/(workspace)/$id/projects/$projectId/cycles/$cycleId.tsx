@@ -5,7 +5,12 @@ import {
 	useQueryClient,
 	useSuspenseQuery,
 } from "@tanstack/react-query";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import {
+	createFileRoute,
+	Link,
+	notFound,
+	useNavigate,
+} from "@tanstack/react-router";
 import { useState } from "react";
 import { CycleForm } from "#/components/cycle/cycle-form";
 import {
@@ -68,8 +73,12 @@ export const Route = createFileRoute(
 		context: { queryClient },
 		params: { projectId, cycleId },
 	}) => {
+		// A cycle opened under another project's address isn't found.
+		const cycle = await queryClient.ensureQueryData(
+			cycleQueryOptions({ cycleId }),
+		);
+		if (cycle.projectId !== projectId) throw notFound();
 		await Promise.all([
-			queryClient.ensureQueryData(cycleQueryOptions({ cycleId })),
 			queryClient.ensureQueryData(cyclesQueryOptions({ projectId })),
 			queryClient.ensureQueryData(statesQueryOptions({ projectId })),
 			queryClient.ensureQueryData(issuesQueryOptions({ projectId })),
@@ -184,17 +193,19 @@ function RouteComponent() {
 	const { mutate: remove, isPending: isDeleting } = useMutation({
 		mutationFn: deleteCycle,
 		onSuccess: async () => {
+			toast.add({ type: "success", description: `Deleted ${cycle.name}.` });
+			// Leave first: while this page is open, refreshing the cycle would ask
+			// for one that no longer exists.
+			await navigate({
+				to: "/$id/projects/$projectId/cycles",
+				params: { id: workspaceId, projectId },
+			});
 			await Promise.all([
 				invalidateCycles(queryClient, projectId),
 				queryClient.invalidateQueries({ queryKey: ["issues", projectId] }),
 				queryClient.invalidateQueries({ queryKey: ["issue"] }),
 				queryClient.invalidateQueries({ queryKey: ["activity"] }),
 			]);
-			toast.add({ type: "success", description: `Deleted ${cycle.name}.` });
-			navigate({
-				to: "/$id/projects/$projectId/cycles",
-				params: { id: workspaceId, projectId },
-			});
 		},
 		onError: (error) => {
 			toastError(error, "Couldn't delete the cycle.");

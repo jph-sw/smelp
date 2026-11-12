@@ -208,6 +208,13 @@ export const updateIssue = base
 			await requireCycleInProject(next.cycleId, project.id);
 		}
 
+		// Read before the write, so the log names what was validated even if the
+		// cycle is renamed or deleted a moment later.
+		const oldCycleName = cycleChanged
+			? await cycleName(oldIssue.cycleId)
+			: null;
+		const newCycleName = cycleChanged ? await cycleName(next.cycleId) : null;
+
 		// The parent checks run again inside this one statement, so a concurrent move or
 		// delete can't slip in between the checks above and the write: the new parent must
 		// still exist in this project and must not have this item among its ancestors.
@@ -353,8 +360,8 @@ export const updateIssue = base
 				payload: {
 					...ref,
 					field: "cycle",
-					oldValue: await cycleName(oldIssue.cycleId),
-					newValue: await cycleName(issue.cycleId),
+					oldValue: oldCycleName,
+					newValue: newCycleName,
 				},
 			});
 		}
