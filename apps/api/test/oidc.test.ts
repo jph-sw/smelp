@@ -506,6 +506,27 @@ describe("signing in to an account that is already linked", () => {
 		expect(resets).toHaveLength(0);
 	});
 
+	test("a password change racing the link can't leave the squatter's password working", async () => {
+		const victim = await passwordUser("racing");
+		const squatter = clientFor(victim.token);
+
+		// Whichever of these lands first, the squatter must end up locked out.
+		await Promise.allSettled([
+			squatter.auth.changePassword({
+				currentPassword: PASSWORD,
+				newPassword: "squatters-new-password-1",
+			}),
+			signInWith(verified(unique("sub"), victim.email)),
+		]);
+
+		for (const password of [PASSWORD, "squatters-new-password-1"]) {
+			await expect(
+				clientFor().auth.signIn({ email: victim.email, password }),
+			).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+		}
+		expect(await sessionUser(victim.token)).toBeUndefined();
+	});
+
 	test("matches the email without regard to case", async () => {
 		const person = await passwordUser("case");
 		const result = await signInWith(
@@ -813,6 +834,22 @@ describe("the callback", () => {
 		const firstDone = await finishAt(first.callbackUrl, first.loginCookie);
 		expect(await sessionUser(secondDone.sessionToken)).toBe(b.id);
 		expect(await sessionUser(firstDone.sessionToken)).toBe(a.id);
+	});
+
+	test("someone presenting a state without the browser's cookie can't use it up", async () => {
+		const person = await passwordUser("burn");
+		const login = await begin(verified(unique("sub"), person.email));
+
+		const stranger = await finishAt(
+			login.callbackUrl,
+			login.loginCookie,
+			"drop",
+		);
+		expect(stranger.error).toBe("failed");
+
+		const real = await finishAt(login.callbackUrl, login.loginCookie);
+		expect(real.error).toBeNull();
+		expect(await sessionUser(real.sessionToken)).toBe(person.id);
 	});
 
 	test("a state nobody issued is refused", async () => {

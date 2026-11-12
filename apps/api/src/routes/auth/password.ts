@@ -144,10 +144,20 @@ export const changePassword = base
 		const now = Date.now();
 
 		await sql.begin(async (tx) => {
-			await tx`
+			// The session and the old password were checked before the slow hashing
+			// above. If either was removed since, in between, nothing is written.
+			const stillSignedIn = await tx`
+				SELECT 1 FROM auth_session WHERE id = ${session.id}
+			`;
+			const changed = await tx`
 				UPDATE auth_account SET password = ${passwordHash}, updatedAt = ${now}
 				WHERE userId = ${session.userId} AND providerId = 'password'
+					AND password IS NOT NULL
+				RETURNING id
 			`;
+			if (stillSignedIn.length === 0 || changed.length === 0) {
+				throw new ORPCError("UNAUTHORIZED");
+			}
 			// Other devices are signed out; this one stays signed in.
 			await tx`DELETE FROM auth_session WHERE userId = ${session.userId} AND id != ${session.id}`;
 			await tx`DELETE FROM auth_password_reset WHERE userId = ${session.userId} AND usedAt IS NULL`;

@@ -231,10 +231,25 @@ function prunePending(now: number) {
 	}
 }
 
-// Removing the entry is what makes a state single-use.
-function takePending(state: string): PendingLogin | null {
+const constantTimeEqual = (a: string, b: string) => {
+	const x = new TextEncoder().encode(a);
+	const y = new TextEncoder().encode(b);
+	if (x.length !== y.length) return false;
+	let diff = 0;
+	for (let i = 0; i < x.length; i++) {
+		diff |= (x[i] as number) ^ (y[i] as number);
+	}
+	return diff === 0;
+};
+
+// Removing the entry is what makes a state single-use. Only the browser that
+// started the login may use it up: anyone else who has seen the state in an address
+// can't cancel the real person's login by presenting it.
+function takePending(state: string, binding: string | undefined) {
 	const login = pending.get(state);
-	if (!login) return null;
+	if (!login || !binding || !constantTimeEqual(login.binding, binding)) {
+		return null;
+	}
 	pending.delete(state);
 	return login.expiresAt > Date.now() ? login : null;
 }
@@ -297,17 +312,6 @@ export type OidcOutcome =
 const asString = (value: unknown) =>
 	typeof value === "string" && value.trim() ? value.trim() : null;
 
-const constantTimeEqual = (a: string, b: string) => {
-	const x = new TextEncoder().encode(a);
-	const y = new TextEncoder().encode(b);
-	if (x.length !== y.length) return false;
-	let diff = 0;
-	for (let i = 0; i < x.length; i++) {
-		diff |= (x[i] as number) ^ (y[i] as number);
-	}
-	return diff === 0;
-};
-
 // Handles what the provider sent back. Checks the state, which is only good once and
 // only for the browser that started the login, trades the code for tokens, and then
 // validates the ID token: signature against the provider's keys, issuer, audience,
@@ -318,10 +322,8 @@ export async function finishOidcLogin(
 	binding: string | undefined,
 ): Promise<OidcOutcome> {
 	const state = params.get("state");
-	const login = state ? takePending(state) : null;
-	if (!login || !binding || !constantTimeEqual(login.binding, binding)) {
-		return { ok: false, invite: null, error: "failed" };
-	}
+	const login = state ? takePending(state, binding) : null;
+	if (!login) return { ok: false, invite: null, error: "failed" };
 	const fail = (error: "failed" | "cancelled" = "failed"): OidcOutcome => ({
 		ok: false,
 		invite: login.invite,

@@ -217,6 +217,13 @@ export const setPassword = base
 		const now = Date.now();
 
 		const done = await sql.begin(async (tx) => {
+			// Checked here, after the slow hashing, so a session that ended in the
+			// meantime can't still write a credential.
+			const stillSignedIn = await tx`
+				SELECT 1 FROM auth_session WHERE id = ${session.id}
+			`;
+			if (stillSignedIn.length === 0) throw new ORPCError("UNAUTHORIZED");
+
 			const updated = await tx`
 				UPDATE auth_account SET password = ${hash}, updatedAt = ${now}
 				WHERE userId = ${session.userId} AND providerId = 'password' AND password IS NULL
