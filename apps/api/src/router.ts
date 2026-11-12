@@ -36,6 +36,7 @@ import {
 	updateIssue,
 } from "./routes/issue";
 import { findIssues, findMyIssues, searchIssues } from "./routes/issues";
+import { createLink, deleteLink, findLinks, updateLink } from "./routes/link";
 import {
 	archiveProject,
 	createProject,
@@ -152,6 +153,12 @@ export const router = {
 		find: findIssues,
 		findMine: findMyIssues,
 		search: searchIssues,
+	},
+	links: {
+		find: findLinks,
+		create: createLink,
+		update: updateLink,
+		delete: deleteLink,
 	},
 	comments: {
 		find: findComments,
