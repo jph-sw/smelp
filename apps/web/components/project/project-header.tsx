@@ -58,11 +58,14 @@ export function ProjectHeader({
 	projectId,
 	workspaceId,
 	view,
+	section = "items",
 }: {
 	projectId: string;
 	workspaceId: string;
 	/** Shows the board/list toggle, on the work items page. */
 	view?: ProjectView;
+	/** Which tab is open: work items (the default) or modules. */
+	section?: "items" | "modules";
 }) {
 	const { data: project } = useSuspenseQuery(
 		projectQueryOptions({ projectId }),
@@ -91,9 +94,23 @@ export function ProjectHeader({
 						/>
 					}
 					size={"lg"}
-					variant={"default"}
+					variant={section === "items" ? "default" : "outline"}
+					aria-current={section === "items" ? "page" : undefined}
 				>
 					Work items
+				</Button>
+				<Button
+					render={
+						<Link
+							to="/$id/projects/$projectId/modules"
+							params={{ id: workspaceId, projectId }}
+						/>
+					}
+					size={"lg"}
+					variant={section === "modules" ? "default" : "outline"}
+					aria-current={section === "modules" ? "page" : undefined}
+				>
+					Modules
 				</Button>
 			</div>
 			{view && (

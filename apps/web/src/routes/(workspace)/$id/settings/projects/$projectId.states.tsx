@@ -178,6 +178,8 @@ function RouteComponent() {
 		Promise.all([
 			queryClient.invalidateQueries({ queryKey: statesOptions.queryKey }),
 			queryClient.invalidateQueries({ queryKey: ["issues", projectId] }),
+			queryClient.invalidateQueries({ queryKey: ["modules", projectId] }),
+			queryClient.invalidateQueries({ queryKey: ["module"] }),
 		]);
 	const options = { onSettled: refresh, onError: (e: Error) => toastError(e) };
 

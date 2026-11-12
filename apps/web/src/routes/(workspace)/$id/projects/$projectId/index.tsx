@@ -9,6 +9,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import {
 	BoardFilterBar,
 	type BoardFilters,
+	NO_MODULE,
 	UNASSIGNED,
 } from "#/components/kanban/board-filters";
 import { IssueItem } from "#/components/kanban/issue-item";
@@ -18,6 +19,7 @@ import { IssueList } from "#/components/project/issue-list";
 import { ProjectHeader } from "#/components/project/project-header";
 import { usePageTitle } from "#/hooks/use-page-title";
 import { issuesQueryOptions, updateIssue } from "#/lib/data/issue";
+import { moduleQueryKeys, modulesQueryOptions } from "#/lib/data/module";
 import { projectQueryOptions } from "#/lib/data/project";
 import {
 	projectMembersQueryOptions,
@@ -40,6 +42,7 @@ export const Route = createFileRoute("/(workspace)/$id/projects/$projectId/")({
 		q: asString(search.q),
 		assignee: asString(search.assignee),
 		state: asString(search.state),
+		module: asString(search.module),
 		view: search.view === "list" ? "list" : undefined,
 	}),
 	loader: async ({ context: { queryClient }, params: { projectId } }) => {
@@ -47,6 +50,7 @@ export const Route = createFileRoute("/(workspace)/$id/projects/$projectId/")({
 			queryClient.ensureQueryData(statesQueryOptions({ projectId })),
 			queryClient.ensureQueryData(issuesQueryOptions({ projectId })),
 			queryClient.ensureQueryData(projectMembersQueryOptions({ projectId })),
+			queryClient.ensureQueryData(modulesQueryOptions({ projectId })),
 		]);
 	},
 });
@@ -62,6 +66,11 @@ function matchesFilters(issue: tables["issue"], filters: BoardFilters) {
 	if (filters.assignee === UNASSIGNED) {
 		if (issue.assignee) return false;
 	} else if (filters.assignee && issue.assignee !== filters.assignee) {
+		return false;
+	}
+	if (filters.module === NO_MODULE) {
+		if (issue.moduleId) return false;
+	} else if (filters.module && issue.moduleId !== filters.module) {
 		return false;
 	}
 	return true;
@@ -80,6 +89,9 @@ function RouteComponent() {
 	const { data: issues } = useSuspenseQuery(issuesQueryOptions({ projectId }));
 	const { data: members } = useSuspenseQuery(
 		projectMembersQueryOptions({ projectId }),
+	);
+	const { data: modules } = useSuspenseQuery(
+		modulesQueryOptions({ projectId }),
 	);
 
 	const isArchived = project.archivedAt !== null;
@@ -108,6 +120,12 @@ function RouteComponent() {
 
 			return { previousIssues };
 		},
+		onSettled: () =>
+			Promise.all(
+				moduleQueryKeys(projectId).map((queryKey) =>
+					queryClient.invalidateQueries({ queryKey }),
+				),
+			),
 		onError: (error, _variables, context) => {
 			toastError(error, "Couldn't move the work item. Please try again.");
 			if (context?.previousIssues) {
@@ -125,7 +143,9 @@ function RouteComponent() {
 	const shownCount = visibleIssues.filter((issue) =>
 		visibleStates.some((state) => state.id === issue.state),
 	).length;
-	const isFiltered = Boolean(filters.q || filters.assignee || filters.state);
+	const isFiltered = Boolean(
+		filters.q || filters.assignee || filters.state || filters.module,
+	);
 
 	return (
 		<div className="flex h-full w-full min-h-0 flex-col overflow-hidden">
@@ -142,6 +162,7 @@ function RouteComponent() {
 				}
 				members={members}
 				states={states}
+				modules={modules}
 			/>
 			{isFiltered && shownCount === 0 && (
 				<p className="px-4 pt-3 text-sm text-muted-foreground">

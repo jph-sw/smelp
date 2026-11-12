@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { deleteIssue } from "#/lib/data/issue";
+import { moduleQueryKeys } from "#/lib/data/module";
 import { toastError } from "#/lib/errors";
 import { formatDate, formatRelativeTime } from "#/lib/utils";
 import {
@@ -28,6 +29,7 @@ import { toast } from "../ui/toast";
 
 const UNASSIGNED = "unassigned";
 const NO_PARENT = "none";
+const NO_MODULE = "none";
 
 type IssueDetail = tables["issue"] & {
 	createdByName: string | null;
@@ -98,6 +100,7 @@ export function IssueProperties({
 	members,
 	canWrite,
 	parentOptions,
+	modules,
 	onUpdate,
 }: {
 	issue: IssueDetail;
@@ -107,10 +110,12 @@ export function IssueProperties({
 	canWrite: boolean;
 	/** Work items this one may sit under: same project, never itself or its own sub-items. */
 	parentOptions: { id: string; title: string }[];
+	modules: { id: string; name: string }[];
 	onUpdate: (changes: {
 		state?: string;
 		assignee?: string | null;
 		parentId?: string | null;
+		moduleId?: string | null;
 	}) => void;
 }) {
 	const navigate = useNavigate();
@@ -124,6 +129,9 @@ export function IssueProperties({
 				queryClient.invalidateQueries({
 					queryKey: ["issues", issue.projectId],
 				}),
+				...moduleQueryKeys(issue.projectId).map((queryKey) =>
+					queryClient.invalidateQueries({ queryKey }),
+				),
 				queryClient.invalidateQueries({ queryKey: ["my-issues"] }),
 			]);
 			toast.add({ type: "success", description: `Deleted ${issue.id}.` });
@@ -178,6 +186,18 @@ export function IssueProperties({
 						label: `${option.id} ${option.title}`,
 						value: option.id,
 					})),
+				]}
+			/>
+			<PropertySelect
+				label="Module"
+				value={issue.moduleId ?? NO_MODULE}
+				disabled={!canWrite}
+				onChange={(moduleId) =>
+					onUpdate({ moduleId: moduleId === NO_MODULE ? null : moduleId })
+				}
+				items={[
+					{ label: "No module", value: NO_MODULE },
+					...modules.map((item) => ({ label: item.name, value: item.id })),
 				]}
 			/>
 			<PersonAndTime
