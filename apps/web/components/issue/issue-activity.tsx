@@ -1,4 +1,8 @@
-import { Delete02Icon, PencilEdit01Icon } from "@hugeicons/core-free-icons";
+import {
+	Delete02Icon,
+	PencilEdit01Icon,
+	SmileIcon,
+} from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { ProjectMember, tables } from "@smelp/db";
 import {
@@ -12,10 +16,13 @@ import {
 	createComment,
 	deleteComment,
 	issueActivityQueryOptions,
+	setReaction,
 	updateComment,
 } from "#/lib/data/issue";
 import { toastError } from "#/lib/errors";
-import { formatDate, formatRelativeTime, initials } from "#/lib/utils";
+import { REACTION_EMOJIS, type ReactionEmoji } from "#/lib/reactions";
+import { RELATION_PHRASES } from "#/lib/relations";
+import { cn, formatDate, formatRelativeTime, initials } from "#/lib/utils";
 import {
 	AlertDialog,
 	AlertDialogCancel,
@@ -28,10 +35,15 @@ import {
 } from "../ui/alert-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Button } from "../ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Textarea } from "../ui/textarea";
 import { CommentAttachments } from "./attachments";
 
+const relatedLabel = (entry: { relatedId?: string | null }) =>
+	entry.relatedId ?? "another work item";
+
 type Activity = {
+	relatedId?: string | null;
 	action: string;
 	field: string | null;
 	oldValue: string | null;
@@ -59,6 +71,11 @@ function describeActivity(
 				? `assigned this to ${memberName(entry.newValue)}`
 				: `unassigned ${memberName(entry.oldValue)}`;
 		case "issue.updated":
+			if (entry.field === "parent") {
+				return entry.newValue
+					? `made this a sub-item of ${entry.newValue}`
+					: "made this a top-level item";
+			}
 			return entry.field === "title"
 				? `renamed this to "${entry.newValue}"`
 				: "edited the description";
@@ -66,6 +83,22 @@ function describeActivity(
 			return `attached ${entry.newValue ?? "a file"}`;
 		case "issue.attachment_removed":
 			return `removed ${entry.oldValue ?? "a file"}`;
+		case "issue.relation_added":
+			return `marked this as ${RELATION_PHRASES[entry.newValue ?? ""] ?? "related to"} ${relatedLabel(entry)}`;
+		case "issue.relation_removed":
+			return `removed the relation to ${relatedLabel(entry)}`;
+		case "issue.link_added":
+			return entry.newValue
+				? `added the link "${entry.newValue}"`
+				: "added a link";
+		case "issue.link_updated": {
+			const name = entry.newValue ?? entry.oldValue;
+			return name ? `edited the link "${name}"` : "edited a link";
+		}
+		case "issue.link_removed":
+			return entry.oldValue
+				? `removed the link "${entry.oldValue}"`
+				: "removed a link";
 		default:
 			return "changed this work item";
 	}
@@ -119,6 +152,85 @@ function DeleteCommentButton({
 	);
 }
 
+type CommentReaction = {
+	emoji: string;
+	count: number;
+	reacted: boolean;
+	users: string[];
+};
+
+function Reactions({
+	reactions,
+	canReact,
+	onToggle,
+}: {
+	reactions: CommentReaction[];
+	canReact: boolean;
+	onToggle: (emoji: ReactionEmoji, reacted: boolean) => void;
+}) {
+	const [pickerOpen, setPickerOpen] = useState(false);
+	if (reactions.length === 0 && !canReact) return null;
+
+	return (
+		<div className="mt-2 flex flex-wrap items-center gap-1">
+			{reactions.map((reaction) => (
+				<button
+					key={reaction.emoji}
+					type="button"
+					// aria-disabled rather than disabled, so the "who reacted" title still shows.
+					aria-disabled={!canReact}
+					aria-pressed={reaction.reacted}
+					aria-label={`${reaction.emoji} ${reaction.count}: ${reaction.users.join(", ")}`}
+					title={reaction.users.join(", ")}
+					onClick={
+						canReact
+							? () =>
+									onToggle(reaction.emoji as ReactionEmoji, !reaction.reacted)
+							: undefined
+					}
+					className={cn(
+						"flex h-6 items-center gap-1 rounded-full border px-2 text-xs",
+						reaction.reacted
+							? "border-primary bg-primary/10 text-foreground"
+							: "border-transparent bg-background text-muted-foreground",
+						canReact && "cursor-pointer hover:border-foreground/30",
+					)}
+				>
+					<span>{reaction.emoji}</span>
+					<span className="tabular-nums">{reaction.count}</span>
+				</button>
+			))}
+			{canReact && (
+				<Popover open={pickerOpen} onOpenChange={setPickerOpen}>
+					<PopoverTrigger
+						aria-label="Add reaction"
+						render={<Button variant="ghost" size="icon-sm" />}
+					>
+						<HugeiconsIcon icon={SmileIcon} />
+					</PopoverTrigger>
+					<PopoverContent align="start" className="w-auto flex-row gap-1 p-1.5">
+						{REACTION_EMOJIS.map((emoji) => (
+							<button
+								key={emoji}
+								type="button"
+								aria-label={`React with ${emoji}`}
+								className="cursor-pointer rounded-md p-1 text-base hover:bg-secondary"
+								onClick={() => {
+									setPickerOpen(false);
+									const existing = reactions.find((r) => r.emoji === emoji);
+									onToggle(emoji, !existing?.reacted);
+								}}
+							>
+								{emoji}
+							</button>
+						))}
+					</PopoverContent>
+				</Popover>
+			)}
+		</div>
+	);
+}
+
 function CommentItem({
 	comment,
 	issueId,
@@ -127,9 +239,11 @@ function CommentItem({
 	canManage,
 	canEdit,
 	canDelete,
+	canReact,
 	isRemoving,
 	onDelete,
 	onEdited,
+	onToggleReaction,
 }: {
 	issueId: string;
 	userId: string | undefined;
@@ -138,9 +252,12 @@ function CommentItem({
 	comment: tables["comment"] & {
 		authorName: string | null;
 		authorImage: string | null;
+		reactions: CommentReaction[];
 	};
 	canEdit: boolean;
 	canDelete: boolean;
+	canReact: boolean;
+	onToggleReaction: (emoji: ReactionEmoji, reacted: boolean) => void;
 	isRemoving: boolean;
 	onDelete: () => void;
 	onEdited: () => Promise<void>;
@@ -245,14 +362,21 @@ function CommentItem({
 					</p>
 				)}
 				{!editing && (
-					<CommentAttachments
-						issueId={issueId}
-						commentId={comment.id}
-						userId={userId}
-						canWrite={canWrite}
-						canManage={canManage}
-						canAttach={canWrite && comment.authorId === userId}
-					/>
+					<>
+						<CommentAttachments
+							issueId={issueId}
+							commentId={comment.id}
+							userId={userId}
+							canWrite={canWrite}
+							canManage={canManage}
+							canAttach={canWrite && comment.authorId === userId}
+						/>
+						<Reactions
+							reactions={comment.reactions}
+							canReact={canReact}
+							onToggle={onToggleReaction}
+						/>
+					</>
 				)}
 			</div>
 		</li>
@@ -304,6 +428,54 @@ export function IssueActivity({
 		onError: (e) => toastError(e),
 	});
 
+	const myName =
+		members.find((member) => member.userId === userId)?.displayName ?? "You";
+
+	type CachedComments = typeof comments;
+	const { mutate: react } = useMutation({
+		mutationFn: setReaction,
+		onMutate: async ({ commentId, emoji, reacted }) => {
+			await queryClient.cancelQueries({ queryKey: commentsOptions.queryKey });
+			const previous = queryClient.getQueryData<CachedComments>(
+				commentsOptions.queryKey,
+			);
+			queryClient.setQueryData<CachedComments>(
+				commentsOptions.queryKey,
+				(current) =>
+					current?.map((comment) => {
+						if (comment.id !== commentId) return comment;
+						const others = comment.reactions.filter(
+							(reaction) => reaction.emoji !== emoji,
+						);
+						const own = comment.reactions.find(
+							(reaction) => reaction.emoji === emoji,
+						) ?? { emoji, count: 0, reacted: false, users: [] };
+						if (own.reacted === reacted) return comment;
+						const users = reacted
+							? [...own.users, myName]
+							: own.users.filter((name) => name !== myName);
+						const updated = { emoji, count: users.length, reacted, users };
+						// Keep the pill where it was; a new one goes last.
+						const reactions = comment.reactions.some((r) => r.emoji === emoji)
+							? comment.reactions.map((r) => (r.emoji === emoji ? updated : r))
+							: [...others, updated];
+						return {
+							...comment,
+							reactions: reactions.filter((reaction) => reaction.count > 0),
+						};
+					}),
+			);
+			return { previous };
+		},
+		onError: (e, _vars, context) => {
+			if (context?.previous) {
+				queryClient.setQueryData(commentsOptions.queryKey, context.previous);
+			}
+			toastError(e);
+		},
+		onSettled: refreshComments,
+	});
+
 	const submit = () => {
 		if (draft.trim() && !isAdding) addComment({ issueId, body: draft });
 	};
@@ -341,6 +513,10 @@ export function IssueActivity({
 							canManage={canManage}
 							canEdit={!readOnly && entry.authorId === userId}
 							canDelete={!readOnly && (entry.authorId === userId || canManage)}
+							canReact={!readOnly}
+							onToggleReaction={(emoji, reacted) =>
+								react({ commentId: entry.id, emoji, reacted })
+							}
 							isRemoving={isRemoving}
 							onDelete={() => removeComment({ id: entry.id })}
 							onEdited={refreshComments}

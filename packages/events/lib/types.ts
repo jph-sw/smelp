@@ -12,6 +12,12 @@ type Event<T extends string, P> = {
 };
 
 type IssueRef = { projectId: string; title: string };
+// Carries the link's title (never its URL, which can hold a token).
+type LinkChange = IssueRef & {
+	field: "link";
+	oldValue: string | null;
+	newValue: string | null;
+};
 type MemberRef = { userId: string; userName: string | null; role: string };
 
 export type ProjectChange = "name" | "description" | "icon" | "access";
@@ -42,7 +48,7 @@ export type DomainEvent =
 	| Event<
 			"issue.updated",
 			IssueRef & {
-				field: "title" | "description";
+				field: "title" | "description" | "parent";
 				oldValue: string | null;
 				newValue: string | null;
 			}
@@ -64,6 +70,19 @@ export type DomainEvent =
 				newValue: null;
 			}
 	  >
+	| Event<
+			"issue.relation_added" | "issue.relation_removed",
+			IssueRef & {
+				field: "relation";
+				// The relation as seen from this issue, e.g. "blocks" or "blocked_by".
+				oldValue: string | null;
+				newValue: string | null;
+				relatedId: string;
+			}
+	  >
+	| Event<"issue.link_added", LinkChange>
+	| Event<"issue.link_updated", LinkChange>
+	| Event<"issue.link_removed", LinkChange>
 	| Event<"comment.created", IssueRef & { issueId: string }>
 	| Event<"comment.updated", IssueRef & { issueId: string }>
 	| Event<"auth.signin", { sessionId: string; username: string }>

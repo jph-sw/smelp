@@ -9,7 +9,10 @@ import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
 import { IssueAttachments } from "#/components/issue/attachments";
 import { IssueActivity } from "#/components/issue/issue-activity";
+import { IssueLinks } from "#/components/issue/issue-links";
 import { IssueProperties } from "#/components/issue/issue-properties";
+import { IssueRelations } from "#/components/issue/issue-relations";
+import { SubItems } from "#/components/issue/sub-items";
 import { ArchivedBanner } from "#/components/project/archived-banner";
 import { ProjectHeader } from "#/components/project/project-header";
 import {
@@ -28,6 +31,9 @@ import {
 	commentsQueryOptions,
 	issueActivityQueryOptions,
 	issueQueryOptions,
+	issueRelationsQueryOptions,
+	issuesQueryOptions,
+	linksQueryOptions,
 	updateIssue,
 } from "#/lib/data/issue";
 import {
@@ -46,8 +52,10 @@ export const Route = createFileRoute("/(workspace)/$id/browse/$issueId")({
 		const [issue] = await Promise.all([
 			queryClient.ensureQueryData(issueQueryOptions({ issueId })),
 			queryClient.ensureQueryData(commentsQueryOptions({ issueId })),
+			queryClient.ensureQueryData(linksQueryOptions({ issueId })),
 			queryClient.ensureQueryData(issueActivityQueryOptions({ issueId })),
 			queryClient.ensureQueryData(attachmentsQueryOptions({ issueId })),
+			queryClient.ensureQueryData(issueRelationsQueryOptions({ issueId })),
 			queryClient.ensureQueryData(currentUserQueryOptions),
 		]);
 		await Promise.all([
@@ -56,6 +64,9 @@ export const Route = createFileRoute("/(workspace)/$id/browse/$issueId")({
 			),
 			queryClient.ensureQueryData(
 				projectMembersQueryOptions({ projectId: issue.projectId }),
+			),
+			queryClient.ensureQueryData(
+				issuesQueryOptions({ projectId: issue.projectId }),
 			),
 		]);
 	},
@@ -134,6 +145,9 @@ function RouteComponent() {
 	const { data: states } = useSuspenseQuery(
 		statesQueryOptions({ projectId: issue.projectId }),
 	);
+	const { data: projectIssues } = useSuspenseQuery(
+		issuesQueryOptions({ projectId: issue.projectId }),
+	);
 	const { user, members, canWrite, canManage, isArchived } = useProjectAccess(
 		issue.projectId,
 	);
@@ -144,6 +158,7 @@ function RouteComponent() {
 			description?: string;
 			state?: string;
 			assignee?: string | null;
+			parentId?: string | null;
 		}) => updateIssue({ id: issue.id, ...changes }),
 		onError: (e) => toastError(e, "Couldn't save your change."),
 		onSettled: () =>
@@ -156,6 +171,26 @@ function RouteComponent() {
 				].map((queryKey) => queryClient.invalidateQueries({ queryKey })),
 			),
 	});
+
+	// Moving an item below its own sub-items would make a loop, so those aren't offered.
+	const descendants = new Set<string>([issue.id]);
+	for (let grew = true; grew; ) {
+		grew = false;
+		for (const item of projectIssues) {
+			if (
+				item.parentId &&
+				descendants.has(item.parentId) &&
+				!descendants.has(item.id)
+			) {
+				descendants.add(item.id);
+				grew = true;
+			}
+		}
+	}
+	const parentOptions = projectIssues.filter(
+		(item) => !descendants.has(item.id),
+	);
+	const parent = projectIssues.find((item) => item.id === issue.parentId);
 
 	return (
 		<div className="flex h-full min-h-0 w-full flex-col overflow-hidden">
@@ -179,6 +214,24 @@ function RouteComponent() {
 							</BreadcrumbLink>
 						</BreadcrumbItem>
 						<BreadcrumbSeparator />
+						{issue.parentId && (
+							<>
+								<BreadcrumbItem>
+									<BreadcrumbLink
+										render={
+											<Link
+												to="/$id/browse/$issueId"
+												params={{ id: workspaceId, issueId: issue.parentId }}
+												title={parent?.title}
+											/>
+										}
+									>
+										{issue.parentId}
+									</BreadcrumbLink>
+								</BreadcrumbItem>
+								<BreadcrumbSeparator />
+							</>
+						)}
 						<BreadcrumbItem>
 							<BreadcrumbPage>{issue.id}</BreadcrumbPage>
 						</BreadcrumbItem>
@@ -229,11 +282,12 @@ function RouteComponent() {
 							</>
 						)}
 					</div>
-					<IssueAttachments
-						issueId={issue.id}
-						userId={user?.id}
+					<SubItems
+						issue={issue}
+						workspaceId={workspaceId}
+						issues={projectIssues}
+						states={states}
 						canWrite={canWrite}
-						canManage={canManage}
 					/>
 					<div className="border-b lg:hidden">
 						<IssueProperties
@@ -242,9 +296,22 @@ function RouteComponent() {
 							states={states}
 							members={members}
 							canWrite={canWrite}
+							parentOptions={parentOptions}
 							onUpdate={update}
 						/>
 					</div>
+					<IssueRelations
+						issueId={issue.id}
+						workspaceId={workspaceId}
+						canWrite={canWrite}
+					/>
+					<IssueLinks issueId={issue.id} canWrite={canWrite} />
+					<IssueAttachments
+						issueId={issue.id}
+						userId={user?.id}
+						canWrite={canWrite}
+						canManage={canManage}
+					/>
 					<IssueActivity
 						issueId={issue.id}
 						userId={user?.id}
@@ -262,6 +329,7 @@ function RouteComponent() {
 						states={states}
 						members={members}
 						canWrite={canWrite}
+						parentOptions={parentOptions}
 						onUpdate={update}
 					/>
 				</aside>
