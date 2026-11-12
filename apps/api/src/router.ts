@@ -35,6 +35,11 @@ import {
 	findIssue,
 	updateIssue,
 } from "./routes/issue";
+import {
+	addIssueRelation,
+	findIssueRelations,
+	removeIssueRelation,
+} from "./routes/issue-relation";
 import { findIssues, findMyIssues, searchIssues } from "./routes/issues";
 import { createLink, deleteLink, findLinks, updateLink } from "./routes/link";
 import {
@@ -148,6 +153,11 @@ export const router = {
 		create: createIssue,
 		update: updateIssue,
 		delete: deleteIssue,
+	},
+	issueRelations: {
+		find: findIssueRelations,
+		add: addIssueRelation,
+		remove: removeIssueRelation,
 	},
 	issues: {
 		find: findIssues,

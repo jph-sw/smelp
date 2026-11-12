@@ -10,6 +10,7 @@ import { useEffect, useRef } from "react";
 import { IssueActivity } from "#/components/issue/issue-activity";
 import { IssueLinks } from "#/components/issue/issue-links";
 import { IssueProperties } from "#/components/issue/issue-properties";
+import { IssueRelations } from "#/components/issue/issue-relations";
 import { SubItems } from "#/components/issue/sub-items";
 import { ArchivedBanner } from "#/components/project/archived-banner";
 import { ProjectHeader } from "#/components/project/project-header";
@@ -28,6 +29,7 @@ import {
 	commentsQueryOptions,
 	issueActivityQueryOptions,
 	issueQueryOptions,
+	issueRelationsQueryOptions,
 	issuesQueryOptions,
 	linksQueryOptions,
 	updateIssue,
@@ -50,6 +52,7 @@ export const Route = createFileRoute("/(workspace)/$id/browse/$issueId")({
 			queryClient.ensureQueryData(commentsQueryOptions({ issueId })),
 			queryClient.ensureQueryData(linksQueryOptions({ issueId })),
 			queryClient.ensureQueryData(issueActivityQueryOptions({ issueId })),
+			queryClient.ensureQueryData(issueRelationsQueryOptions({ issueId })),
 			queryClient.ensureQueryData(currentUserQueryOptions),
 		]);
 		await Promise.all([
@@ -294,6 +297,11 @@ function RouteComponent() {
 							onUpdate={update}
 						/>
 					</div>
+					<IssueRelations
+						issueId={issue.id}
+						workspaceId={workspaceId}
+						canWrite={canWrite}
+					/>
 					<IssueLinks issueId={issue.id} canWrite={canWrite} />
 					<IssueActivity
 						issueId={issue.id}

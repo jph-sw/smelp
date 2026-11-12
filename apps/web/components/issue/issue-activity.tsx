@@ -15,6 +15,7 @@ import {
 	updateComment,
 } from "#/lib/data/issue";
 import { toastError } from "#/lib/errors";
+import { RELATION_PHRASES } from "#/lib/relations";
 import { formatDate, formatRelativeTime, initials } from "#/lib/utils";
 import {
 	AlertDialog,
@@ -30,7 +31,11 @@ import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
 
+const relatedLabel = (entry: { relatedId?: string | null }) =>
+	entry.relatedId ?? "another work item";
+
 type Activity = {
+	relatedId?: string | null;
 	action: string;
 	field: string | null;
 	oldValue: string | null;
@@ -66,6 +71,10 @@ function describeActivity(
 			return entry.field === "title"
 				? `renamed this to "${entry.newValue}"`
 				: "edited the description";
+		case "issue.relation_added":
+			return `marked this as ${RELATION_PHRASES[entry.newValue ?? ""] ?? "related to"} ${relatedLabel(entry)}`;
+		case "issue.relation_removed":
+			return `removed the relation to ${relatedLabel(entry)}`;
 		case "issue.link_added":
 			return entry.newValue
 				? `added the link "${entry.newValue}"`

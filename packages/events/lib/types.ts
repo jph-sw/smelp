@@ -54,6 +54,16 @@ export type DomainEvent =
 			}
 	  >
 	| Event<"issue.deleted", IssueRef>
+	| Event<
+			"issue.relation_added" | "issue.relation_removed",
+			IssueRef & {
+				field: "relation";
+				// The relation as seen from this issue, e.g. "blocks" or "blocked_by".
+				oldValue: string | null;
+				newValue: string | null;
+				relatedId: string;
+			}
+	  >
 	| Event<"issue.link_added", LinkChange>
 	| Event<"issue.link_updated", LinkChange>
 	| Event<"issue.link_removed", LinkChange>

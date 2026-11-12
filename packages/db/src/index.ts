@@ -16,6 +16,7 @@ import type {
 import type { comment } from "../types/tables/comment";
 import type { issue } from "../types/tables/issue";
 import type { issue_link } from "../types/tables/issue_link";
+import type { issue_relation } from "../types/tables/issue_relation";
 import type { schema_migrations } from "../types/tables/migration";
 import type { project } from "../types/tables/project";
 import type { project_counter } from "../types/tables/project_counter";
@@ -159,6 +160,7 @@ export type tables = {
 	project: project;
 	project_counter: project_counter;
 	issue: issue;
+	issue_relation: issue_relation;
 	state: state;
 	comment: comment;
 	issue_link: issue_link;

@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import type { FeedEvent } from "#/lib/data/activity";
+import { RELATION_PHRASES } from "#/lib/relations";
 
 const linkClass =
 	"font-medium text-foreground underline-offset-3 hover:underline";
@@ -137,6 +138,20 @@ export function ActivitySentence({
 				<>
 					deleted {issue}
 					{event.issue?.title && ` "${event.issue.title}"`}
+				</>
+			);
+		case "issue.relation_added":
+			return (
+				<>
+					marked {issue} as {RELATION_PHRASES[d.relation ?? ""] ?? "related to"}{" "}
+					<Strong>{d.relatedId ?? "another work item"}</Strong>
+				</>
+			);
+		case "issue.relation_removed":
+			return (
+				<>
+					removed the relation between {issue} and{" "}
+					<Strong>{d.relatedId ?? "another work item"}</Strong>
 				</>
 			);
 		case "issue.link_added":
