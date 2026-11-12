@@ -77,6 +77,12 @@ function describeActivity(
 					? `made this a sub-item of ${entry.newValue}`
 					: "made this a top-level item";
 			}
+			if (entry.field === "cycle") {
+				if (entry.newValue) return `added this to the cycle ${entry.newValue}`;
+				return entry.oldValue
+					? `removed this from the cycle ${entry.oldValue}`
+					: "removed this from its cycle";
+			}
 			return entry.field === "title"
 				? `renamed this to "${entry.newValue}"`
 				: "edited the description";

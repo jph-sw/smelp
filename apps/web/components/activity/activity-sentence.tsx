@@ -126,6 +126,15 @@ export function ActivitySentence({
 					<>made {issue} a top-level item</>
 				);
 			}
+			if (d.field === "cycle") {
+				return d.to ? (
+					<>
+						added {issue} to the cycle <Strong>{d.to}</Strong>
+					</>
+				) : (
+					<>removed {issue} from its cycle</>
+				);
+			}
 			return d.field === "title" ? (
 				<>
 					renamed {issue} to {`"${d.to}"`}

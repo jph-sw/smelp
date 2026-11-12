@@ -31,6 +31,25 @@ async function stateName(stateId: string) {
 	return state?.name ?? null;
 }
 
+async function requireCycleInProject(cycleId: string, projectId: string) {
+	const cycle = (
+		await sql`SELECT id FROM cycle WHERE id = ${cycleId} AND projectId = ${projectId}`
+	)[0];
+	if (!cycle) {
+		throw new ORPCError("BAD_REQUEST", {
+			message: "The cycle must be in the same project",
+		});
+	}
+}
+
+async function cycleName(cycleId: string | null) {
+	if (!cycleId) return null;
+	const cycle = (await sql`SELECT name FROM cycle WHERE id = ${cycleId}`)[0] as
+		| Pick<tables["cycle"], "name">
+		| undefined;
+	return cycle?.name ?? null;
+}
+
 // A parent must be in the same project, and an item can't sit below itself.
 async function requireValidParent(
 	parentId: string,
@@ -131,6 +150,7 @@ export const updateIssue = base
 			description: v.optional(Description),
 			assignee: v.optional(v.nullable(NonEmpty)),
 			parentId: v.optional(v.nullable(NonEmpty)),
+			cycleId: v.optional(v.nullable(NonEmpty)),
 		}),
 	)
 	.handler(async ({ input, context }) => {
@@ -155,6 +175,7 @@ export const updateIssue = base
 				input.assignee === undefined ? oldIssue.assignee : input.assignee,
 			parentId:
 				input.parentId === undefined ? oldIssue.parentId : input.parentId,
+			cycleId: input.cycleId === undefined ? oldIssue.cycleId : input.cycleId,
 		};
 
 		const stateChanged = next.state !== oldIssue.state;
@@ -162,13 +183,15 @@ export const updateIssue = base
 		const descriptionChanged = next.description !== oldIssue.description;
 		const assigneeChanged = next.assignee !== oldIssue.assignee;
 		const parentChanged = next.parentId !== oldIssue.parentId;
+		const cycleChanged = next.cycleId !== oldIssue.cycleId;
 
 		if (
 			!stateChanged &&
 			!titleChanged &&
 			!descriptionChanged &&
 			!assigneeChanged &&
-			!parentChanged
+			!parentChanged &&
+			!cycleChanged
 		) {
 			return oldIssue;
 		}
@@ -181,12 +204,25 @@ export const updateIssue = base
 			await requireValidParent(next.parentId, project.id, oldIssue.id);
 		}
 
+		if (cycleChanged && next.cycleId) {
+			await requireCycleInProject(next.cycleId, project.id);
+		}
+
+		// Read before the write, so the log names what was validated even if the
+		// cycle is renamed or deleted a moment later.
+		const oldCycleName = cycleChanged
+			? await cycleName(oldIssue.cycleId)
+			: null;
+		const newCycleName = cycleChanged ? await cycleName(next.cycleId) : null;
+
 		// The parent checks run again inside this one statement, so a concurrent move or
 		// delete can't slip in between the checks above and the write: the new parent must
 		// still exist in this project and must not have this item among its ancestors.
 		// Only a real parent change is written and checked, so an item whose parent is gone
 		// can still be edited, and an unrelated edit never fails over its parent.
 		const setParent = parentChanged ? 1 : 0;
+		// Same for the cycle: it must still exist in this project when the write happens.
+		const setCycle = cycleChanged ? 1 : 0;
 		const written = await sql`
 			UPDATE issue SET
 				state = ${next.state},
@@ -194,9 +230,18 @@ export const updateIssue = base
 				description = ${next.description},
 				assignee = ${next.assignee},
 				parentId = CASE WHEN ${setParent} = 1 THEN ${next.parentId} ELSE parentId END,
+				cycleId = CASE WHEN ${setCycle} = 1 THEN ${next.cycleId} ELSE cycleId END,
 				updatedAt = ${Date.now()},
 				updatedBy = ${session.userId}
 			WHERE id = ${input.id}
+				AND (
+					${setCycle} = 0
+					OR ${next.cycleId} IS NULL
+					OR EXISTS (
+						SELECT 1 FROM cycle
+						WHERE cycle.id = ${next.cycleId} AND cycle.projectId = ${project.id}
+					)
+				)
 				AND (
 					${setParent} = 0
 					OR ${next.parentId} IS NULL
@@ -222,9 +267,12 @@ export const updateIssue = base
 		if (written.length === 0) {
 			const stillThere = await sql`SELECT id FROM issue WHERE id = ${input.id}`;
 			if (stillThere.length === 0) throw new ORPCError("NOT_FOUND");
+			// Say which check failed, so the message fits what the caller changed.
 			throw new ORPCError("BAD_REQUEST", {
 				message:
-					"The parent must be a work item in the same project, and not below this one",
+					cycleChanged && !parentChanged
+						? "The cycle must be in the same project"
+						: "The parent must be a work item in the same project, and not below this one",
 			});
 		}
 
@@ -301,6 +349,19 @@ export const updateIssue = base
 					field: "parent",
 					oldValue: oldIssue.parentId,
 					newValue: issue.parentId,
+				},
+			});
+		}
+
+		if (cycleChanged) {
+			eventBus.emit({
+				...event,
+				type: "issue.updated",
+				payload: {
+					...ref,
+					field: "cycle",
+					oldValue: oldCycleName,
+					newValue: newCycleName,
 				},
 			});
 		}
@@ -407,6 +468,7 @@ export const createIssue = base
 			description: input.description,
 			type: input.type,
 			parentId: input.parentId || null,
+			cycleId: null,
 			workspaceId: project.workspaceId,
 			projectId: project.id,
 			createdAt: Date.now(),
