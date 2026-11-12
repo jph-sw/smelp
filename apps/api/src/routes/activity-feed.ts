@@ -18,6 +18,9 @@ const LEGACY_ACTIONS: Record<string, string> = {
 	commented: "comment.created",
 };
 
+// issue.updated fields whose new value is short enough to show in the feed.
+const FIELDS_WITH_VALUE = new Set(["title", "parent"]);
+
 type FeedRow = Pick<
 	tables["activity_logs"],
 	| "id"
@@ -126,7 +129,7 @@ function toFeedEvent(row: FeedRow, canSeeInviteEmails: boolean): FeedEvent {
 		case "issue.updated":
 			details = {
 				field: row.field,
-				to: row.field === "title" ? row.newValue : null,
+				to: row.field && FIELDS_WITH_VALUE.has(row.field) ? row.newValue : null,
 			};
 			break;
 		case "issue.relation_added":
@@ -136,6 +139,12 @@ function toFeedEvent(row: FeedRow, canSeeInviteEmails: boolean): FeedEvent {
 				// Only set when the viewer can read the related item's project.
 				relatedId: row.relatedVisibleId,
 			};
+			break;
+		case "issue.link_added":
+		case "issue.link_updated":
+		case "issue.link_removed":
+			// The link's title; untitled links have none.
+			details = { name: row.newValue ?? row.oldValue };
 			break;
 		case "project.created":
 		case "project.deleted":

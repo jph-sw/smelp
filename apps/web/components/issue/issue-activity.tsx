@@ -63,6 +63,11 @@ function describeActivity(
 				? `assigned this to ${memberName(entry.newValue)}`
 				: `unassigned ${memberName(entry.oldValue)}`;
 		case "issue.updated":
+			if (entry.field === "parent") {
+				return entry.newValue
+					? `made this a sub-item of ${entry.newValue}`
+					: "made this a top-level item";
+			}
 			return entry.field === "title"
 				? `renamed this to "${entry.newValue}"`
 				: "edited the description";
@@ -70,6 +75,18 @@ function describeActivity(
 			return `marked this as ${RELATION_PHRASES[entry.newValue ?? ""] ?? "related to"} ${relatedLabel(entry)}`;
 		case "issue.relation_removed":
 			return `removed the relation to ${relatedLabel(entry)}`;
+		case "issue.link_added":
+			return entry.newValue
+				? `added the link "${entry.newValue}"`
+				: "added a link";
+		case "issue.link_updated": {
+			const name = entry.newValue ?? entry.oldValue;
+			return name ? `edited the link "${name}"` : "edited a link";
+		}
+		case "issue.link_removed":
+			return entry.oldValue
+				? `removed the link "${entry.oldValue}"`
+				: "removed a link";
 		default:
 			return "changed this work item";
 	}

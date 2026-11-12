@@ -55,10 +55,31 @@ export const updateIssue = (input: {
 	title?: string;
 	description?: string;
 	assignee?: string | null;
+	parentId?: string | null;
 }) => orpc.issue.update(input);
 
 export const deleteIssue = ({ id }: { id: string }) =>
 	orpc.issue.delete({ id });
+
+export const linksQueryOptions = ({ issueId }: { issueId: string }) =>
+	queryOptions({
+		queryKey: ["links", issueId],
+		queryFn: () => orpc.links.find({ issueId }),
+	});
+
+export const createLink = (input: {
+	issueId: string;
+	url: string;
+	title?: string;
+}) => orpc.links.create(input);
+
+export const updateLink = (input: {
+	id: string;
+	url: string;
+	title?: string;
+}) => orpc.links.update(input);
+
+export const deleteLink = ({ id }: { id: string }) => orpc.links.delete({ id });
 
 export const createComment = (input: { issueId: string; body: string }) =>
 	orpc.comments.create(input);

@@ -15,6 +15,7 @@ import type {
 } from "../types/tables/auth";
 import type { comment } from "../types/tables/comment";
 import type { issue } from "../types/tables/issue";
+import type { issue_link } from "../types/tables/issue_link";
 import type { issue_relation } from "../types/tables/issue_relation";
 import type { schema_migrations } from "../types/tables/migration";
 import type { project } from "../types/tables/project";
@@ -162,6 +163,7 @@ export type tables = {
 	issue_relation: issue_relation;
 	state: state;
 	comment: comment;
+	issue_link: issue_link;
 };
 
 export const DEFAULTS = {
