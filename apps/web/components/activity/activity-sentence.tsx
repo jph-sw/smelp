@@ -130,6 +130,18 @@ export function ActivitySentence({
 					{event.issue?.title && ` "${event.issue.title}"`}
 				</>
 			);
+		case "issue.attachment_added":
+			return (
+				<>
+					attached <Strong>{d.name ?? "a file"}</Strong> to {issue}
+				</>
+			);
+		case "issue.attachment_removed":
+			return (
+				<>
+					removed <Strong>{d.name ?? "a file"}</Strong> from {issue}
+				</>
+			);
 		case "comment.created":
 			return <>commented on {issue}</>;
 		case "comment.updated":

@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-query";
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
+import { IssueAttachments } from "#/components/issue/attachments";
 import { IssueActivity } from "#/components/issue/issue-activity";
 import { IssueProperties } from "#/components/issue/issue-properties";
 import { ArchivedBanner } from "#/components/project/archived-banner";
@@ -226,6 +227,12 @@ function RouteComponent() {
 							</>
 						)}
 					</div>
+					<IssueAttachments
+						issueId={issue.id}
+						userId={user?.id}
+						canWrite={canWrite}
+						canManage={canManage}
+					/>
 					<div className="border-b lg:hidden">
 						<IssueProperties
 							issue={issue}
@@ -242,6 +249,7 @@ function RouteComponent() {
 						states={states}
 						members={members}
 						canManage={canManage}
+						canWrite={canWrite}
 						readOnly={isArchived}
 					/>
 				</div>

@@ -68,3 +68,46 @@ export const updateComment = (input: { commentId: string; body: string }) =>
 
 export const deleteComment = ({ id }: { id: string }) =>
 	orpc.comments.delete({ id });
+
+export const attachmentsQueryOptions = ({ issueId }: { issueId: string }) =>
+	queryOptions({
+		queryKey: ["attachments", issueId],
+		queryFn: () => orpc.attachments.find({ issueId }),
+	});
+
+export const deleteAttachment = ({ id }: { id: string }) =>
+	orpc.attachments.delete({ id });
+
+export const attachmentUrl = (id: string) => `/api/attachments/${id}`;
+
+// Its message is written for the user, like the server's own refusals.
+export class AttachmentUploadError extends Error {}
+
+// Not an RPC call, because the file goes up as a plain multipart request.
+export async function uploadAttachment(input: {
+	issueId: string;
+	commentId?: string;
+	file: File;
+}) {
+	const query = new URLSearchParams({ issueId: input.issueId });
+	if (input.commentId) query.set("commentId", input.commentId);
+	const body = new FormData();
+	body.set("file", input.file);
+
+	let response: Response;
+	try {
+		response = await fetch(`/api/attachments?${query}`, {
+			method: "POST",
+			body,
+			credentials: "include",
+		});
+	} catch {
+		throw new AttachmentUploadError(
+			"The upload failed. Check your connection.",
+		);
+	}
+	if (!response.ok) {
+		const message = (await response.text().catch(() => "")).slice(0, 200);
+		throw new AttachmentUploadError(message || "The upload failed.");
+	}
+}

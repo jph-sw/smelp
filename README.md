@@ -67,6 +67,8 @@ All of these are optional. Put them in `.env`, which `.env.example` has a starti
 | `SMELP_PORT` | Port on this machine, optionally with an address. Defaults to `3000`. |
 | `SECURE_COOKIES` | `false` allows signing in over plain HTTP. |
 | `TRUST_PROXY` | `true` when behind a reverse proxy. See above. |
+| `MAX_ATTACHMENT_MB` | Largest file that can be attached to a work item or comment, in megabytes. Defaults to `25`. |
+| `ATTACHMENTS_PATH` | Where attached files are stored. Defaults to an `attachments` folder next to the database, which is on the `smelp-data` volume in Docker. Keep it on a persistent volume. |
 | `CORS_ORIGINS` | Comma-separated origins allowed to call the API from another site. The web app doesn't need this. |
 
 ### Email
@@ -87,16 +89,17 @@ To check your settings, use **Send test email** at `/ceo`. Self-signed certifica
 
 ## Backup
 
-All your data, including photos, is in one SQLite database on the `smelp-data` Docker volume. This is safe while smelp is running:
+Your data is a SQLite database, which includes photos, and a folder of attached files (`/data/attachments`), both on the `smelp-data` Docker volume. This is safe while smelp is running:
 
 ```sh
 docker compose exec smelp bun run backup
 ```
 
-It prints the backup's path, under `/data/backups`. **That's on the same disk as your data, so copy it somewhere else:**
+It prints the backup's path, under `/data/backups`. If anything is attached, the files are saved in a folder beside it with the same name plus `.attachments`. **That's on the same disk as your data, so copy both somewhere else:**
 
 ```sh
 docker compose cp smelp:/data/backups/smelp-2026-01-31T03-00-00-000Z.sqlite .
+docker compose cp smelp:/data/backups/smelp-2026-01-31T03-00-00-000Z.sqlite.attachments .
 ```
 
 Keep backups private, because they contain password hashes. To back up nightly from cron, use `-T`, since cron has no terminal:
@@ -121,11 +124,14 @@ If the backup is outside the container, such as on a new server, put it on the v
 
 ```sh
 docker compose run --rm -T smelp sh -c 'cat > /data/incoming.sqlite' < smelp-2026-01-31T03-00-00-000Z.sqlite
+tar -C smelp-2026-01-31T03-00-00-000Z.sqlite.attachments -c . | docker compose run --rm -T smelp sh -c 'mkdir /data/incoming.sqlite.attachments && tar -x -C /data/incoming.sqlite.attachments'
 docker compose run --rm smelp bun run restore /data/incoming.sqlite
 docker compose up -d
 ```
 
-Your current database is set aside in `/data/backups`, not deleted. Restore refuses damaged files, and backups from a newer version of smelp. An older backup is fine, because it's brought up to date when smelp starts. If smelp crashed, restore waits 30 seconds after the crash before it will run.
+If the backup has a `.attachments` folder beside it, restore brings those files back too. Backups from before attachments existed have none, and leave your current files alone. If you move a backup, move the folder with it, and restore warns if it's missing.
+
+Your current database, and the current attachments folder, are set aside next to where they were, not deleted. Restore refuses damaged files, and backups from a newer version of smelp. An older backup is fine, because it's brought up to date when smelp starts. If smelp crashed, restore waits 30 seconds after the crash before it will run.
 
 ## Upgrade
 
@@ -183,7 +189,7 @@ Open <http://localhost:5173>. The API runs on port 3000 and keeps its data in `.
 | `bun run migrate:new <name>` | Creates a new migration in `migrations/` |
 | `bun run build:web && bun run start` | Runs the production build without Docker |
 
-Without Docker, `PORT`, `DATABASE_PATH` and `WEB_DIST` set the port, the database file and the built web app's location.
+Without Docker, `PORT`, `DATABASE_PATH` and `WEB_DIST` set the port, the database file and the built web app's location, and `ATTACHMENTS_PATH` the attached files' folder.
 
 ### Releasing
 

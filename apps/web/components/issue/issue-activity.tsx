@@ -29,6 +29,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
+import { CommentAttachments } from "./attachments";
 
 type Activity = {
 	action: string;
@@ -61,6 +62,10 @@ function describeActivity(
 			return entry.field === "title"
 				? `renamed this to "${entry.newValue}"`
 				: "edited the description";
+		case "issue.attachment_added":
+			return `attached ${entry.newValue ?? "a file"}`;
+		case "issue.attachment_removed":
+			return `removed ${entry.oldValue ?? "a file"}`;
 		default:
 			return "changed this work item";
 	}
@@ -116,12 +121,20 @@ function DeleteCommentButton({
 
 function CommentItem({
 	comment,
+	issueId,
+	userId,
+	canWrite,
+	canManage,
 	canEdit,
 	canDelete,
 	isRemoving,
 	onDelete,
 	onEdited,
 }: {
+	issueId: string;
+	userId: string | undefined;
+	canWrite: boolean;
+	canManage: boolean;
 	comment: tables["comment"] & {
 		authorName: string | null;
 		authorImage: string | null;
@@ -231,6 +244,16 @@ function CommentItem({
 						{comment.body}
 					</p>
 				)}
+				{!editing && (
+					<CommentAttachments
+						issueId={issueId}
+						commentId={comment.id}
+						userId={userId}
+						canWrite={canWrite}
+						canManage={canManage}
+						canAttach={canWrite && comment.authorId === userId}
+					/>
+				)}
 			</div>
 		</li>
 	);
@@ -242,6 +265,7 @@ export function IssueActivity({
 	states,
 	members,
 	canManage,
+	canWrite = false,
 	readOnly = false,
 }: {
 	issueId: string;
@@ -249,6 +273,8 @@ export function IssueActivity({
 	states: tables["state"][];
 	members: ProjectMember[];
 	canManage: boolean;
+	/** A member or admin of a project that isn't archived, who can attach files. */
+	canWrite?: boolean;
 	/** Archived project: show the discussion, but no way to add to or remove from it. */
 	readOnly?: boolean;
 }) {
@@ -309,6 +335,10 @@ export function IssueActivity({
 						<CommentItem
 							key={entry.id}
 							comment={entry}
+							issueId={issueId}
+							userId={userId}
+							canWrite={canWrite}
+							canManage={canManage}
 							canEdit={!readOnly && entry.authorId === userId}
 							canDelete={!readOnly && (entry.authorId === userId || canManage)}
 							isRemoving={isRemoving}
