@@ -36,6 +36,7 @@ import {
 	linksQueryOptions,
 	updateIssue,
 } from "#/lib/data/issue";
+import { markIssueNotificationRead } from "#/lib/data/notifications";
 import {
 	projectMembersQueryOptions,
 	useProjectAccess,
@@ -151,6 +152,18 @@ function RouteComponent() {
 	const { user, members, canWrite, canManage, isArchived } = useProjectAccess(
 		issue.projectId,
 	);
+
+	// Opening an item reads its notification.
+	useEffect(() => {
+		markIssueNotificationRead(issueId)
+			.then(() =>
+				Promise.all([
+					queryClient.invalidateQueries({ queryKey: ["notifications"] }),
+					queryClient.invalidateQueries({ queryKey: ["notification-count"] }),
+				]),
+			)
+			.catch(() => {});
+	}, [issueId, queryClient]);
 
 	const { mutate: update } = useMutation({
 		mutationFn: (changes: {

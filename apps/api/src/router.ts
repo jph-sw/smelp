@@ -1,6 +1,7 @@
 import { onError } from "@orpc/server";
 import { RPCHandler } from "@orpc/server/fetch";
 import { CORSPlugin, ResponseHeadersPlugin } from "@orpc/server/plugins";
+import "./lib/notifications";
 import { logRequestError } from "./lib/request-errors";
 import { findIssueActivity } from "./routes/activity";
 import { findWorkspaceActivity } from "./routes/activity-feed";
@@ -16,7 +17,12 @@ import {
 	requestPasswordReset,
 	resetPassword,
 } from "./routes/auth/password";
-import { removeAvatar, setAvatar, updateProfile } from "./routes/auth/profile";
+import {
+	removeAvatar,
+	setAvatar,
+	updateNotificationPreferences,
+	updateProfile,
+} from "./routes/auth/profile";
 import { signIn } from "./routes/auth/signin";
 import { signOut } from "./routes/auth/signout";
 import { signUp } from "./routes/auth/signup";
@@ -48,6 +54,13 @@ import {
 } from "./routes/issue-relation";
 import { findIssues, findMyIssues, searchIssues } from "./routes/issues";
 import { createLink, deleteLink, findLinks, updateLink } from "./routes/link";
+import {
+	countUnreadNotifications,
+	findNotifications,
+	markAllNotificationsRead,
+	markIssueNotificationRead,
+	markNotificationRead,
+} from "./routes/notifications";
 import {
 	archiveProject,
 	createProject,
@@ -113,6 +126,7 @@ export const router = {
 		updateProfile,
 		setAvatar,
 		removeAvatar,
+		updateNotificationPreferences,
 	},
 	workspace: {
 		find: findWorkspace,
@@ -191,6 +205,13 @@ export const router = {
 	activity: {
 		findForIssue: findIssueActivity,
 		findWorkspace: findWorkspaceActivity,
+	},
+	notifications: {
+		find: findNotifications,
+		countUnread: countUnreadNotifications,
+		markRead: markNotificationRead,
+		markAllRead: markAllNotificationsRead,
+		markReadForIssue: markIssueNotificationRead,
 	},
 	states: {
 		find: findStates,

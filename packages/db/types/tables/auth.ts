@@ -13,6 +13,8 @@ export type auth_user = {
 	email: string;
 	role: string | null;
 	image: string | null;
+	/** 1 when they asked for notification emails; off (0) by default. */
+	notifyByEmail: number;
 	createdAt: number;
 	updatedAt: number;
 };

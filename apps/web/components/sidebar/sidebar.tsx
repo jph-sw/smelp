@@ -1,10 +1,12 @@
 import {
 	HomeIcon,
+	Notification01Icon,
 	PlusSignIcon,
 	Search01Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { tables } from "@smelp/db";
+import { useQuery } from "@tanstack/react-query";
 import { Link, useMatchRoute, useParams } from "@tanstack/react-router";
 import {
 	Sidebar,
@@ -12,9 +14,11 @@ import {
 	SidebarGroup,
 	SidebarGroupContent,
 	SidebarMenu,
+	SidebarMenuBadge,
 	SidebarMenuButton,
 	SidebarMenuItem,
 } from "#/components/ui/sidebar";
+import { unreadCountQueryOptions } from "#/lib/data/notifications";
 import { cn } from "#/lib/utils";
 import { openCreateIssueDialog } from "../issue/create-issue-dialog-store";
 import { buttonVariants } from "../ui/button";
@@ -29,6 +33,10 @@ export function AppSidebar({
 	projects: (tables["project"] & { isMember: boolean; isArchived: boolean })[];
 }) {
 	const matchRoute = useMatchRoute();
+	const { data: unread } = useQuery(
+		unreadCountQueryOptions({ workspaceId: workspace.id }),
+	);
+	const unreadCount = unread?.count ?? 0;
 	const params = useParams({ strict: false });
 
 	// New work items go into the project on screen. Issue ids are "<projectId>-<n>".
@@ -89,6 +97,27 @@ export function AppSidebar({
 									<HugeiconsIcon icon={HomeIcon} />
 									Home
 								</SidebarMenuButton>
+							</SidebarMenuItem>
+							<SidebarMenuItem>
+								<SidebarMenuButton
+									render={
+										<Link to="/$id/inbox" params={{ id: workspace.id }} />
+									}
+									isActive={
+										!!matchRoute({
+											to: "/$id/inbox",
+											params: { id: workspace.id },
+										})
+									}
+								>
+									<HugeiconsIcon icon={Notification01Icon} />
+									Inbox
+								</SidebarMenuButton>
+								{unreadCount > 0 && (
+									<SidebarMenuBadge aria-label={`${unreadCount} unread`}>
+										{unreadCount > 99 ? "99+" : unreadCount}
+									</SidebarMenuBadge>
+								)}
 							</SidebarMenuItem>
 							<SidebarMenuItem>
 								<SidebarMenuButton

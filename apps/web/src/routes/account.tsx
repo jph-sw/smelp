@@ -1,16 +1,22 @@
-import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import {
+	useQuery,
+	useQueryClient,
+	useSuspenseQuery,
+} from "@tanstack/react-query";
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
-import { useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 import * as v from "valibot";
 import { Avatar, AvatarFallback, AvatarImage } from "#/components/ui/avatar";
 import { Button } from "#/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "#/components/ui/card";
 import { FieldGroup } from "#/components/ui/field";
+import { Switch } from "#/components/ui/switch";
 import { toast } from "#/components/ui/toast";
 import { useAppForm } from "#/hooks/form";
 import { usePageTitle } from "#/hooks/use-page-title";
 import { type AuthUser, currentUserQueryOptions } from "#/lib/auth";
 import { AvatarFileError, avatarAsBase64 } from "#/lib/data/avatar";
+import { instanceStatusQueryOptions } from "#/lib/data/instance";
 import { NewPasswordSchema, PASSWORDS_DIFFER } from "#/lib/data/password";
 import { toastError } from "#/lib/errors";
 import { orpc } from "#/lib/orpc";
@@ -93,6 +99,7 @@ function RouteComponent() {
 				Signed in as {user?.email}
 			</p>
 			{user && <ProfileCard user={user} />}
+			{user && <NotificationsCard user={user} />}
 			<Card>
 				<CardHeader>
 					<CardTitle className="text-sm">Change password</CardTitle>
@@ -259,6 +266,53 @@ function ProfileCard({ user }: { user: AuthUser }) {
 						<form.SubscribeButton label="Save profile" />
 					</form.AppForm>
 				</form>
+			</CardContent>
+		</Card>
+	);
+}
+
+function NotificationsCard({ user }: { user: AuthUser }) {
+	const queryClient = useQueryClient();
+	const { data: status } = useQuery(instanceStatusQueryOptions);
+	const [isSaving, setIsSaving] = useState(false);
+	const labelId = useId();
+
+	const change = async (emailNotifications: boolean) => {
+		setIsSaving(true);
+		try {
+			await orpc.auth.updateNotificationPreferences({ emailNotifications });
+			await queryClient.invalidateQueries({
+				queryKey: currentUserQueryOptions.queryKey,
+			});
+		} catch (e) {
+			toastError(e);
+		} finally {
+			setIsSaving(false);
+		}
+	};
+
+	return (
+		<Card>
+			<CardHeader>
+				<CardTitle className="text-sm">Notifications</CardTitle>
+			</CardHeader>
+			<CardContent className="space-y-2">
+				<div className="flex items-center justify-between gap-4">
+					<span id={labelId} className="text-sm">
+						Email me about new notifications
+					</span>
+					<Switch
+						aria-labelledby={labelId}
+						checked={user.notifyByEmail === 1}
+						disabled={isSaving}
+						onCheckedChange={change}
+					/>
+				</div>
+				<p className="text-xs text-muted-foreground">
+					{status && !status.emailEnabled
+						? "This install can't send email yet, so you'll only see notifications in your inbox."
+						: "Assignments, comments on your work and mentions also arrive by email. The inbox always has them."}
+				</p>
 			</CardContent>
 		</Card>
 	);

@@ -93,3 +93,14 @@ export const removeAvatar = base.handler(async ({ context }) => {
 
 	return { success: true };
 });
+
+export const updateNotificationPreferences = base
+	.input(v.object({ emailNotifications: v.boolean() }))
+	.handler(async ({ input, context }) => {
+		const session = await requireSession(context.headers);
+		await sql`
+			UPDATE auth_user SET notifyByEmail = ${input.emailNotifications ? 1 : 0}
+			WHERE id = ${session.userId}
+		`;
+		return { emailNotifications: input.emailNotifications };
+	});

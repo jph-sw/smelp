@@ -23,6 +23,7 @@ import type { issue } from "../types/tables/issue";
 import type { issue_link } from "../types/tables/issue_link";
 import type { issue_relation } from "../types/tables/issue_relation";
 import type { schema_migrations } from "../types/tables/migration";
+import type { notification } from "../types/tables/notification";
 import type { project } from "../types/tables/project";
 import type { project_counter } from "../types/tables/project_counter";
 import { STATE_GROUPS, type state } from "../types/tables/state";
@@ -168,6 +169,7 @@ export type tables = {
 	issue_relation: issue_relation;
 	state: state;
 	comment: comment;
+	notification: notification;
 	attachment: attachment;
 	comment_reaction: comment_reaction;
 	issue_link: issue_link;

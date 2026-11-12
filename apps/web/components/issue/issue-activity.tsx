@@ -38,6 +38,7 @@ import { Button } from "../ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Textarea } from "../ui/textarea";
 import { CommentAttachments } from "./attachments";
+import { CommentBody, MentionTextarea } from "./mentions";
 
 const relatedLabel = (entry: { relatedId?: string | null }) =>
 	entry.relatedId ?? "another work item";
@@ -239,6 +240,8 @@ function CommentItem({
 	canManage,
 	canEdit,
 	canDelete,
+	currentUserId,
+	members,
 	canReact,
 	isRemoving,
 	onDelete,
@@ -256,6 +259,8 @@ function CommentItem({
 	};
 	canEdit: boolean;
 	canDelete: boolean;
+	currentUserId: string | undefined;
+	members: ProjectMember[];
 	canReact: boolean;
 	onToggleReaction: (emoji: ReactionEmoji, reacted: boolean) => void;
 	isRemoving: boolean;
@@ -357,9 +362,11 @@ function CommentItem({
 						</div>
 					</form>
 				) : (
-					<p className="text-sm/relaxed whitespace-pre-wrap [overflow-wrap:anywhere]">
-						{comment.body}
-					</p>
+					<CommentBody
+						body={comment.body}
+						members={members}
+						currentUserId={currentUserId}
+					/>
 				)}
 				{!editing && (
 					<>
@@ -513,6 +520,8 @@ export function IssueActivity({
 							canManage={canManage}
 							canEdit={!readOnly && entry.authorId === userId}
 							canDelete={!readOnly && (entry.authorId === userId || canManage)}
+							currentUserId={userId}
+							members={members}
 							canReact={!readOnly}
 							onToggleReaction={(emoji, reacted) =>
 								react({ commentId: entry.id, emoji, reacted })
@@ -532,17 +541,13 @@ export function IssueActivity({
 						submit();
 					}}
 				>
-					<Textarea
+					<MentionTextarea
 						aria-label="Add a comment"
-						placeholder="Add a comment"
+						placeholder="Add a comment. Type @ to mention someone."
 						value={draft}
-						onChange={(event) => setDraft(event.target.value)}
-						onKeyDown={(event) => {
-							if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
-								event.preventDefault();
-								submit();
-							}
-						}}
+						onValueChange={setDraft}
+						members={members}
+						onSubmit={submit}
 					/>
 					<Button type="submit" disabled={!draft.trim() || isAdding}>
 						Comment

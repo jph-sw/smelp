@@ -14,6 +14,7 @@ await import("./setup");
 const { Auth } = await import("@smelp/auth");
 const { DB } = await import("@smelp/db");
 const { router } = await import("../src/router");
+const { notificationsIdle } = await import("../src/lib/notifications");
 
 const sql = new DB().sqlite;
 const auth = new Auth();
@@ -453,6 +454,140 @@ describe("test email", () => {
 		expect(publicClient().instance.sendTestEmail()).rejects.toMatchObject({
 			code: "UNAUTHORIZED",
 		});
+	});
+});
+
+describe("notification emails", () => {
+	const setup = async (wantsEmail: boolean) => {
+		const owner = await createUser();
+		const person = await createUser();
+		const workspaceId = `notify_mail_${counter}`;
+		const projectId = `NM${counter}`;
+		await owner.client.workspace.create({ name: `Notify mail ${counter}` });
+		await owner.client.project.create({
+			id: projectId,
+			name: "Notify",
+			description: "",
+			access: "public",
+			icon: "AppWindowIcon",
+			workspaceId,
+		});
+		for (const spaceId of [workspaceId, projectId]) {
+			await sql`INSERT INTO auth_space_member ${sql({
+				id: crypto.randomUUID(),
+				spaceId,
+				userId: person.id,
+				role: "member",
+				createdAt: Date.now(),
+			})}`;
+		}
+		const [state] = await owner.client.states.find({ projectId });
+		if (wantsEmail) {
+			await person.client.auth.updateNotificationPreferences({
+				emailNotifications: true,
+			});
+		}
+		const create = (title = "Mail me", assignee?: string) =>
+			owner.client.issue.create({
+				title,
+				description: "",
+				state: state?.id ?? "",
+				type: "task",
+				workspaceId,
+				projectId,
+				assignee,
+			});
+		const assign = (title?: string) => create(title, person.id);
+		return { owner, person, workspaceId, create, assign };
+	};
+
+	test("nothing is sent unless the person turned it on", async () => {
+		const { assign } = await setup(false);
+		await assign();
+		await notificationsIdle();
+		expect(received.length).toBe(0);
+	});
+
+	test("sends a link to the item when it is on", async () => {
+		const { person, workspaceId, assign } = await setup(true);
+		const issue = await assign();
+		await waitForMail(1);
+		expect(received[0]?.to[0]).toContain(person.email);
+		expect(received[0]?.text).toContain("assigned you");
+		expect(received[0]?.text).toContain(
+			`https://smelp.example.test/${workspaceId}/browse/${issue.id}`,
+		);
+	});
+
+	test("quotes the comment under a line saying who wrote it", async () => {
+		const { owner, person, create } = await setup(true);
+		const issue = await create("Quoted", person.id);
+		await waitForMail(1);
+		await owner.client.comments.create({
+			issueId: issue.id,
+			body: `Line one\r\nLine two with ${`@[Admin](user:${person.id})`}`,
+		});
+		await waitForMail(2);
+		const text = received[1]?.text ?? "";
+		expect(text).toContain(`${owner.displayName} wrote:`);
+		expect(text).toContain("> Line one");
+		// Each line is quoted, and a mention reads as the real name behind the id.
+		expect(text).toContain(`> Line two with @${person.displayName}`);
+		expect(text).not.toContain("@Admin");
+	});
+
+	test("line breaks in names and titles can't add headers", async () => {
+		const { owner, person, assign } = await setup(true);
+		await owner.client.auth.updateProfile({
+			fullName: "Mallory",
+			displayName: `mal-${counter}\r\nBcc: evil@example.test`,
+		});
+		await assign("Title\r\nBcc: other@example.test");
+		await waitForMail(1);
+		const raw = received[0]?.raw ?? "";
+		const headers = raw.split(/\r?\n\r?\n/)[0] ?? "";
+		expect(headers).not.toMatch(/^Bcc:/im);
+		const subjects = headers.match(/^Subject:/gim) ?? [];
+		expect(subjects).toHaveLength(1);
+		expect(received[0]?.to.join()).toContain(person.email);
+		expect(received[0]?.to).toHaveLength(1);
+	});
+
+	test("a failing mail server doesn't fail the request", async () => {
+		const { person, workspaceId, assign } = await setup(true);
+		failNextData = true;
+		const issue = await assign();
+		expect(issue.assignee).toBe(person.id);
+		await notificationsIdle();
+		expect(received.length).toBe(0);
+		// The inbox still has it.
+		const { notifications } = await person.client.notifications.find({
+			workspaceId,
+		});
+		expect(notifications).toHaveLength(1);
+	});
+
+	test("with email off the inbox still works", async () => {
+		const { person, workspaceId, assign } = await setup(true);
+		clearMailEnv();
+		await assign();
+		await notificationsIdle();
+		expect(received.length).toBe(0);
+		const { count } = await person.client.notifications.countUnread({
+			workspaceId,
+		});
+		expect(count).toBe(1);
+	});
+
+	test("sends at most 20 an hour to one person and drops the rest", async () => {
+		const { person, workspaceId, assign } = await setup(true);
+		for (let i = 0; i < 22; i += 1) await assign(`Burst ${i}`);
+		await notificationsIdle();
+		expect(received.length).toBe(20);
+		const { count } = await person.client.notifications.countUnread({
+			workspaceId,
+		});
+		expect(count).toBe(22);
 	});
 });
 
