@@ -19,7 +19,10 @@ import { ProjectHeader } from "#/components/project/project-header";
 import { usePageTitle } from "#/hooks/use-page-title";
 import { issuesQueryOptions, updateIssue } from "#/lib/data/issue";
 import { projectQueryOptions } from "#/lib/data/project";
-import { projectMembersQueryOptions } from "#/lib/data/project-members";
+import {
+	projectMembersQueryOptions,
+	useProjectAccess,
+} from "#/lib/data/project-members";
 import { statesQueryOptions } from "#/lib/data/state";
 import { toastError } from "#/lib/errors";
 
@@ -80,6 +83,8 @@ function RouteComponent() {
 	);
 
 	const isArchived = project.archivedAt !== null;
+	// Guests can look but not move cards, and nobody moves them while archived.
+	const { canWrite } = useProjectAccess(projectId);
 
 	const queryClient = useQueryClient();
 	const issuesQueryKey = issuesQueryOptions({ projectId }).queryKey;
@@ -153,7 +158,7 @@ function RouteComponent() {
 			) : (
 				<DragDropProvider
 					onDragEnd={(event) => {
-						if (event.canceled || isArchived) return;
+						if (event.canceled || !canWrite) return;
 
 						const issueId = event.operation.source?.id;
 						const targetStateId = event.operation.target?.id;
@@ -180,7 +185,7 @@ function RouteComponent() {
 											issue={issue}
 											key={issue.id}
 											workspaceId={workspaceId}
-											draggable={!isArchived}
+											draggable={canWrite}
 											assignee={members.find(
 												(member) => member.userId === issue.assignee,
 											)}

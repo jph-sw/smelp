@@ -1,3 +1,4 @@
+import { ORPCError } from "@orpc/server";
 import { Auth } from "@smelp/auth";
 import { DB, type tables } from "@smelp/db";
 import * as v from "valibot";
@@ -227,9 +228,10 @@ export const findWorkspaceActivity = base
 			await sql`SELECT role FROM auth_space_member WHERE spaceId = ${workspace.spaceId} AND userId = ${userId}`
 		)[0] as Pick<tables["auth_space_member"], "role"> | undefined;
 		const role = membership?.role ?? null;
-		// Guests see the projects they've been let into, not who joins or leaves.
-		const canSeeMembers =
-			isInstanceAdmin || role === "member" || role === "admin";
+		// Guests don't get the feed: it's for the people doing the work.
+		if (!isInstanceAdmin && role !== "member" && role !== "admin") {
+			throw new ORPCError("FORBIDDEN");
+		}
 		const canSeeInviteEmails = isInstanceAdmin || role === "admin";
 
 		const beforeAt = input.before?.createdAt ?? null;
@@ -331,7 +333,7 @@ export const findWorkspaceActivity = base
 				AND p.createdAt <= ev.createdAt
 			WHERE ev.kind <> 'hidden' AND (
 				${isInstanceAdmin ? 1 : 0} = 1
-				OR (ev.kind = 'members' AND ${canSeeMembers ? 1 : 0} = 1)
+				OR ev.kind = 'members'
 				OR (ev.kind = 'project' AND p.id IS NOT NULL AND (
 					EXISTS (
 						SELECT 1 FROM auth_space_member pm

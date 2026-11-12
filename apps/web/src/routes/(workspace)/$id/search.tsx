@@ -99,6 +99,7 @@ function RouteComponent() {
 									</span>
 									<span className="block truncate text-xs text-muted-foreground">
 										{issue.id} in {issue.projectName}, {issue.stateName}
+										{issue.projectArchived && " · Archived"}
 									</span>
 								</span>
 								{issue.assigneeName && (
