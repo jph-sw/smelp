@@ -195,7 +195,14 @@ export function ActivitySentence({
 		case "comment.updated":
 			return <>edited a comment on {issue}</>;
 		case "project.created":
-			return <>created the project {project}</>;
+			return d.source === "jira" ? (
+				<>
+					imported the project {project} from Jira
+					{d.count != null && ` (${d.count} work items)`}
+				</>
+			) : (
+				<>created the project {project}</>
+			);
 		case "project.archived":
 			return <>archived the project {project}</>;
 		case "project.unarchived":

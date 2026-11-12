@@ -19,6 +19,7 @@ import {
 	type comment_reaction,
 	REACTION_EMOJIS,
 } from "../types/tables/comment_reaction";
+import type { import_record } from "../types/tables/import_record";
 import type { issue } from "../types/tables/issue";
 import type { issue_link } from "../types/tables/issue_link";
 import type { issue_relation } from "../types/tables/issue_relation";
@@ -173,6 +174,7 @@ export type tables = {
 	attachment: attachment;
 	comment_reaction: comment_reaction;
 	issue_link: issue_link;
+	import_record: import_record;
 };
 
 export const DEFAULTS = {

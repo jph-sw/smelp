@@ -89,7 +89,17 @@ export type DomainEvent =
 	| Event<"auth.signup", { sessionId: string; username: string }>
 	| Event<"workspace.created", { name: string }>
 	| Event<"workspace.deleted", { name: string }>
-	| Event<"project.created", { projectId: string; name: string }>
+	| Event<
+			"project.created",
+			{
+				projectId: string;
+				name: string;
+				// Set when the project was brought in from elsewhere: one event per
+				// project, however many work items came with it.
+				source?: "jira";
+				itemCount?: number;
+			}
+	  >
 	| Event<
 			"project.updated",
 			{

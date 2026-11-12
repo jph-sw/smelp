@@ -32,6 +32,7 @@ import { Route as workspaceIdSettingsWorkspaceRouteRouteImport } from './routes/
 import { Route as workspaceIdProjectsProjectIdIndexRouteImport } from './routes/(workspace)/$id/projects/$projectId/index'
 import { Route as workspaceIdSettingsProjectsProjectIdRouteRouteImport } from './routes/(workspace)/$id/settings/projects/$projectId.route'
 import { Route as workspaceIdSettingsWorkspaceIndexRouteImport } from './routes/(workspace)/$id/settings/workspace/index'
+import { Route as workspaceIdSettingsWorkspaceImportRouteImport } from './routes/(workspace)/$id/settings/workspace/import'
 import { Route as workspaceIdSettingsWorkspaceMembersRouteImport } from './routes/(workspace)/$id/settings/workspace/members'
 import { Route as workspaceIdSettingsProjectsProjectIdIndexRouteImport } from './routes/(workspace)/$id/settings/projects/$projectId.index'
 import { Route as workspaceIdSettingsProjectsProjectIdMembersRouteImport } from './routes/(workspace)/$id/settings/projects/$projectId.members'
@@ -159,6 +160,12 @@ const workspaceIdSettingsWorkspaceIndexRoute =
     path: '/',
     getParentRoute: () => workspaceIdSettingsWorkspaceRouteRoute,
   } as any)
+const workspaceIdSettingsWorkspaceImportRoute =
+  workspaceIdSettingsWorkspaceImportRouteImport.update({
+    id: '/import',
+    path: '/import',
+    getParentRoute: () => workspaceIdSettingsWorkspaceRouteRoute,
+  } as any)
 const workspaceIdSettingsWorkspaceMembersRoute =
   workspaceIdSettingsWorkspaceMembersRouteImport.update({
     id: '/members',
@@ -205,6 +212,7 @@ export interface FileRoutesByFullPath {
   '/$id/browse/$issueId': typeof workspaceIdBrowseIssueIdRoute
   '/$id/projects/': typeof workspaceIdProjectsIndexRoute
   '/$id/settings/projects/$projectId': typeof workspaceIdSettingsProjectsProjectIdRouteRouteWithChildren
+  '/$id/settings/workspace/import': typeof workspaceIdSettingsWorkspaceImportRoute
   '/$id/settings/workspace/members': typeof workspaceIdSettingsWorkspaceMembersRoute
   '/$id/projects/$projectId/': typeof workspaceIdProjectsProjectIdIndexRoute
   '/$id/settings/workspace/': typeof workspaceIdSettingsWorkspaceIndexRoute
@@ -228,6 +236,7 @@ export interface FileRoutesByTo {
   '/$id': typeof workspaceIdIndexRoute
   '/$id/browse/$issueId': typeof workspaceIdBrowseIssueIdRoute
   '/$id/projects': typeof workspaceIdProjectsIndexRoute
+  '/$id/settings/workspace/import': typeof workspaceIdSettingsWorkspaceImportRoute
   '/$id/settings/workspace/members': typeof workspaceIdSettingsWorkspaceMembersRoute
   '/$id/projects/$projectId': typeof workspaceIdProjectsProjectIdIndexRoute
   '/$id/settings/workspace': typeof workspaceIdSettingsWorkspaceIndexRoute
@@ -258,6 +267,7 @@ export interface FileRoutesById {
   '/(workspace)/$id/browse/$issueId': typeof workspaceIdBrowseIssueIdRoute
   '/(workspace)/$id/projects/': typeof workspaceIdProjectsIndexRoute
   '/(workspace)/$id/settings/projects/$projectId': typeof workspaceIdSettingsProjectsProjectIdRouteRouteWithChildren
+  '/(workspace)/$id/settings/workspace/import': typeof workspaceIdSettingsWorkspaceImportRoute
   '/(workspace)/$id/settings/workspace/members': typeof workspaceIdSettingsWorkspaceMembersRoute
   '/(workspace)/$id/projects/$projectId/': typeof workspaceIdProjectsProjectIdIndexRoute
   '/(workspace)/$id/settings/workspace/': typeof workspaceIdSettingsWorkspaceIndexRoute
@@ -288,6 +298,7 @@ export interface FileRouteTypes {
     | '/$id/browse/$issueId'
     | '/$id/projects/'
     | '/$id/settings/projects/$projectId'
+    | '/$id/settings/workspace/import'
     | '/$id/settings/workspace/members'
     | '/$id/projects/$projectId/'
     | '/$id/settings/workspace/'
@@ -311,6 +322,7 @@ export interface FileRouteTypes {
     | '/$id'
     | '/$id/browse/$issueId'
     | '/$id/projects'
+    | '/$id/settings/workspace/import'
     | '/$id/settings/workspace/members'
     | '/$id/projects/$projectId'
     | '/$id/settings/workspace'
@@ -340,6 +352,7 @@ export interface FileRouteTypes {
     | '/(workspace)/$id/browse/$issueId'
     | '/(workspace)/$id/projects/'
     | '/(workspace)/$id/settings/projects/$projectId'
+    | '/(workspace)/$id/settings/workspace/import'
     | '/(workspace)/$id/settings/workspace/members'
     | '/(workspace)/$id/projects/$projectId/'
     | '/(workspace)/$id/settings/workspace/'
@@ -523,6 +536,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof workspaceIdSettingsWorkspaceIndexRouteImport
       parentRoute: typeof workspaceIdSettingsWorkspaceRouteRoute
     }
+    '/(workspace)/$id/settings/workspace/import': {
+      id: '/(workspace)/$id/settings/workspace/import'
+      path: '/import'
+      fullPath: '/$id/settings/workspace/import'
+      preLoaderRoute: typeof workspaceIdSettingsWorkspaceImportRouteImport
+      parentRoute: typeof workspaceIdSettingsWorkspaceRouteRoute
+    }
     '/(workspace)/$id/settings/workspace/members': {
       id: '/(workspace)/$id/settings/workspace/members'
       path: '/members'
@@ -572,12 +592,15 @@ const workspaceIdProjectsRouteRouteWithChildren =
   )
 
 interface workspaceIdSettingsWorkspaceRouteRouteChildren {
+  workspaceIdSettingsWorkspaceImportRoute: typeof workspaceIdSettingsWorkspaceImportRoute
   workspaceIdSettingsWorkspaceMembersRoute: typeof workspaceIdSettingsWorkspaceMembersRoute
   workspaceIdSettingsWorkspaceIndexRoute: typeof workspaceIdSettingsWorkspaceIndexRoute
 }
 
 const workspaceIdSettingsWorkspaceRouteRouteChildren: workspaceIdSettingsWorkspaceRouteRouteChildren =
   {
+    workspaceIdSettingsWorkspaceImportRoute:
+      workspaceIdSettingsWorkspaceImportRoute,
     workspaceIdSettingsWorkspaceMembersRoute:
       workspaceIdSettingsWorkspaceMembersRoute,
     workspaceIdSettingsWorkspaceIndexRoute:

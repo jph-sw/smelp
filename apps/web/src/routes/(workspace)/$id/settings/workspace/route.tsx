@@ -1,4 +1,8 @@
-import { People, Setting07Icon } from "@hugeicons/core-free-icons";
+import {
+	FileImportIcon,
+	People,
+	Setting07Icon,
+} from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
 import {
@@ -35,6 +39,17 @@ function RouteComponent() {
 					>
 						<HugeiconsIcon icon={People} className="size-3.5" />
 						Members
+					</Link>
+				</SettingsNavGroup>
+				<SettingsNavGroup label="Data">
+					<Link
+						to="/$id/settings/workspace/import"
+						params={{ id: workspaceId }}
+						activeOptions={{ exact: true }}
+						className={settingsNavLinkClassName}
+					>
+						<HugeiconsIcon icon={FileImportIcon} className="size-3.5" />
+						Import from Jira
 					</Link>
 				</SettingsNavGroup>
 			</SettingsNav>

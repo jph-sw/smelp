@@ -65,6 +65,9 @@ export type FeedDetails = {
 	email?: string | null;
 	relation?: string | null;
 	relatedId?: string | null;
+	/** Where an imported project came from, and how many work items it had. */
+	source?: string | null;
+	count?: number | null;
 };
 
 export type FeedEvent = {
@@ -149,6 +152,12 @@ function toFeedEvent(row: FeedRow, canSeeInviteEmails: boolean): FeedEvent {
 			details = { name: row.newValue ?? row.oldValue };
 			break;
 		case "project.created":
+			details = {
+				name: text("name"),
+				source: text("source"),
+				count: typeof meta.itemCount === "number" ? meta.itemCount : null,
+			};
+			break;
 		case "project.deleted":
 		case "project.archived":
 		case "project.unarchived":
