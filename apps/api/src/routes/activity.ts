@@ -30,6 +30,7 @@ export const findIssueActivity = base
 				activity_logs.oldValue,
 				activity_logs.newValue,
 				activity_logs.createdAt,
+				json_extract(activity_logs.metadata, '$.relatedId') AS relatedId,
 				auth_user.displayName AS actorName
 			FROM activity_logs
 			LEFT JOIN auth_user ON auth_user.id = activity_logs.actorId
@@ -39,5 +40,5 @@ export const findIssueActivity = base
 		`) as (Pick<
 			tables["activity_logs"],
 			"id" | "action" | "field" | "oldValue" | "newValue" | "createdAt"
-		> & { actorName: string | null })[];
+		> & { actorName: string | null; relatedId: string | null })[];
 	});

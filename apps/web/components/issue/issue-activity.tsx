@@ -30,7 +30,19 @@ import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
 
+const RELATION_PHRASES: Record<string, string> = {
+	blocks: "blocking",
+	blocked_by: "blocked by",
+	relates: "related to",
+	duplicates: "a duplicate of",
+	duplicated_by: "duplicated by",
+};
+
+const relatedLabel = (entry: { relatedId?: string | null }) =>
+	entry.relatedId ?? "another work item";
+
 type Activity = {
+	relatedId?: string | null;
 	action: string;
 	field: string | null;
 	oldValue: string | null;
@@ -61,6 +73,10 @@ function describeActivity(
 			return entry.field === "title"
 				? `renamed this to "${entry.newValue}"`
 				: "edited the description";
+		case "issue.relation_added":
+			return `marked this as ${RELATION_PHRASES[entry.newValue ?? ""] ?? "related to"} ${relatedLabel(entry)}`;
+		case "issue.relation_removed":
+			return `removed the relation to ${relatedLabel(entry)}`;
 		default:
 			return "changed this work item";
 	}

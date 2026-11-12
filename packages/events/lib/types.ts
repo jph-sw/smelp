@@ -48,6 +48,17 @@ export type DomainEvent =
 			}
 	  >
 	| Event<"issue.deleted", IssueRef>
+	| Event<
+			"issue.relation_added" | "issue.relation_removed",
+			IssueRef & {
+				field: "relation";
+				// The relation as seen from this issue, e.g. "blocks" or "blocked_by".
+				oldValue: string | null;
+				newValue: string | null;
+				relatedId: string;
+				relatedTitle: string;
+			}
+	  >
 	| Event<"comment.created", IssueRef & { issueId: string }>
 	| Event<"comment.updated", IssueRef & { issueId: string }>
 	| Event<"auth.signin", { sessionId: string; username: string }>

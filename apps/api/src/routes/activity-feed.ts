@@ -59,6 +59,8 @@ export type FeedDetails = {
 	userName?: string | null;
 	role?: string | null;
 	email?: string | null;
+	relation?: string | null;
+	relatedId?: string | null;
 };
 
 export type FeedEvent = {
@@ -124,6 +126,13 @@ function toFeedEvent(row: FeedRow, canSeeInviteEmails: boolean): FeedEvent {
 			details = {
 				field: row.field,
 				to: row.field === "title" ? row.newValue : null,
+			};
+			break;
+		case "issue.relation_added":
+		case "issue.relation_removed":
+			details = {
+				relation: row.newValue ?? row.oldValue,
+				relatedId: text("relatedId"),
 			};
 			break;
 		case "project.created":

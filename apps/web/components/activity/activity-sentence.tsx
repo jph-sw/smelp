@@ -73,6 +73,14 @@ const GROUP_LABELS: Record<string, string> = {
 	cancelled: "Cancelled",
 };
 
+const RELATION_PHRASES: Record<string, string> = {
+	blocks: "blocking",
+	blocked_by: "blocked by",
+	relates: "related to",
+	duplicates: "a duplicate of",
+	duplicated_by: "duplicated by",
+};
+
 function listWords(words: string[]) {
 	if (words.length <= 1) return words.join("");
 	return `${words.slice(0, -1).join(", ")} and ${words.at(-1)}`;
@@ -128,6 +136,20 @@ export function ActivitySentence({
 				<>
 					deleted {issue}
 					{event.issue?.title && ` "${event.issue.title}"`}
+				</>
+			);
+		case "issue.relation_added":
+			return (
+				<>
+					marked {issue} as {RELATION_PHRASES[d.relation ?? ""] ?? "related to"}{" "}
+					<Strong>{d.relatedId}</Strong>
+				</>
+			);
+		case "issue.relation_removed":
+			return (
+				<>
+					removed the relation between {issue} and{" "}
+					<Strong>{d.relatedId}</Strong>
 				</>
 			);
 		case "comment.created":

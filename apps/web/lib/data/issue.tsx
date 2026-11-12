@@ -68,3 +68,18 @@ export const updateComment = (input: { commentId: string; body: string }) =>
 
 export const deleteComment = ({ id }: { id: string }) =>
 	orpc.comments.delete({ id });
+
+export const issueRelationsQueryOptions = ({ issueId }: { issueId: string }) =>
+	queryOptions({
+		queryKey: ["issue-relations", issueId],
+		queryFn: () => orpc.issueRelations.find({ issueId }),
+	});
+
+export const addIssueRelation = (input: {
+	issueId: string;
+	relatedId: string;
+	kind: "blocks" | "blocked_by" | "relates" | "duplicates" | "duplicated_by";
+}) => orpc.issueRelations.add(input);
+
+export const removeIssueRelation = (input: { issueId: string; id: string }) =>
+	orpc.issueRelations.remove(input);
