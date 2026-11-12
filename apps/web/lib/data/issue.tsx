@@ -78,6 +78,12 @@ export const attachmentsQueryOptions = ({ issueId }: { issueId: string }) =>
 export const deleteAttachment = ({ id }: { id: string }) =>
 	orpc.attachments.delete({ id });
 
+export const attachmentLimitsQueryOptions = queryOptions({
+	queryKey: ["attachment-limits"],
+	queryFn: () => orpc.attachments.limits(),
+	staleTime: Number.POSITIVE_INFINITY,
+});
+
 export const attachmentUrl = (id: string) => `/api/attachments/${id}`;
 
 // Its message is written for the user, like the server's own refusals.
@@ -98,6 +104,9 @@ export async function uploadAttachment(input: {
 	try {
 		response = await fetch(`/api/attachments?${query}`, {
 			method: "POST",
+			// The server only takes uploads that carry this, which a page on another
+			// site can't add.
+			headers: { "X-Smelp-Upload": "1" },
 			body,
 			credentials: "include",
 		});

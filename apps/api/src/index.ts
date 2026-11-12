@@ -8,6 +8,7 @@ import { Migrator } from "@smelp/migrate";
 import {
 	attachmentResponse,
 	maxRequestBytes,
+	sweepAttachments,
 	uploadAttachment,
 } from "./lib/attachments";
 import { avatarResponse } from "./lib/avatars";
@@ -23,6 +24,13 @@ const utils = new Utils();
 
 await migrator.up();
 logMailStatus();
+sweepAttachments()
+	.then((removed) => {
+		if (removed > 0) {
+			utils.logger.info(`Removed ${removed} unused attachment file(s)`);
+		}
+	})
+	.catch((error) => utils.logger.warn("Attachment cleanup failed", error));
 
 function bunRequestHandler<T extends Context>(
 	handler: RPCHandler<T>,
@@ -91,7 +99,7 @@ const server = Bun.serve({
 		"/api/status": () => statusResponse(),
 		"/api/attachments": (request) => uploadAttachment(request),
 		"/api/attachments/:id": (request) =>
-			attachmentResponse(request.headers, request.params.id),
+			attachmentResponse(request.headers, request.params.id, request.method),
 		"/api/avatars/:userId": (request) =>
 			avatarResponse(request.headers, request.params.userId),
 	},

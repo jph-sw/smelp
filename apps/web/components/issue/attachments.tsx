@@ -6,12 +6,14 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
 	useMutation,
+	useQuery,
 	useQueryClient,
 	useSuspenseQuery,
 } from "@tanstack/react-query";
 import { useRef } from "react";
 import {
 	AttachmentUploadError,
+	attachmentLimitsQueryOptions,
 	attachmentsQueryOptions,
 	attachmentUrl,
 	deleteAttachment,
@@ -51,6 +53,7 @@ function AttachButton({
 	onUploaded: () => void;
 }) {
 	const input = useRef<HTMLInputElement>(null);
+	const { data: limits } = useQuery(attachmentLimitsQueryOptions);
 	const { mutate, isPending } = useMutation({
 		mutationFn: (files: File[]) =>
 			// One at a time, so a refused file doesn't leave the rest in doubt.
@@ -80,7 +83,16 @@ function AttachButton({
 				onChange={(event) => {
 					const files = Array.from(event.target.files ?? []);
 					event.target.value = "";
-					if (files.length > 0) mutate(files);
+					// Said here, in words, instead of after a long upload that is refused.
+					const maxBytes = limits?.maxBytes ?? Number.POSITIVE_INFINITY;
+					const allowed = files.filter((file) => file.size <= maxBytes);
+					for (const file of files.filter((file) => file.size > maxBytes)) {
+						toast.add({
+							type: "error",
+							description: `${file.name} is too large. The limit is ${formatBytes(maxBytes)}.`,
+						});
+					}
+					if (allowed.length > 0) mutate(allowed);
 				}}
 			/>
 			<Button

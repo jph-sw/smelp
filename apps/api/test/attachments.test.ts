@@ -1,5 +1,11 @@
 import { beforeAll, describe, expect, test } from "bun:test";
-import { existsSync, readdirSync } from "node:fs";
+import {
+	existsSync,
+	mkdirSync,
+	readdirSync,
+	utimesSync,
+	writeFileSync,
+} from "node:fs";
 import path from "node:path";
 import { createRouterClient } from "@orpc/server";
 
@@ -8,8 +14,13 @@ await import("./setup");
 const { Auth } = await import("@smelp/auth");
 const { DB } = await import("@smelp/db");
 const { router } = await import("../src/router");
-const { attachmentResponse, attachmentsPath, cleanFileName, uploadAttachment } =
-	await import("../src/lib/attachments");
+const {
+	attachmentResponse,
+	attachmentsPath,
+	cleanFileName,
+	sweepAttachments,
+	uploadAttachment,
+} = await import("../src/lib/attachments");
 
 const sql = new DB().sqlite;
 const auth = new Auth();
@@ -55,22 +66,64 @@ async function addMember(spaceId: string, userId: string, role: string) {
 	})}`;
 }
 
-function upload(
+// Sends what a browser would: a multipart body with its size, and the header the web
+// app adds.
+async function upload(
 	user: User | null,
 	file: File,
 	params: { issueId: string; commentId?: string },
+	extra: Record<string, string> = { "x-smelp-upload": "1" },
 ) {
 	const query = new URLSearchParams(params);
-	const body = new FormData();
-	body.set("file", file);
+	// Built by hand, because the content type of a FormData body is only known once
+	// it's sent.
+	const boundary = "----smelp-test-boundary";
+	const body = new Blob([
+		`--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="${file.name}"\r\nContent-Type: ${file.type || "application/octet-stream"}\r\n\r\n`,
+		file,
+		`\r\n--${boundary}--\r\n`,
+	]);
+	const bytes = await body.arrayBuffer();
+	const headers = new Headers(user?.headers);
+	headers.set("content-type", `multipart/form-data; boundary=${boundary}`);
+	headers.set("content-length", String(bytes.byteLength));
+	for (const [name, value] of Object.entries(extra)) headers.set(name, value);
 	return uploadAttachment(
 		new Request(`http://localhost/api/attachments?${query}`, {
 			method: "POST",
-			headers: user?.headers,
-			body,
+			headers,
+			body: bytes,
 		}),
 	);
 }
+
+// A body that arrives in pieces, so nothing can know its size up front.
+function streamOf(pieces: number, pieceBytes: number) {
+	let sent = 0;
+	return new ReadableStream<Uint8Array>({
+		pull(controller) {
+			if (sent >= pieces) return controller.close();
+			sent += 1;
+			controller.enqueue(new Uint8Array(pieceBytes).fill(97));
+		},
+	});
+}
+
+const streamingRequest = (
+	headers: Record<string, string>,
+	body: ReadableStream,
+) =>
+	new Request(`http://localhost/api/attachments?issueId=${issueId}`, {
+		method: "POST",
+		headers: {
+			cookie: member.headers.get("cookie") ?? "",
+			"x-smelp-upload": "1",
+			"content-type": "multipart/form-data; boundary=x",
+			...headers,
+		},
+		body,
+		duplex: "half",
+	});
 
 const download = (user: User | null, id: string) =>
 	attachmentResponse(user?.headers ?? new Headers(), id);
@@ -225,16 +278,56 @@ describe("uploading", () => {
 	});
 
 	test("refuses by Content-Length before reading the body", async () => {
-		const request = new Request(
-			`http://localhost/api/attachments?issueId=${issueId}`,
-			{
-				method: "POST",
-				headers: member.headers,
-				body: "x",
-			},
+		const request = streamingRequest(
+			{ "content-length": String(1024 * 1024 * 1024) },
+			streamOf(1, 1),
 		);
-		request.headers.set("content-length", String(1024 * 1024 * 1024));
 		expect((await uploadAttachment(request)).status).toBe(413);
+	});
+
+	test("refuses a body that doesn't say its size, instead of buffering it", async () => {
+		process.env.MAX_ATTACHMENT_MB = "0.001";
+		try {
+			const response = await uploadAttachment(
+				streamingRequest({}, streamOf(80, 64 * 1024)),
+			);
+			expect(response.status).toBe(411);
+		} finally {
+			delete process.env.MAX_ATTACHMENT_MB;
+		}
+	});
+
+	test("cuts off a body that is bigger than it claims", async () => {
+		process.env.MAX_ATTACHMENT_MB = "0.001";
+		const before = readdirSync(attachmentsPath()).length;
+		try {
+			const response = await uploadAttachment(
+				streamingRequest({ "content-length": "100" }, streamOf(80, 64 * 1024)),
+			);
+			expect(response.status).toBe(413);
+		} finally {
+			delete process.env.MAX_ATTACHMENT_MB;
+		}
+		expect(readdirSync(attachmentsPath()).length).toBe(before);
+	});
+
+	test("must carry the header only the web app sends", async () => {
+		const without = await upload(member, text("x"), { issueId }, {});
+		expect(without.status).toBe(403);
+		const crossSite = await upload(
+			member,
+			text("x"),
+			{ issueId },
+			{ "x-smelp-upload": "1", "sec-fetch-site": "cross-site" },
+		);
+		expect(crossSite.status).toBe(403);
+		const sameSite = await upload(
+			member,
+			text("x"),
+			{ issueId },
+			{ "x-smelp-upload": "1", "sec-fetch-site": "same-origin" },
+		);
+		expect(sameSite.status).toBe(201);
 	});
 
 	test("needs a session, write access, and a project that isn't archived", async () => {
@@ -342,6 +435,35 @@ describe("listing and downloading", () => {
 		expect(refused.headers.get("content-disposition")).toStartWith(
 			"attachment",
 		);
+	});
+
+	test("names with quotes, other scripts and control characters stay safe in the header", async () => {
+		const saved = await attach(member);
+		// As stored, since a form upload would escape the quote on its way in.
+		const nasty = `a"b'(c)*é日本d.txt`;
+		await sql`UPDATE attachment SET name = ${nasty} WHERE id = ${saved.id}`;
+		const served = await download(member, saved.id);
+		const disposition = served.headers.get("content-disposition") ?? "";
+		expect(disposition).toContain(`filename="a_b'(c)*___d.txt"`);
+		expect(disposition).toContain(
+			"filename*=UTF-8''a%22b%27%28c%29%2A%C3%A9%E6%97%A5%E6%9C%ACd.txt",
+		);
+		expect(disposition).not.toMatch(/[\u0080-\u202e]/);
+	});
+
+	test("only GET and HEAD are served", async () => {
+		const saved = await attach(member);
+		const response = await attachmentResponse(member.headers, saved.id, "POST");
+		expect(response.status).toBe(405);
+		expect(
+			(await attachmentResponse(member.headers, saved.id, "HEAD")).status,
+		).toBe(200);
+	});
+
+	test("tells the web app the size limit", async () => {
+		expect(await member.client.attachments.limits()).toEqual({
+			maxBytes: 25 * 1024 * 1024,
+		});
 	});
 
 	test("is refused to people who can't read the work item", async () => {
@@ -463,7 +585,68 @@ describe("file names", () => {
 		expect(cleanFileName("C:\\Users\\me\\report.pdf")).toBe("report.pdf");
 		expect(cleanFileName("a\u0000b\nc.txt")).toBe("abc.txt");
 		expect(cleanFileName("..hidden")).toBe("hidden");
+		expect(cleanFileName("a\u0085b\u202ec\u2066d\u200fe.txt")).toBe(
+			"abcde.txt",
+		);
 		expect(cleanFileName("   ")).toBe("file");
 		expect(cleanFileName("x".repeat(500)).length).toBe(200);
+	});
+});
+
+describe("cleaning up", () => {
+	const HOUR = 60 * 60 * 1000;
+
+	async function leftover(content: string, age: number, row = false) {
+		const key = crypto.randomUUID();
+		const file = path.join(attachmentsPath(), key);
+		mkdirSync(attachmentsPath(), { recursive: true });
+		writeFileSync(file, content);
+		const when = new Date(Date.now() - age);
+		utimesSync(file, when, when);
+		if (row) {
+			await sql`INSERT INTO attachment ${sql({
+				id: crypto.randomUUID(),
+				issueId,
+				commentId: null,
+				uploaderId: member.id,
+				name: "old.txt",
+				size: content.length,
+				contentType: "text/plain",
+				storageKey: key,
+				createdAt: Date.now() - age,
+			})}`;
+		}
+		return file;
+	}
+
+	test("removes old files nothing refers to, and keeps the rest", async () => {
+		const orphan = await leftover("orphan", 2 * HOUR);
+		const recent = await leftover("recent", 60_000);
+		const used = await leftover("used", 2 * HOUR, true);
+		const stray = path.join(attachmentsPath(), "notes.txt");
+		writeFileSync(stray, "not ours");
+		const old = new Date(Date.now() - 2 * HOUR);
+		utimesSync(stray, old, old);
+
+		expect(await sweepAttachments()).toBe(1);
+
+		expect(existsSync(orphan)).toBe(false);
+		expect(existsSync(recent)).toBe(true);
+		expect(existsSync(used)).toBe(true);
+		expect(existsSync(stray)).toBe(true);
+	});
+
+	test("does nothing when there is no folder", async () => {
+		const saved = process.env.ATTACHMENTS_PATH;
+		process.env.ATTACHMENTS_PATH = path.join(
+			attachmentsPath(),
+			"missing-folder",
+		);
+		try {
+			expect(await sweepAttachments()).toBe(0);
+		} finally {
+			if (saved === undefined) delete process.env.ATTACHMENTS_PATH;
+			else process.env.ATTACHMENTS_PATH = saved;
+		}
 	});
 });

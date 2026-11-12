@@ -4,11 +4,17 @@ import { DB, type tables } from "@smelp/db";
 import { eventBus } from "@smelp/events";
 import * as v from "valibot";
 import { requireProjectPermission, requireSession } from "../lib/access";
-import { removeAttachmentFiles } from "../lib/attachments";
+import { maxAttachmentBytes, removeAttachmentFiles } from "../lib/attachments";
 import { base } from "../orpc";
 
 const sql = new DB().sqlite;
 const auth = new Auth();
+
+// So the web app can say a file is too large before sending it.
+export const findAttachmentLimits = base.handler(async ({ context }) => {
+	await requireSession(context.headers);
+	return { maxBytes: maxAttachmentBytes() };
+});
 
 export const findAttachments = base
 	.input(v.object({ issueId: v.string() }))

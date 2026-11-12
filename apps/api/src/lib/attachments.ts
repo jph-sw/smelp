@@ -1,4 +1,4 @@
-import { mkdirSync } from "node:fs";
+import { mkdirSync, readdirSync, statSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import path from "node:path";
 import { ORPCError } from "@orpc/server";
@@ -6,6 +6,7 @@ import { DB, databasePath, type tables, Utils } from "@smelp/db";
 import { eventBus } from "@smelp/events";
 import { requireProjectPermission, requireSession } from "./access";
 import { detectImageType } from "./avatars";
+import { STORAGE_KEY } from "./backup";
 
 const sql = new DB().sqlite;
 const utils = new Utils();
@@ -14,8 +15,12 @@ const DEFAULT_MAX_MB = 25;
 // Room for the form's other fields and the multipart boundaries around the file.
 const FORM_OVERHEAD_BYTES = 64 * 1024;
 const MAX_NAME_LENGTH = 200;
-const STORAGE_KEY =
-	/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+// A file without a row this old is left over from a crash or a race, since a
+// finished upload gets its row within moments.
+const ORPHAN_AGE_MS = 60 * 60 * 1000;
+// Header the web app sends with an upload. A page on another site can't add it
+// without a CORS preflight, which this route never approves.
+export const UPLOAD_HEADER = "x-smelp-upload";
 
 // Files live on disk, next to the database unless ATTACHMENTS_PATH says otherwise.
 export function attachmentsPath() {
@@ -99,7 +104,15 @@ export function cleanFileName(raw: string) {
 	const cleaned = Array.from(base)
 		.filter((character) => {
 			const code = character.codePointAt(0) ?? 0;
-			return code >= 0x20 && code !== 0x7f;
+			// Control characters, including C1, and the ones that reorder text.
+			return !(
+				code < 0x20 ||
+				(code >= 0x7f && code <= 0x9f) ||
+				code === 0x200e ||
+				code === 0x200f ||
+				(code >= 0x202a && code <= 0x202e) ||
+				(code >= 0x2066 && code <= 0x2069)
+			);
 		})
 		.join("")
 		.trim()
@@ -108,6 +121,13 @@ export function cleanFileName(raw: string) {
 		.trim();
 	return cleaned || "file";
 }
+
+// encodeURIComponent leaves ' ( ) * alone, which RFC 5987 doesn't allow unescaped.
+const encodeFileName = (name: string) =>
+	encodeURIComponent(name).replace(
+		/['()*]/g,
+		(character) => `%${character.charCodeAt(0).toString(16).toUpperCase()}`,
+	);
 
 const INLINE_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
 
@@ -120,6 +140,31 @@ const tooLarge = (limit: number) =>
 		`That file is too large. The limit is ${Math.floor(limit / 1024 / 1024)} MB.`,
 	);
 
+// Only the first bytes are read. The types in use here don't list Blob's slice.
+const headOf = (file: File) =>
+	(file as unknown as { slice(start: number, end: number): Blob }).slice(0, 16);
+
+class BodyTooLarge extends Error {}
+
+// Parses the form while counting bytes, so a body that outgrows the limit is cut off
+// instead of being buffered in full.
+function readForm(request: Request, maxBytes: number) {
+	if (!request.body) throw new Error("No body");
+	let seen = 0;
+	const counted = request.body.pipeThrough(
+		new TransformStream<Uint8Array, Uint8Array>({
+			transform(chunk, controller) {
+				seen += chunk.byteLength;
+				if (seen > maxBytes) throw new BodyTooLarge();
+				controller.enqueue(chunk);
+			},
+		}),
+	);
+	return new Response(counted, {
+		headers: { "content-type": request.headers.get("content-type") ?? "" },
+	}).formData();
+}
+
 function failure(error: unknown) {
 	if (error instanceof ORPCError) return fail(error.status, error.message);
 	throw error;
@@ -129,8 +174,26 @@ export async function uploadAttachment(request: Request) {
 	try {
 		if (request.method !== "POST") return fail(405, "Method not allowed");
 
+		if (request.headers.get(UPLOAD_HEADER) !== "1") {
+			return fail(403, "Uploads must come from the smelp web app");
+		}
+		const site = request.headers.get("sec-fetch-site");
+		if (site && site !== "same-origin" && site !== "none") {
+			return fail(403, "Uploads must come from the smelp web app");
+		}
+
+		// Browsers always say how big a form upload is. Without it the size can't be
+		// checked up front, and a chunked body would be buffered before any limit applied.
 		const limit = maxAttachmentBytes();
-		const declared = Number(request.headers.get("content-length"));
+		const declaredHeader = request.headers.get("content-length");
+		const declared = Number(declaredHeader);
+		if (
+			declaredHeader === null ||
+			!Number.isInteger(declared) ||
+			declared < 0
+		) {
+			return fail(411, "The upload's size is missing");
+		}
 		if (declared > limit + FORM_OVERHEAD_BYTES) return tooLarge(limit);
 
 		// Everything is checked before the body is read, so a refused upload is cheap.
@@ -161,17 +224,19 @@ export async function uploadAttachment(request: Request) {
 			}
 		}
 
+		// The declared size could be a lie, so what actually arrives is counted too.
 		let file: unknown;
 		try {
-			file = (await request.formData()).get("file");
-		} catch {
+			file = (await readForm(request, limit + FORM_OVERHEAD_BYTES)).get("file");
+		} catch (error) {
+			if (error instanceof BodyTooLarge) return tooLarge(limit);
 			return fail(400, "Expected a file upload");
 		}
 		if (!(file instanceof File)) return fail(400, "No file was sent");
 		if (file.size > limit) return tooLarge(limit);
 
 		const detected = detectImageType(
-			new Uint8Array(await file.arrayBuffer(), 0, Math.min(16, file.size)),
+			new Uint8Array(await headOf(file).arrayBuffer()),
 		);
 		const claimed = file.type.split(";")[0]?.trim().toLowerCase() ?? "";
 		// An image type is only believed when the bytes agree, since it decides
@@ -196,8 +261,8 @@ export async function uploadAttachment(request: Request) {
 		};
 
 		mkdirSync(attachmentsPath(), { recursive: true, mode: 0o700 });
-		await Bun.write(fileFor(attachment.storageKey), file);
 		try {
+			await Bun.write(fileFor(attachment.storageKey), file, { mode: 0o600 });
 			// This fails if the work item was deleted while the file was being written.
 			await sql`INSERT INTO attachment ${sql(attachment)}`;
 		} catch (error) {
@@ -226,8 +291,15 @@ export async function uploadAttachment(request: Request) {
 	}
 }
 
-export async function attachmentResponse(headers: Headers, id: string) {
+export async function attachmentResponse(
+	headers: Headers,
+	id: string,
+	method = "GET",
+) {
 	try {
+		if (method !== "GET" && method !== "HEAD") {
+			return fail(405, "Method not allowed");
+		}
 		// Signed-out visitors learn nothing about what exists.
 		await requireSession(headers);
 		const attachment = (
@@ -251,8 +323,7 @@ export async function attachmentResponse(headers: Headers, id: string) {
 				"Content-Type": inline
 					? attachment.contentType
 					: "application/octet-stream",
-				"Content-Length": String(attachment.size),
-				"Content-Disposition": `${inline ? "inline" : "attachment"}; filename="${fallback}"; filename*=UTF-8''${encodeURIComponent(attachment.name)}`,
+				"Content-Disposition": `${inline ? "inline" : "attachment"}; filename="${fallback}"; filename*=UTF-8''${encodeFileName(attachment.name)}`,
 				"X-Content-Type-Options": "nosniff",
 				// Nothing in a download should ever run, even if a browser opens it.
 				"Content-Security-Policy": "default-src 'none'; sandbox",
@@ -262,4 +333,38 @@ export async function attachmentResponse(headers: Headers, id: string) {
 	} catch (error) {
 		return failure(error);
 	}
+}
+
+// Removes files nothing refers to, such as after a crash between writing a file and
+// saving its row, or after restoring an older backup. Anything recent is left alone,
+// because it may be an upload in progress.
+export async function sweepAttachments(now = Date.now()) {
+	let names: string[];
+	try {
+		names = readdirSync(attachmentsPath());
+	} catch {
+		return 0;
+	}
+	const candidates = names.filter((name) => {
+		if (!STORAGE_KEY.test(name)) return false;
+		try {
+			const stats = statSync(path.join(attachmentsPath(), name));
+			return stats.isFile() && now - stats.mtimeMs > ORPHAN_AGE_MS;
+		} catch {
+			return false;
+		}
+	});
+	if (candidates.length === 0) return 0;
+
+	const known = new Set(
+		(
+			(await sql`SELECT storageKey FROM attachment`) as Pick<
+				tables["attachment"],
+				"storageKey"
+			>[]
+		).map((row) => row.storageKey),
+	);
+	const orphans = candidates.filter((name) => !known.has(name));
+	await removeAttachmentFiles(orphans);
+	return orphans.length;
 }

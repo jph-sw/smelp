@@ -24,6 +24,7 @@ import { Textarea } from "#/components/ui/textarea";
 import { usePageTitle } from "#/hooks/use-page-title";
 import { currentUserQueryOptions } from "#/lib/auth";
 import {
+	attachmentsQueryOptions,
 	commentsQueryOptions,
 	issueActivityQueryOptions,
 	issueQueryOptions,
@@ -46,6 +47,7 @@ export const Route = createFileRoute("/(workspace)/$id/browse/$issueId")({
 			queryClient.ensureQueryData(issueQueryOptions({ issueId })),
 			queryClient.ensureQueryData(commentsQueryOptions({ issueId })),
 			queryClient.ensureQueryData(issueActivityQueryOptions({ issueId })),
+			queryClient.ensureQueryData(attachmentsQueryOptions({ issueId })),
 			queryClient.ensureQueryData(currentUserQueryOptions),
 		]);
 		await Promise.all([
