@@ -212,7 +212,7 @@ function RouteComponent() {
 						});
 					}}
 				>
-					<div className="flex h-full min-h-0 w-full flex-1 gap-8 overflow-x-auto p-4">
+					<div className="flex h-full min-h-0 w-full flex-1 gap-3 overflow-x-auto p-4 pointer-coarse:snap-x pointer-coarse:snap-mandatory pointer-coarse:scroll-px-4 pointer-coarse:overscroll-x-contain sm:gap-8">
 						{visibleStates.map((state) => (
 							<StateColumn key={state.id} state={state}>
 								{visibleIssues
@@ -224,6 +224,10 @@ function RouteComponent() {
 											key={issue.id}
 											workspaceId={workspaceId}
 											draggable={canWrite}
+											states={states}
+											onMove={(stateId) =>
+												moveIssue({ id: issue.id, state: stateId })
+											}
 											assignee={members.find(
 												(member) => member.userId === issue.assignee,
 											)}

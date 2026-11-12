@@ -43,7 +43,10 @@ function FilterSelect({
 				onChange(next == null || next === ALL ? undefined : next)
 			}
 		>
-			<SelectTrigger aria-label={label} className="min-w-0 max-w-44">
+			<SelectTrigger
+				aria-label={label}
+				className="max-w-44 min-w-0 shrink-0 sm:shrink"
+			>
 				<SelectValue />
 			</SelectTrigger>
 			<SelectContent>
@@ -97,63 +100,72 @@ export function BoardFilterBar({
 
 	return (
 		<div className="flex shrink-0 flex-wrap items-center gap-2 px-4 pt-3">
-			<Input
-				type="search"
-				aria-label="Search work items"
-				placeholder="Search by title or ID"
-				className="w-full sm:w-64"
-				value={search}
-				onChange={(event) => setSearch(event.target.value)}
-			/>
-			<FilterSelect
-				label="Filter by assignee"
-				value={filters.assignee}
-				onChange={(assignee) => onChange({ ...filters, assignee })}
-				items={[
-					{ label: "Anyone", value: ALL },
-					{ label: "Unassigned", value: UNASSIGNED },
-					...members.map((member) => ({
-						label: member.displayName,
-						value: member.userId,
-					})),
-				]}
-			/>
-			<FilterSelect
-				label="Filter by state"
-				value={filters.state}
-				onChange={(state) => onChange({ ...filters, state })}
-				items={[
-					{ label: "All states", value: ALL },
-					...states.map((state) => ({ label: state.name, value: state.id })),
-				]}
-			/>
-			<FilterSelect
-				label="Filter by module"
-				value={filters.module}
-				onChange={(module) => onChange({ ...filters, module })}
-				items={[
-					{ label: "All modules", value: ALL },
-					{ label: "No module", value: NO_MODULE },
-					...modules.map((item) => ({ label: item.name, value: item.id })),
-				]}
-			/>
-			{cycles.length > 0 && (
+			<div className="flex w-full min-w-0 items-center gap-2 overflow-x-auto sm:contents">
+				<Input
+					type="search"
+					aria-label="Search work items"
+					placeholder="Search by title or ID"
+					className="w-56 shrink-0 sm:w-64"
+					value={search}
+					onChange={(event) => setSearch(event.target.value)}
+				/>
 				<FilterSelect
-					label="Filter by cycle"
-					value={filters.cycle}
-					onChange={(cycle) => onChange({ ...filters, cycle })}
+					label="Filter by assignee"
+					value={filters.assignee}
+					onChange={(assignee) => onChange({ ...filters, assignee })}
 					items={[
-						{ label: "All cycles", value: ALL },
-						{ label: "No cycle", value: NO_CYCLE },
-						...cycles.map((cycle) => ({ label: cycle.name, value: cycle.id })),
+						{ label: "Anyone", value: ALL },
+						{ label: "Unassigned", value: UNASSIGNED },
+						...members.map((member) => ({
+							label: member.displayName,
+							value: member.userId,
+						})),
 					]}
 				/>
-			)}
-			{isFiltered && (
-				<Button variant="ghost" onClick={() => onChange({})}>
-					Clear
-				</Button>
-			)}
+				<FilterSelect
+					label="Filter by state"
+					value={filters.state}
+					onChange={(state) => onChange({ ...filters, state })}
+					items={[
+						{ label: "All states", value: ALL },
+						...states.map((state) => ({ label: state.name, value: state.id })),
+					]}
+				/>
+				<FilterSelect
+					label="Filter by module"
+					value={filters.module}
+					onChange={(module) => onChange({ ...filters, module })}
+					items={[
+						{ label: "All modules", value: ALL },
+						{ label: "No module", value: NO_MODULE },
+						...modules.map((item) => ({ label: item.name, value: item.id })),
+					]}
+				/>
+				{cycles.length > 0 && (
+					<FilterSelect
+						label="Filter by cycle"
+						value={filters.cycle}
+						onChange={(cycle) => onChange({ ...filters, cycle })}
+						items={[
+							{ label: "All cycles", value: ALL },
+							{ label: "No cycle", value: NO_CYCLE },
+							...cycles.map((cycle) => ({
+								label: cycle.name,
+								value: cycle.id,
+							})),
+						]}
+					/>
+				)}
+				{isFiltered && (
+					<Button
+						variant="ghost"
+						className="shrink-0"
+						onClick={() => onChange({})}
+					>
+						Clear
+					</Button>
+				)}
+			</div>
 		</div>
 	);
 }
