@@ -151,6 +151,26 @@ export async function sendPasswordResetEmail(reset: {
 	});
 }
 
+export async function sendEmailVerificationEmail(verification: {
+	to: string;
+	token: string;
+}): Promise<EmailDelivery> {
+	const { config } = readConfig();
+	if (!config) return "none";
+
+	return deliver({
+		to: verification.to,
+		subject: "Confirm your email address for smelp",
+		text: [
+			"Confirm your email address to start using your smelp account:",
+			`${config.appUrl}/verify-email/${verification.token}`,
+			"",
+			"This link works once and expires in 24 hours.",
+			"If you didn't create a smelp account, you can ignore this email.",
+		].join("\n"),
+	});
+}
+
 export async function sendNotificationEmail(notification: {
 	to: string;
 	workspaceId: string;

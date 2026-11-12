@@ -77,7 +77,7 @@ All of these are optional. Put them in `.env`, which `.env.example` has a starti
 
 ### Email
 
-Email turns on when `SMTP_HOST`, `SMTP_FROM` and `APP_URL` are all set. Invites and admin-created reset links are then emailed, and sign-in gains "Forgot your password?". Without email, you copy those links and send them yourself. People can also opt in to email for their inbox notifications in their account settings; it is off by default.
+Email turns on when `SMTP_HOST`, `SMTP_FROM` and `APP_URL` are all set. Invites and admin-created reset links are then emailed, and sign-in gains "Forgot your password?". Without email, you copy those links and send them yourself. People can also opt in to email for their inbox notifications in their account settings; it is off by default. When public sign-up is open, new accounts get a link to confirm their email address (it works once and expires in 24 hours). Until they confirm, they can sign in and join workspaces by invite, but not create one. Accounts that join through an invite link, the first account and accounts that existed before count as confirmed, and an instance admin can mark anyone as confirmed at `/ceo`.
 
 | Setting | What it does |
 | --- | --- |

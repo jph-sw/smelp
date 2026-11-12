@@ -1,15 +1,19 @@
 import { ORPCError } from "@orpc/server";
 import { setCookie } from "@orpc/server/helpers";
 import { Auth } from "@smelp/auth";
+import { Utils } from "@smelp/db";
 import { SQL } from "bun";
 import * as v from "valibot";
 import { useSecureCookies } from "../../lib/cookies";
+import { emailVerificationLink } from "../../lib/email-verification";
 import { isFirstRun, isSignupOpen, makeFirstAdmin } from "../../lib/instance";
 import { findUsableInvite } from "../../lib/invites";
+import { isMailEnabled } from "../../lib/mail";
 import { enforceRateLimit, RateLimiter } from "../../lib/rate-limit";
 import { base } from "../../orpc";
 
 const auth = new Auth();
+const utils = new Utils();
 
 const signUpsByIp = new RateLimiter(10, 60 * 60 * 1000);
 
@@ -25,16 +29,21 @@ export const signUp = base.input(Params).handler(async ({ input, context }) => {
 	enforceRateLimit(signUpsByIp, context.ip);
 
 	const firstRun = await isFirstRun();
-	const allowed =
-		firstRun ||
-		(await isSignupOpen()) ||
-		(input.inviteToken !== undefined &&
-			(await findUsableInvite(input.inviteToken)) !== undefined);
-	if (!allowed) {
+	const signupOpen = await isSignupOpen();
+	const invite =
+		input.inviteToken !== undefined
+			? await findUsableInvite(input.inviteToken)
+			: undefined;
+	if (!(firstRun || signupOpen || invite !== undefined)) {
 		throw new ORPCError("FORBIDDEN", {
 			message: "Sign-ups are closed. Ask an admin for an invite link.",
 		});
 	}
+
+	// Only public sign-up on an instance that can send the link needs it. An invite
+	// proves the address, and the first account is the instance admin.
+	const needsVerification =
+		!firstRun && signupOpen && invite === undefined && isMailEnabled();
 
 	try {
 		const { session, user } = await auth.signUp(
@@ -42,9 +51,16 @@ export const signUp = base.input(Params).handler(async ({ input, context }) => {
 			input.fullName,
 			input.displayName,
 			input.password,
+			!needsVerification,
 		);
 
 		if (firstRun) await makeFirstAdmin(user.id);
+
+		if (needsVerification) {
+			emailVerificationLink(user.id, user.email).catch((error) => {
+				utils.logger.error(`Couldn't send a verification email: ${error}`);
+			});
+		}
 
 		setCookie(context.resHeaders, "auth_session", session.authSessionToken, {
 			httpOnly: true,

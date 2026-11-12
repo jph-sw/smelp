@@ -3,7 +3,10 @@ import type { tables } from "@smelp/db";
 import { type QueryClient, queryOptions } from "@tanstack/react-query";
 import { orpc } from "./orpc";
 
-export type AuthUser = tables["auth_user"];
+export type AuthUser = tables["auth_user"] & {
+	/** Their address isn't confirmed yet and the server can email a link. */
+	emailVerificationPending: boolean;
+};
 
 export async function signIn(email: string, password: string) {
 	const res = await orpc.auth.signIn({ email, password });

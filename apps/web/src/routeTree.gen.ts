@@ -21,6 +21,7 @@ import { Route as workspaceCreateWorkspaceRouteImport } from './routes/(workspac
 import { Route as CeoIndexRouteImport } from './routes/ceo/index'
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as ResetPasswordTokenRouteImport } from './routes/reset-password.$token'
+import { Route as VerifyEmailTokenRouteImport } from './routes/verify-email.$token'
 import { Route as workspaceIdIndexRouteImport } from './routes/(workspace)/$id/index'
 import { Route as workspaceIdActivityRouteImport } from './routes/(workspace)/$id/activity'
 import { Route as workspaceIdInboxRouteImport } from './routes/(workspace)/$id/inbox'
@@ -100,6 +101,11 @@ const InviteTokenRoute = InviteTokenRouteImport.update({
 const ResetPasswordTokenRoute = ResetPasswordTokenRouteImport.update({
   id: '/reset-password/$token',
   path: '/reset-password/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VerifyEmailTokenRoute = VerifyEmailTokenRouteImport.update({
+  id: '/verify-email/$token',
+  path: '/verify-email/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
 const workspaceIdIndexRoute = workspaceIdIndexRouteImport.update({
@@ -230,6 +236,7 @@ export interface FileRoutesByFullPath {
   '/create-workspace': typeof workspaceCreateWorkspaceRoute
   '/invite/$token': typeof InviteTokenRoute
   '/reset-password/$token': typeof ResetPasswordTokenRoute
+  '/verify-email/$token': typeof VerifyEmailTokenRoute
   '/ceo/': typeof CeoIndexRoute
   '/$id/projects': typeof workspaceIdProjectsRouteRouteWithChildren
   '/$id/activity': typeof workspaceIdActivityRoute
@@ -261,6 +268,7 @@ export interface FileRoutesByTo {
   '/create-workspace': typeof workspaceCreateWorkspaceRoute
   '/invite/$token': typeof InviteTokenRoute
   '/reset-password/$token': typeof ResetPasswordTokenRoute
+  '/verify-email/$token': typeof VerifyEmailTokenRoute
   '/ceo': typeof CeoIndexRoute
   '/$id/activity': typeof workspaceIdActivityRoute
   '/$id/inbox': typeof workspaceIdInboxRoute
@@ -293,6 +301,7 @@ export interface FileRoutesById {
   '/(workspace)/create-workspace': typeof workspaceCreateWorkspaceRoute
   '/invite/$token': typeof InviteTokenRoute
   '/reset-password/$token': typeof ResetPasswordTokenRoute
+  '/verify-email/$token': typeof VerifyEmailTokenRoute
   '/ceo/': typeof CeoIndexRoute
   '/(workspace)/$id/projects': typeof workspaceIdProjectsRouteRouteWithChildren
   '/(workspace)/$id/activity': typeof workspaceIdActivityRoute
@@ -328,6 +337,7 @@ export interface FileRouteTypes {
     | '/create-workspace'
     | '/invite/$token'
     | '/reset-password/$token'
+    | '/verify-email/$token'
     | '/ceo/'
     | '/$id/projects'
     | '/$id/activity'
@@ -359,6 +369,7 @@ export interface FileRouteTypes {
     | '/create-workspace'
     | '/invite/$token'
     | '/reset-password/$token'
+    | '/verify-email/$token'
     | '/ceo'
     | '/$id/activity'
     | '/$id/inbox'
@@ -390,6 +401,7 @@ export interface FileRouteTypes {
     | '/(workspace)/create-workspace'
     | '/invite/$token'
     | '/reset-password/$token'
+    | '/verify-email/$token'
     | '/ceo/'
     | '/(workspace)/$id/projects'
     | '/(workspace)/$id/activity'
@@ -423,6 +435,7 @@ export interface RootRouteChildren {
   SignupRoute: typeof SignupRoute
   InviteTokenRoute: typeof InviteTokenRoute
   ResetPasswordTokenRoute: typeof ResetPasswordTokenRoute
+  VerifyEmailTokenRoute: typeof VerifyEmailTokenRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -509,6 +522,13 @@ declare module '@tanstack/react-router' {
       path: '/reset-password/$token'
       fullPath: '/reset-password/$token'
       preLoaderRoute: typeof ResetPasswordTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/verify-email/$token': {
+      id: '/verify-email/$token'
+      path: '/verify-email/$token'
+      fullPath: '/verify-email/$token'
+      preLoaderRoute: typeof VerifyEmailTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/(workspace)/$id/': {
@@ -788,6 +808,7 @@ const rootRouteChildren: RootRouteChildren = {
   SignupRoute: SignupRoute,
   InviteTokenRoute: InviteTokenRoute,
   ResetPasswordTokenRoute: ResetPasswordTokenRoute,
+  VerifyEmailTokenRoute: VerifyEmailTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
