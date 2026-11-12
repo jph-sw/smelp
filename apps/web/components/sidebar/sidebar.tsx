@@ -57,7 +57,7 @@ export function AppSidebar({
 	return (
 		<Sidebar
 			variant={"inset"}
-			className="top-(--header-height) h-[calc(100svh-var(--header-height))]!"
+			className="top-[calc(var(--header-height)+env(safe-area-inset-top))] h-[calc(100svh-var(--header-height)-env(safe-area-inset-top))]!"
 		>
 			<SidebarContent>
 				<SidebarGroup>

@@ -212,7 +212,7 @@ function RouteComponent() {
 						});
 					}}
 				>
-					<div className="flex h-full min-h-0 w-full flex-1 gap-3 overflow-x-auto p-4 pointer-coarse:snap-x pointer-coarse:snap-mandatory pointer-coarse:scroll-px-4 pointer-coarse:overscroll-x-contain sm:gap-8">
+					<div className="flex h-full min-h-0 w-full flex-1 gap-3 overflow-x-auto p-4 pointer-coarse:snap-x pointer-coarse:snap-proximity pointer-coarse:scroll-px-4 pointer-coarse:overscroll-x-contain sm:gap-8">
 						{visibleStates.map((state) => (
 							<StateColumn key={state.id} state={state}>
 								{visibleIssues
