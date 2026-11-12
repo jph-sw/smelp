@@ -261,15 +261,18 @@ export const updateModule = base
 
 		// Only a changed lead is checked, so an unrelated edit still works after the
 		// lead has left the project. The check is part of the write.
+		// Each column is only written when this request changes it, so a concurrent
+		// edit of another field isn't overwritten with a stale value.
 		const setLead = changes.includes("lead") ? 1 : 0;
+		const flag = (change: ModuleChange) => (changes.includes(change) ? 1 : 0);
 		let written: unknown[];
 		try {
 			written = await sql`
 				UPDATE module SET
-					name = ${next.name},
-					description = ${next.description},
-					leadId = ${next.leadId},
-					targetDate = ${next.targetDate}
+					name = CASE WHEN ${flag("name")} = 1 THEN ${next.name} ELSE name END,
+					description = CASE WHEN ${flag("description")} = 1 THEN ${next.description} ELSE description END,
+					leadId = CASE WHEN ${setLead} = 1 THEN ${next.leadId} ELSE leadId END,
+					targetDate = CASE WHEN ${flag("targetDate")} = 1 THEN ${next.targetDate} ELSE targetDate END
 				WHERE id = ${old.id}
 					AND (
 						${setLead} = 0
