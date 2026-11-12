@@ -8,19 +8,21 @@ smelp is early software. Each release is a git tag, and [CHANGELOG.md](CHANGELOG
 
 - Workspaces and projects, with guest, member and admin roles
 - A board for each project, with your own states and drag and drop
-- Work items with assignees, comments and an activity timeline
-- "My work" on the home page, plus search and filters on each board
+- Work items with assignees, sub-items, relations, links, attached files and an activity timeline
+- Comments with @mentions and emoji reactions, and an inbox for what needs you
+- "My work" on the home page, workspace-wide search, a list view and an activity feed
+- Archiving finished projects
 - Invite links, closed sign-up and password reset that work without a mail server
 - Optional email over any SMTP server
 
-Not there yet: a list view, workspace-wide search, cycles, attachments, notifications and importing from Jira.
+Not there yet: cycles, modules and importing from Jira.
 
 ## Install
 
-You need Docker with Compose 2.24 or newer. There's no published image, so this builds from source. Use the newest version from [CHANGELOG.md](CHANGELOG.md) in place of `v0.2.0`.
+You need Docker with Compose 2.24 or newer. There's no published image, so this builds from source. Use the newest version from [CHANGELOG.md](CHANGELOG.md) in place of `v0.3.0`.
 
 ```sh
-git clone --branch v0.2.0 https://github.com/jph-sw/smelp.git
+git clone --branch v0.3.0 https://github.com/jph-sw/smelp.git
 cd smelp
 docker compose up -d --build
 ```
@@ -138,11 +140,11 @@ Your current database is set aside in `/data/backups`, and your current attached
 ```sh
 docker compose exec smelp bun run backup
 git fetch --tags
-git checkout v0.2.0
+git checkout v0.3.0
 docker compose up -d --build
 ```
 
-Replace `v0.2.0` with the version you're upgrading to, and read its entry in [CHANGELOG.md](CHANGELOG.md) first. Each release is tested by upgrading a database from the release before it. You can skip versions.
+Replace `v0.3.0` with the version you're upgrading to, and read its entry in [CHANGELOG.md](CHANGELOG.md) first. Each release is tested by upgrading a database from the release before it. You can skip versions.
 
 Database changes run automatically when smelp starts, and they can't be undone. To go back, check out the older version and restore the backup you just took. `/ceo` shows which version is running.
 
@@ -194,14 +196,14 @@ Without Docker, `PORT`, `DATABASE_PATH` and `WEB_DIST` set the port, the databas
 ### Releasing
 
 1. Set the new version in `package.json`, and move the changes under it in `CHANGELOG.md`, with the date.
-2. Run `bun run test:upgrade v0.1.0`, using the previous release's tag. It builds that version and this one in Docker, adds data to the old one, upgrades the same volume and checks nothing was lost. Add `--bun` to run them without Docker.
+2. Run `bun run test:upgrade v0.2.0`, using the previous release's tag. It builds that version and this one in Docker, adds data to the old one, upgrades the same volume and checks nothing was lost. Add `--bun` to run them without Docker.
 3. Merge to `main`, then tag that commit and publish the release notes:
 
 ```sh
-git tag -a v0.2.0 -m "smelp 0.2.0"
-git push origin v0.2.0
-awk '/^## 0.2.0/{found=1; next} /^## /{found=0} found' CHANGELOG.md > notes.md
-gh release create v0.2.0 --title "smelp 0.2.0" --notes-file notes.md
+git tag -a v0.3.0 -m "smelp 0.3.0"
+git push origin v0.3.0
+awk '/^## 0.3.0/{found=1; next} /^## /{found=0} found' CHANGELOG.md > notes.md
+gh release create v0.3.0 --title "smelp 0.3.0" --notes-file notes.md
 ```
 
 ## License

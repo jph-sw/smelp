@@ -2,6 +2,20 @@
 
 Each release is a git tag. To upgrade, follow [Upgrade](README.md#upgrade) in the README.
 
+## 0.3.0 (2026-11-12)
+
+Work items connect to each other and to people: they nest, point at each other, carry files and links, and tell you when something needs you.
+
+- **Sub-items:** break a work item into children in the same project. The parent lists them with a progress bar, and a child shows its parent in the breadcrumb and the side panel. Deleting a parent keeps its children as top-level items.
+- **Relations:** mark a work item as blocking, related to or a duplicate of another, in any project of the workspace. Each relation shows on both items, and two items can have one relation between them.
+- **Links:** attach web links with an optional title to a work item. Only `http` and `https` links are accepted.
+- **Attached files:** attach files to work items and comments, up to 25 MB each (`MAX_ATTACHMENT_MB`). They're stored in an `attachments` folder next to the database, on the data volume in Docker (`ATTACHMENTS_PATH` to move it). Backups now save the files in a `.attachments` folder beside the backup, and restore brings them back.
+- **Mentions and inbox:** type `@` in a comment to mention a project member. An Inbox page, with an unread count in the sidebar, lists items you're assigned to, mentioned in, or that get a comment after you created, were assigned or commented on them. One entry per item, marked read when you open it.
+- **Notification email:** off by default. Each person can turn it on in their account settings when the install has email set up. It sends at most 20 a person per hour.
+- **Reactions:** react to comments with 👍 ❤️ 😄 🎉 😕 👀. Guests can react, as they can comment.
+
+Upgrading runs five database changes automatically: tables for links, relations, reactions, notifications and attached files, and a column for the email setting. Back up first, as the README describes. If you keep backups elsewhere, copy each one's `.attachments` folder with it from now on.
+
 ## 0.2.0 (2026-11-11)
 
 Smoother daily use: find anything across the workspace, put finished projects away and see what changed.

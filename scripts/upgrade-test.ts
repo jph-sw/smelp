@@ -258,9 +258,90 @@ try {
 			"and unarchived",
 		);
 	}
+
+	// Phase 2 features, on the work item and comment from before the upgrade.
+	const child = await rpc<{ id: string; parentId: string | null }>(
+		"issue/create",
+		{
+			title: "A sub-item of an old item",
+			description: "",
+			state: states[0]?.id,
+			type: "task",
+			workspaceId: workspace.id,
+			projectId: "UPG",
+			parentId: issue.id,
+		},
+	);
+	check(
+		child.status === 200 && child.data.parentId === issue.id,
+		"an old work item can get a sub-item",
+	);
+	const relation = await rpc("issueRelations/add", {
+		issueId: child.data.id,
+		relatedId: issue.id,
+		kind: "blocks",
+	});
+	if (!missing(relation.status))
+		check(relation.status === 200, "an old work item can be related");
+	const link = await rpc("links/create", {
+		issueId: issue.id,
+		url: "https://example.com/upgrade",
+		title: "Upgrade notes",
+	});
+	if (!missing(link.status))
+		check(link.status === 200, "an old work item can get a link");
+	if (hasComments) {
+		const [old] = await ok<{ id: string }[]>("comments/find", {
+			issueId: issue.id,
+		});
+		const reaction = await rpc("comments/setReaction", {
+			commentId: old?.id,
+			emoji: "🎉",
+			reacted: true,
+		});
+		if (!missing(reaction.status))
+			check(reaction.status === 200, "the old comment takes a reaction");
+	}
+	const upload = new FormData();
+	upload.set("file", new File(["kept in the backup\n"], "upgrade.txt"));
+	const attached = await fetch(`${base}/api/attachments?issueId=${issue.id}`, {
+		method: "POST",
+		headers: { cookie, "X-Smelp-Upload": "1" },
+		body: upload,
+	});
+	if (!missing(attached.status)) {
+		check(attached.status === 201, "a file can be attached to an old item");
+		const files = await ok<{ id: string }[]>("attachments/find", {
+			issueId: issue.id,
+		});
+		const download = await fetch(`${base}/api/attachments/${files[0]?.id}`, {
+			headers: { cookie },
+		});
+		check(
+			(await download.text()) === "kept in the backup\n",
+			"and downloaded again",
+		);
+	}
+	const inbox = await rpc<{ notifications: unknown[] }>("notifications/find", {
+		workspaceId: workspace.id,
+	});
+	if (!missing(inbox.status)) {
+		check(inbox.status === 200, "the inbox works for an old account");
+		const me = await ok<{ user: { notifyByEmail?: number } }>("auth/me");
+		check(
+			!me.user.notifyByEmail,
+			"notification email is off for the old account",
+		);
+	}
+
 	if (!useBun) {
 		const backup = await $`docker exec ${name} bun run --silent backup`.text();
 		check(backup.includes("Backup saved"), "backups still work");
+		if (!missing(attached.status))
+			check(
+				backup.includes("1 attachment(s) saved"),
+				"and include the attached file",
+			);
 	}
 	console.log(`Upgrade test passed: ${from} → ${to ?? "working tree"}`);
 } catch (error) {
