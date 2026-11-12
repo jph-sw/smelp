@@ -44,6 +44,7 @@ import {
 } from "#/components/ui/select";
 import { toast } from "#/components/ui/toast";
 import { usePageTitle } from "#/hooks/use-page-title";
+import { invalidateCycles } from "#/lib/data/cycle";
 import { issuesQueryOptions, updateIssue } from "#/lib/data/issue";
 import {
 	deleteModule,
@@ -104,6 +105,8 @@ function RouteComponent() {
 			...moduleQueryKeys(projectId).map((queryKey) =>
 				queryClient.invalidateQueries({ queryKey }),
 			),
+			// Cycle progress follows the same items.
+			invalidateCycles(queryClient, projectId),
 			queryClient.invalidateQueries({ queryKey: ["issues", projectId] }),
 			queryClient.invalidateQueries({ queryKey: ["issue"] }),
 			queryClient.invalidateQueries({ queryKey: ["activity"] }),
