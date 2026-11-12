@@ -340,20 +340,65 @@ describe("attachments", () => {
 		expect(existsSync(path.join(files, ".restoring"))).toBe(false);
 	});
 
-	test("restoring an old backup without files leaves the current ones", () => {
+	test("restoring a backup without files sets aside the files it doesn't use", () => {
 		const { file } = createBackup(databasePath);
-		attach("00000000-0000-4000-8000-000000000006", "still here", false);
+		attach("00000000-0000-4000-8000-000000000006", "unused now", false);
 		const result = restoreWithFiles(file);
-		expect(result.attachmentsSetAside).toBeNull();
 		expect(result.attachmentsMissing).toBe(false);
+		const aside = result.attachmentsSetAside as string;
 		expect(
 			readFileSync(
-				path.join(files, "00000000-0000-4000-8000-000000000006"),
+				path.join(aside, "00000000-0000-4000-8000-000000000006"),
 				"utf8",
 			),
-		).toBe("still here");
+		).toBe("unused now");
+		expect(
+			existsSync(path.join(files, "00000000-0000-4000-8000-000000000006")),
+		).toBe(false);
 	});
 
+	test("files the restored database still refers to stay where they are", () => {
+		attach("00000000-0000-4000-8000-000000000001", "kept");
+		const { file } = createBackup(databasePath, undefined, files);
+		rmSync(`${file}.attachments`, { recursive: true });
+		const result = restoreWithFiles(file);
+		expect(result.attachmentsMissing).toBe(true);
+		expect(result.attachmentsSetAside).toBeNull();
+		expect(
+			readFileSync(
+				path.join(files, "00000000-0000-4000-8000-000000000001"),
+				"utf8",
+			),
+		).toBe("kept");
+	});
+
+	test("a failed undo is reported and deletes nothing", () => {
+		attach("00000000-0000-4000-8000-000000000001", "original");
+		const { file } = createBackup(databasePath, undefined, files);
+		const name = "00000000-0000-4000-8000-000000000005";
+		attach(name, "current", false);
+		let error: unknown;
+		try {
+			restoreBackup(databasePath, file, migrations, files, {
+				afterFilesSetAside: () => {
+					// Blocks moving that file back, then fails the restore.
+					mkdirSync(path.join(files, name));
+					throw new Error("disk is busy");
+				},
+			});
+		} catch (caught) {
+			error = caught;
+		}
+		expect(error).toBeInstanceOf(BackupError);
+		expect((error as Error).message).toContain("couldn't be fully undone");
+		expect((error as Error).message).toContain(name);
+		const aside = readdirSync(files).find((entry) =>
+			entry.startsWith(".before-restore"),
+		);
+		expect(readFileSync(path.join(files, aside as string, name), "utf8")).toBe(
+			"current",
+		);
+	});
 	test("warns when the backup refers to files that weren't kept with it", () => {
 		attach("00000000-0000-4000-8000-000000000001", "original");
 		const { file } = createBackup(databasePath, undefined, files);

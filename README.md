@@ -129,7 +129,7 @@ docker compose run --rm smelp bun run restore /data/incoming.sqlite
 docker compose up -d
 ```
 
-If the backup has a `.attachments` folder beside it, restore brings those files back too. Backups from before attachments existed have none, and leave your current files alone. If you move a backup, move the folder with it, and restore warns if it's missing.
+If the backup has a `.attachments` folder beside it, restore brings those files back too. Backups from before attachments existed have none, so your current files, which that backup no longer refers to, are set aside in the same `.before-restore-…` folder rather than deleted. If you move a backup, move the folder with it, and restore warns if it's missing.
 
 Your current database is set aside in `/data/backups`, and your current attached files in a hidden `.before-restore-…` folder inside the attachments folder, not deleted. Because that folder is used for the swap, `ATTACHMENTS_PATH` can safely be a mount point of its own. If any step fails, the restore is undone and says so. Files that no backup or row refers to are removed on start, once they're an hour old, so the set-aside folder is left alone but stray files from a crash are cleaned up. Restore refuses damaged files, and backups from a newer version of smelp. An older backup is fine, because it's brought up to date when smelp starts. If smelp crashed, restore waits 30 seconds after the crash before it will run.
 

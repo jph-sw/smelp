@@ -3,6 +3,7 @@ import {
 	existsSync,
 	mkdirSync,
 	readdirSync,
+	statSync,
 	utimesSync,
 	writeFileSync,
 } from "node:fs";
@@ -233,6 +234,17 @@ describe("uploading", () => {
 		expect(await Bun.file(onDisk).text()).toBe("some notes");
 		expect(readdirSync(attachmentsPath())).not.toContain("evil.txt");
 	});
+
+	test.skipIf(process.platform === "win32")(
+		"files are readable only by the server's user",
+		async () => {
+			const saved = await attach(member, "private");
+			const mode = statSync(
+				path.join(attachmentsPath(), await keyOf(saved.id)),
+			).mode;
+			expect(mode & 0o777).toBe(0o600);
+		},
+	);
 
 	test("can be attached to a comment by its author only", async () => {
 		const response = await upload(member, text("on a comment"), {
@@ -634,6 +646,20 @@ describe("cleaning up", () => {
 		expect(existsSync(recent)).toBe(true);
 		expect(existsSync(used)).toBe(true);
 		expect(existsSync(stray)).toBe(true);
+	});
+
+	test("leaves files that a restore set aside", async () => {
+		const aside = path.join(attachmentsPath(), ".before-restore-test");
+		mkdirSync(aside, { recursive: true });
+		const kept = path.join(aside, crypto.randomUUID());
+		writeFileSync(kept, "kept by restore");
+		const old = new Date(Date.now() - 3 * HOUR);
+		utimesSync(kept, old, old);
+		utimesSync(aside, old, old);
+
+		await sweepAttachments();
+
+		expect(existsSync(kept)).toBe(true);
 	});
 
 	test("does nothing when there is no folder", async () => {

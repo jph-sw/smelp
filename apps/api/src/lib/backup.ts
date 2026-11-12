@@ -7,6 +7,7 @@ import {
 	mkdirSync,
 	readdirSync,
 	renameSync,
+	rmdirSync,
 	rmSync,
 	statSync,
 	utimesSync,
@@ -232,7 +233,7 @@ export function restoreBackup(
 	migrationsDirectory: string,
 	attachmentsDirectory?: string,
 	// For tests to make a failure happen at a chosen moment.
-	hooks?: { afterDatabaseSwap?: () => void },
+	hooks?: { afterDatabaseSwap?: () => void; afterFilesSetAside?: () => void },
 ) {
 	checkBackup(file, migrationsDirectory);
 	if (isServerRunning(databasePath)) {
@@ -280,7 +281,8 @@ export function restoreBackup(
 
 	// Every step that has happened can be undone, because a restore that stops halfway
 	// would leave a database and its files from different times.
-	const undo: (() => void)[] = [];
+	const undo: { what: string; run: () => void }[] = [];
+	const onUndo = (what: string, run: () => void) => undo.push({ what, run });
 	let setAside: string | null = null;
 	let attachmentsSetAside: string | null = null;
 	try {
@@ -289,54 +291,76 @@ export function restoreBackup(
 			mkdirSync(directory, { recursive: true, mode: 0o700 });
 			const aside = path.join(directory, `before-restore-${stamp()}.sqlite`);
 			renameSync(target, aside);
-			undo.push(() => renameSync(aside, target));
+			onUndo(`put the database back from ${aside}`, () =>
+				renameSync(aside, target),
+			);
 			for (const suffix of SIDECAR_SUFFIXES) {
 				if (existsSync(target + suffix)) {
 					renameSync(target + suffix, aside + suffix);
-					undo.push(() => renameSync(aside + suffix, target + suffix));
+					onUndo(`put ${target + suffix} back from ${aside + suffix}`, () =>
+						renameSync(aside + suffix, target + suffix),
+					);
 				}
 			}
 			setAside = aside;
 		}
 		renameSync(incoming, target);
-		undo.push(() => renameSync(target, incoming));
+		onUndo("remove the restored database", () => renameSync(target, incoming));
 		hooks?.afterDatabaseSwap?.();
 
-		if (restoresFiles) {
-			const old = attachmentFilesIn(files);
+		if (attachmentsDirectory && existsSync(files)) {
+			// With files in the backup, the current ones all make way for them. Without,
+			// the ones the restored database doesn't refer to are set aside, so the
+			// startup cleanup can't mistake them for leftovers and delete them.
+			const referenced = new Set(restoresFiles ? [] : attachmentKeysIn(file));
+			const old = attachmentFilesIn(files).filter(
+				(name) => !referenced.has(name),
+			);
 			if (old.length > 0) {
 				const aside = path.join(files, `.before-restore-${stamp()}`);
 				mkdirSync(aside, { mode: 0o700 });
-				undo.push(() => rmSync(aside, { recursive: true, force: true }));
+				// Not recursive: a folder that still holds something is left in place.
+				onUndo(`remove the empty folder ${aside}`, () => rmdirSync(aside));
 				for (const name of old) {
 					renameSync(path.join(files, name), path.join(aside, name));
-					undo.push(() =>
+					onUndo(`move ${name} back from ${aside}`, () =>
 						renameSync(path.join(aside, name), path.join(files, name)),
 					);
 				}
 				attachmentsSetAside = aside;
 			}
+		}
+		hooks?.afterFilesSetAside?.();
+		if (restoresFiles) {
 			for (const name of attachmentFilesIn(incomingFiles)) {
 				renameSync(path.join(incomingFiles, name), path.join(files, name));
-				undo.push(() =>
+				onUndo(`move ${name} back out of ${files}`, () =>
 					renameSync(path.join(files, name), path.join(incomingFiles, name)),
 				);
 			}
 			rmSync(incomingFiles, { recursive: true, force: true });
 		}
 	} catch (error) {
+		const failed: string[] = [];
 		for (const step of undo.reverse()) {
 			try {
-				step();
+				step.run();
 			} catch {
-				// Keep undoing the rest.
+				failed.push(step.what);
 			}
 		}
-		rmSync(incoming, { force: true });
-		if (restoresFiles) rmSync(incomingFiles, { recursive: true, force: true });
+		// Only after the files were moved back, so a failed move never loses one.
+		if (failed.length === 0) {
+			rmSync(incoming, { force: true });
+			if (restoresFiles) {
+				rmSync(incomingFiles, { recursive: true, force: true });
+			}
+		}
 		const reason = error instanceof Error ? error.message : String(error);
 		throw new BackupError(
-			`The restore failed (${reason}) and was undone, so your database and attachments are as they were.`,
+			failed.length === 0
+				? `The restore failed (${reason}) and was undone, so your database and attachments are as they were.`
+				: `The restore failed (${reason}) and couldn't be fully undone. Not put back: ${failed.join("; ")}. Nothing was deleted, so your previous data is still in the files named there.`,
 		);
 	}
 

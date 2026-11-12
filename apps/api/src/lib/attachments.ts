@@ -1,5 +1,5 @@
 import { mkdirSync, readdirSync, statSync } from "node:fs";
-import { rm } from "node:fs/promises";
+import { chmod, rm } from "node:fs/promises";
 import path from "node:path";
 import { ORPCError } from "@orpc/server";
 import { DB, databasePath, type tables, Utils } from "@smelp/db";
@@ -262,7 +262,10 @@ export async function uploadAttachment(request: Request) {
 
 		mkdirSync(attachmentsPath(), { recursive: true, mode: 0o700 });
 		try {
-			await Bun.write(fileFor(attachment.storageKey), file, { mode: 0o600 });
+			const stored = fileFor(attachment.storageKey);
+			await Bun.write(stored, file);
+			// Bun.write ignores a mode on some versions, so it's set afterwards.
+			await chmod(stored, 0o600);
 			// This fails if the work item was deleted while the file was being written.
 			await sql`INSERT INTO attachment ${sql(attachment)}`;
 		} catch (error) {
