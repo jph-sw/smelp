@@ -14,6 +14,10 @@ import type {
 	auth_user_avatar,
 } from "../types/tables/auth";
 import type { comment } from "../types/tables/comment";
+import {
+	type comment_reaction,
+	REACTION_EMOJIS,
+} from "../types/tables/comment_reaction";
 import type { issue } from "../types/tables/issue";
 import type { schema_migrations } from "../types/tables/migration";
 import type { project } from "../types/tables/project";
@@ -160,10 +164,12 @@ export type tables = {
 	issue: issue;
 	state: state;
 	comment: comment;
+	comment_reaction: comment_reaction;
 };
 
 export const DEFAULTS = {
 	STATE_GROUPS: STATE_GROUPS,
+	REACTION_EMOJIS: REACTION_EMOJIS,
 };
 
 export type ProjectMember = tables["auth_space_member"] &

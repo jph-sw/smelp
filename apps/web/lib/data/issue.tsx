@@ -68,3 +68,8 @@ export const updateComment = (input: { commentId: string; body: string }) =>
 
 export const deleteComment = ({ id }: { id: string }) =>
 	orpc.comments.delete({ id });
+
+export const toggleReaction = (input: { commentId: string; emoji: string }) =>
+	orpc.comments.toggleReaction(
+		input as Parameters<typeof orpc.comments.toggleReaction>[0],
+	);

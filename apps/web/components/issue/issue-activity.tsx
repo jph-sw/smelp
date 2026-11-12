@@ -1,4 +1,8 @@
-import { Delete02Icon, PencilEdit01Icon } from "@hugeicons/core-free-icons";
+import {
+	Delete02Icon,
+	PencilEdit01Icon,
+	SmileIcon,
+} from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { ProjectMember, tables } from "@smelp/db";
 import {
@@ -12,10 +16,12 @@ import {
 	createComment,
 	deleteComment,
 	issueActivityQueryOptions,
+	toggleReaction,
 	updateComment,
 } from "#/lib/data/issue";
 import { toastError } from "#/lib/errors";
-import { formatDate, formatRelativeTime, initials } from "#/lib/utils";
+import { REACTION_EMOJIS } from "#/lib/reactions";
+import { cn, formatDate, formatRelativeTime, initials } from "#/lib/utils";
 import {
 	AlertDialog,
 	AlertDialogCancel,
@@ -28,6 +34,7 @@ import {
 } from "../ui/alert-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Button } from "../ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Textarea } from "../ui/textarea";
 
 type Activity = {
@@ -114,20 +121,97 @@ function DeleteCommentButton({
 	);
 }
 
+type CommentReaction = {
+	emoji: string;
+	count: number;
+	reacted: boolean;
+	users: string[];
+};
+
+function Reactions({
+	reactions,
+	canReact,
+	onToggle,
+}: {
+	reactions: CommentReaction[];
+	canReact: boolean;
+	onToggle: (emoji: string) => void;
+}) {
+	const [pickerOpen, setPickerOpen] = useState(false);
+	if (reactions.length === 0 && !canReact) return null;
+
+	return (
+		<div className="mt-2 flex flex-wrap items-center gap-1">
+			{reactions.map((reaction) => (
+				<button
+					key={reaction.emoji}
+					type="button"
+					disabled={!canReact}
+					aria-pressed={reaction.reacted}
+					aria-label={`${reaction.emoji} ${reaction.count}: ${reaction.users.join(", ")}`}
+					title={reaction.users.join(", ")}
+					onClick={() => onToggle(reaction.emoji)}
+					className={cn(
+						"flex h-6 items-center gap-1 rounded-full border px-2 text-xs",
+						reaction.reacted
+							? "border-primary bg-primary/10 text-foreground"
+							: "border-transparent bg-background text-muted-foreground",
+						canReact && "cursor-pointer hover:border-foreground/30",
+					)}
+				>
+					<span>{reaction.emoji}</span>
+					<span className="tabular-nums">{reaction.count}</span>
+				</button>
+			))}
+			{canReact && (
+				<Popover open={pickerOpen} onOpenChange={setPickerOpen}>
+					<PopoverTrigger
+						aria-label="Add reaction"
+						render={<Button variant="ghost" size="icon-sm" />}
+					>
+						<HugeiconsIcon icon={SmileIcon} />
+					</PopoverTrigger>
+					<PopoverContent align="start" className="w-auto flex-row gap-1 p-1.5">
+						{REACTION_EMOJIS.map((emoji) => (
+							<button
+								key={emoji}
+								type="button"
+								aria-label={`React with ${emoji}`}
+								className="cursor-pointer rounded-md p-1 text-base hover:bg-secondary"
+								onClick={() => {
+									setPickerOpen(false);
+									onToggle(emoji);
+								}}
+							>
+								{emoji}
+							</button>
+						))}
+					</PopoverContent>
+				</Popover>
+			)}
+		</div>
+	);
+}
+
 function CommentItem({
 	comment,
 	canEdit,
 	canDelete,
+	canReact,
 	isRemoving,
 	onDelete,
 	onEdited,
+	onToggleReaction,
 }: {
 	comment: tables["comment"] & {
 		authorName: string | null;
 		authorImage: string | null;
+		reactions: CommentReaction[];
 	};
 	canEdit: boolean;
 	canDelete: boolean;
+	canReact: boolean;
+	onToggleReaction: (emoji: string) => void;
 	isRemoving: boolean;
 	onDelete: () => void;
 	onEdited: () => Promise<void>;
@@ -231,6 +315,13 @@ function CommentItem({
 						{comment.body}
 					</p>
 				)}
+				{!editing && (
+					<Reactions
+						reactions={comment.reactions}
+						canReact={canReact}
+						onToggle={onToggleReaction}
+					/>
+				)}
 			</div>
 		</li>
 	);
@@ -278,6 +369,12 @@ export function IssueActivity({
 		onError: (e) => toastError(e),
 	});
 
+	const { mutate: react } = useMutation({
+		mutationFn: toggleReaction,
+		onSuccess: refreshComments,
+		onError: (e) => toastError(e),
+	});
+
 	const submit = () => {
 		if (draft.trim() && !isAdding) addComment({ issueId, body: draft });
 	};
@@ -311,6 +408,10 @@ export function IssueActivity({
 							comment={entry}
 							canEdit={!readOnly && entry.authorId === userId}
 							canDelete={!readOnly && (entry.authorId === userId || canManage)}
+							canReact={!readOnly}
+							onToggleReaction={(emoji) =>
+								react({ commentId: entry.id, emoji })
+							}
 							isRemoving={isRemoving}
 							onDelete={() => removeComment({ id: entry.id })}
 							onEdited={refreshComments}
