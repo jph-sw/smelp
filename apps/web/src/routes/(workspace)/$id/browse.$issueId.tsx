@@ -26,6 +26,7 @@ import {
 import { Textarea } from "#/components/ui/textarea";
 import { usePageTitle } from "#/hooks/use-page-title";
 import { currentUserQueryOptions } from "#/lib/auth";
+import { cyclesQueryOptions, invalidateCycles } from "#/lib/data/cycle";
 import {
 	attachmentsQueryOptions,
 	commentsQueryOptions,
@@ -36,6 +37,7 @@ import {
 	linksQueryOptions,
 	updateIssue,
 } from "#/lib/data/issue";
+import { moduleQueryKeys, modulesQueryOptions } from "#/lib/data/module";
 import { markIssueNotificationRead } from "#/lib/data/notifications";
 import {
 	projectMembersQueryOptions,
@@ -68,6 +70,12 @@ export const Route = createFileRoute("/(workspace)/$id/browse/$issueId")({
 			),
 			queryClient.ensureQueryData(
 				issuesQueryOptions({ projectId: issue.projectId }),
+			),
+			queryClient.ensureQueryData(
+				modulesQueryOptions({ projectId: issue.projectId }),
+			),
+			queryClient.ensureQueryData(
+				cyclesQueryOptions({ projectId: issue.projectId }),
 			),
 		]);
 	},
@@ -149,6 +157,12 @@ function RouteComponent() {
 	const { data: projectIssues } = useSuspenseQuery(
 		issuesQueryOptions({ projectId: issue.projectId }),
 	);
+	const { data: modules } = useSuspenseQuery(
+		modulesQueryOptions({ projectId: issue.projectId }),
+	);
+	const { data: cycles } = useSuspenseQuery(
+		cyclesQueryOptions({ projectId: issue.projectId }),
+	);
 	const { user, members, canWrite, canManage, isArchived } = useProjectAccess(
 		issue.projectId,
 	);
@@ -172,17 +186,22 @@ function RouteComponent() {
 			state?: string;
 			assignee?: string | null;
 			parentId?: string | null;
+			moduleId?: string | null;
+			cycleId?: string | null;
 		}) => updateIssue({ id: issue.id, ...changes }),
 		onError: (e) => toastError(e, "Couldn't save your change."),
 		onSettled: () =>
-			Promise.all(
-				[
+			Promise.all([
+				...[
 					["issue", issue.id],
 					["activity", issue.id],
 					["issues", issue.projectId],
 					["my-issues"],
+					...moduleQueryKeys(issue.projectId),
 				].map((queryKey) => queryClient.invalidateQueries({ queryKey })),
-			),
+				// Cycle progress follows an item's state and cycle.
+				invalidateCycles(queryClient, issue.projectId),
+			]),
 	});
 
 	// Moving an item below its own sub-items would make a loop, so those aren't offered.
@@ -310,6 +329,8 @@ function RouteComponent() {
 							members={members}
 							canWrite={canWrite}
 							parentOptions={parentOptions}
+							modules={modules}
+							cycles={cycles}
 							onUpdate={update}
 						/>
 					</div>
@@ -343,6 +364,8 @@ function RouteComponent() {
 						members={members}
 						canWrite={canWrite}
 						parentOptions={parentOptions}
+						modules={modules}
+						cycles={cycles}
 						onUpdate={update}
 					/>
 				</aside>

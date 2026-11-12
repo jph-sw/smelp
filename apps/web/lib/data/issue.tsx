@@ -57,6 +57,8 @@ export const updateIssue = (input: {
 	description?: string;
 	assignee?: string | null;
 	parentId?: string | null;
+	moduleId?: string | null;
+	cycleId?: string | null;
 }) => orpc.issue.update(input);
 
 export const deleteIssue = ({ id }: { id: string }) =>

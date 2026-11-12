@@ -621,6 +621,9 @@ export function buildPlan(
 				parentId: parentOf.has(issue.key)
 					? issueId(byKey.get(parentOf.get(issue.key) as string) as JiraIssue)
 					: null,
+				// Sprints aren't imported, and Jira has no modules.
+				cycleId: null,
+				moduleId: null,
 				workspaceId: ctx.workspaceId,
 				projectId: p.id,
 				createdAt: created,

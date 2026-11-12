@@ -19,11 +19,13 @@ import {
 	type comment_reaction,
 	REACTION_EMOJIS,
 } from "../types/tables/comment_reaction";
+import type { cycle } from "../types/tables/cycle";
 import type { import_record } from "../types/tables/import_record";
 import type { issue } from "../types/tables/issue";
 import type { issue_link } from "../types/tables/issue_link";
 import type { issue_relation } from "../types/tables/issue_relation";
 import type { schema_migrations } from "../types/tables/migration";
+import type { module } from "../types/tables/module";
 import type { notification } from "../types/tables/notification";
 import type { project } from "../types/tables/project";
 import type { project_counter } from "../types/tables/project_counter";
@@ -175,6 +177,8 @@ export type tables = {
 	comment_reaction: comment_reaction;
 	issue_link: issue_link;
 	import_record: import_record;
+	module: module;
+	cycle: cycle;
 };
 
 export const DEFAULTS = {

@@ -34,6 +34,14 @@ import {
 	updateComment,
 } from "./routes/comment";
 import {
+	createCycle,
+	deleteCycle,
+	findCycle,
+	findCycles,
+	moveUnfinishedToCycle,
+	updateCycle,
+} from "./routes/cycle";
+import {
 	createPasswordReset,
 	findInstanceStatus,
 	findInstanceUsers,
@@ -55,6 +63,13 @@ import {
 import { findIssues, findMyIssues, searchIssues } from "./routes/issues";
 import { applyJiraImport, previewJiraImport } from "./routes/jira-import";
 import { createLink, deleteLink, findLinks, updateLink } from "./routes/link";
+import {
+	createModule,
+	deleteModule,
+	findModule,
+	findModules,
+	updateModule,
+} from "./routes/module";
 import {
 	countUnreadNotifications,
 	findNotifications,
@@ -195,6 +210,13 @@ export const router = {
 		update: updateLink,
 		delete: deleteLink,
 	},
+	modules: {
+		find: findModules,
+		get: findModule,
+		create: createModule,
+		update: updateModule,
+		delete: deleteModule,
+	},
 	comments: {
 		find: findComments,
 		create: createComment,
@@ -220,6 +242,14 @@ export const router = {
 	},
 	states: {
 		find: findStates,
+	},
+	cycles: {
+		find: findCycles,
+		findOne: findCycle,
+		create: createCycle,
+		update: updateCycle,
+		delete: deleteCycle,
+		moveUnfinished: moveUnfinishedToCycle,
 	},
 	state: {
 		create: createState,
