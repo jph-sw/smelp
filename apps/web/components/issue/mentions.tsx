@@ -8,11 +8,16 @@ import { Textarea } from "../ui/textarea";
 // apps/api/src/lib/mentions.ts.
 const MENTION = /@\[([^\]\n]{1,80})\]\(user:([a-z0-9]{8,64})\)/g;
 
+// The name inside a mention is never shown as written, since anyone can type
+// "@[Admin](user:<someone else>)". A mention shows the current name of the project
+// member its id belongs to; any other id is plain text.
 export function CommentBody({
 	body,
+	members,
 	currentUserId,
 }: {
 	body: string;
+	members: ProjectMember[];
 	currentUserId: string | undefined;
 }) {
 	const parts: ReactNode[] = [];
@@ -20,17 +25,22 @@ export function CommentBody({
 	for (const match of body.matchAll(MENTION)) {
 		const start = match.index ?? 0;
 		if (start > last) parts.push(body.slice(last, start));
-		parts.push(
-			<span
-				key={start}
-				className={cn(
-					"rounded-sm bg-primary/10 px-0.5 font-medium text-primary",
-					match[2] === currentUserId && "bg-primary/25",
-				)}
-			>
-				@{match[1]}
-			</span>,
-		);
+		const member = members.find((candidate) => candidate.userId === match[2]);
+		if (member) {
+			parts.push(
+				<span
+					key={start}
+					className={cn(
+						"rounded-sm bg-primary/10 px-0.5 font-medium text-primary",
+						member.userId === currentUserId && "bg-primary/25",
+					)}
+				>
+					@{member.displayName}
+				</span>,
+			);
+		} else {
+			parts.push(`@${match[1]}`);
+		}
 		last = start + match[0].length;
 	}
 	if (last < body.length) parts.push(body.slice(last));

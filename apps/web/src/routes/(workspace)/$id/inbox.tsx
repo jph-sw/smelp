@@ -1,5 +1,6 @@
 import {
 	useMutation,
+	useQuery,
 	useQueryClient,
 	useSuspenseInfiniteQuery,
 } from "@tanstack/react-query";
@@ -44,7 +45,9 @@ function RouteComponent() {
 		useSuspenseInfiniteQuery(notificationsQueryOptions({ workspaceId }));
 
 	const items = data.pages.flatMap((page) => page.notifications);
-	const hasUnread = items.some((item) => item.readAt === null);
+	// From the count, not the loaded pages: unread items may be on pages not loaded yet.
+	const { data: unread } = useQuery(unreadCountQueryOptions({ workspaceId }));
+	const hasUnread = (unread?.count ?? 0) > 0;
 
 	const refresh = () =>
 		Promise.all([

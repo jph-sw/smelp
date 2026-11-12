@@ -10,7 +10,15 @@ export function mentionedUserIds(body: string): string[] {
 	return [...ids];
 }
 
-// Plain text for emails: "@[Ada](user:x)" reads as "@Ada".
-export function plainMentions(body: string): string {
-	return body.replace(MENTION, "@$1");
+// Plain text for emails. The name typed in a mention is never trusted, since anyone
+// can write "@[Admin](user:<someone else>)". Ids in `names` (project members) read
+// as that person's current name; any other mention is left as plain typed text.
+export function plainMentions(
+	body: string,
+	names: ReadonlyMap<string, string>,
+): string {
+	return body.replace(MENTION, (_, typed: string, id: string) => {
+		const name = names.get(id);
+		return `@${name ?? typed}`;
+	});
 }

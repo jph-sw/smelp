@@ -46,6 +46,7 @@ import {
 	countUnreadNotifications,
 	findNotifications,
 	markAllNotificationsRead,
+	markIssueNotificationRead,
 	markNotificationRead,
 } from "./routes/notifications";
 import {
@@ -181,6 +182,7 @@ export const router = {
 		countUnread: countUnreadNotifications,
 		markRead: markNotificationRead,
 		markAllRead: markAllNotificationsRead,
+		markReadForIssue: markIssueNotificationRead,
 	},
 	states: {
 		find: findStates,

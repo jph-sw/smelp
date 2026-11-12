@@ -122,3 +122,18 @@ export const markAllNotificationsRead = base
 		`;
 		return { success: true };
 	});
+
+// Called when someone opens a work item: having seen it is as good as having read
+// the notification.
+export const markIssueNotificationRead = base
+	.input(v.object({ issueId: v.string() }))
+	.handler(async ({ input, context }) => {
+		const session = await requireSession(context.headers);
+		await sql`
+			UPDATE notification SET readAt = ${Date.now()}
+			WHERE userId = ${session.userId}
+				AND issueId = ${input.issueId}
+				AND readAt IS NULL
+		`;
+		return { success: true };
+	});

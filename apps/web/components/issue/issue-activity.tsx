@@ -120,6 +120,7 @@ function CommentItem({
 	canEdit,
 	canDelete,
 	currentUserId,
+	members,
 	isRemoving,
 	onDelete,
 	onEdited,
@@ -131,6 +132,7 @@ function CommentItem({
 	canEdit: boolean;
 	canDelete: boolean;
 	currentUserId: string | undefined;
+	members: ProjectMember[];
 	isRemoving: boolean;
 	onDelete: () => void;
 	onEdited: () => Promise<void>;
@@ -230,7 +232,11 @@ function CommentItem({
 						</div>
 					</form>
 				) : (
-					<CommentBody body={comment.body} currentUserId={currentUserId} />
+					<CommentBody
+						body={comment.body}
+						members={members}
+						currentUserId={currentUserId}
+					/>
 				)}
 			</div>
 		</li>
@@ -313,6 +319,7 @@ export function IssueActivity({
 							canEdit={!readOnly && entry.authorId === userId}
 							canDelete={!readOnly && (entry.authorId === userId || canManage)}
 							currentUserId={userId}
+							members={members}
 							isRemoving={isRemoving}
 							onDelete={() => removeComment({ id: entry.id })}
 							onEdited={refreshComments}

@@ -156,6 +156,7 @@ export async function sendNotificationEmail(notification: {
 	workspaceId: string;
 	issueId: string;
 	summary: string;
+	actorName: string;
 	excerpt?: string;
 }): Promise<EmailDelivery> {
 	const { config } = readConfig();
@@ -166,7 +167,13 @@ export async function sendNotificationEmail(notification: {
 		subject: oneLine(notification.summary),
 		text: [
 			oneLine(notification.summary),
-			...(notification.excerpt ? ["", notification.excerpt] : []),
+			...(notification.excerpt
+				? [
+						"",
+						`${oneLine(notification.actorName)} wrote:`,
+						...notification.excerpt.split(/\r?\n/).map((line) => `> ${line}`),
+					]
+				: []),
 			"",
 			`${config.appUrl}/${notification.workspaceId}/browse/${notification.issueId}`,
 			"",

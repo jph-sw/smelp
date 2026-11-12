@@ -38,3 +38,6 @@ export const markNotificationRead = (id: string) =>
 
 export const markAllNotificationsRead = (workspaceId: string) =>
 	orpc.notifications.markAllRead({ workspaceId });
+
+export const markIssueNotificationRead = (issueId: string) =>
+	orpc.notifications.markReadForIssue({ issueId });
