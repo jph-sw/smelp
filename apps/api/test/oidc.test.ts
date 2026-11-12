@@ -15,6 +15,9 @@ const { Auth } = await import("@smelp/auth");
 const { DB } = await import("@smelp/db");
 const { router } = await import("../src/router");
 const { oidcStart, oidcCallback } = await import("../src/routes/auth/oidc");
+const { createSecretToken, hashSecretToken } = await import(
+	"../src/lib/tokens"
+);
 const { oidcCookieName, resetOidcCache, safeLocalPath } = await import(
 	"../src/lib/oidc"
 );
@@ -1023,6 +1026,42 @@ describe("account settings", () => {
 			await expect(
 				clientFor().auth.setPassword({ newPassword: "whatever-password-1" }),
 			).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+		} finally {
+			await setSignupOpen(false);
+		}
+	});
+
+	test("a password reset gives a provider-only account its first password", async () => {
+		await setSignupOpen(true);
+		try {
+			const email = `${unique("reset")}@${EMAIL_DOMAIN}`;
+			const result = await signInWith(verified(unique("sub"), email));
+			const user = await userByEmail(email);
+			expect(
+				(await clientFor(result.sessionToken).auth.linkedAccounts())
+					.hasPassword,
+			).toBe(false);
+
+			const token = createSecretToken();
+			await sql`INSERT INTO auth_password_reset ${sql({
+				id: crypto.randomUUID(),
+				userId: user?.id,
+				tokenHash: hashSecretToken(token),
+				createdByUserId: null,
+				createdAt: Date.now(),
+				expiresAt: Date.now() + 60_000,
+				usedAt: null,
+			})}`;
+			await clientFor().auth.resetPassword({
+				token,
+				newPassword: "reset-made-password-1",
+			});
+
+			const viaPassword = await clientFor().auth.signIn({
+				email,
+				password: "reset-made-password-1",
+			});
+			expect(viaPassword.user.id).toBe(user?.id ?? "");
 		} finally {
 			await setSignupOpen(false);
 		}

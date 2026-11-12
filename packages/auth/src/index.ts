@@ -93,7 +93,15 @@ export class Auth {
 			return null;
 		}
 
-		const session = await this.createAuthSession(user.id);
+		// The check above is slow. If the password was removed or changed in the
+		// meantime, by a provider linking to this account for one, it no longer counts.
+		const session = await this.sql.begin(async (tx) => {
+			const unchanged = await tx`
+				SELECT 1 FROM auth_account WHERE id = ${account.id} AND password = ${account.password}
+			`;
+			return unchanged.length > 0 ? this.createAuthSession(user.id) : null;
+		});
+		if (session == null) return null;
 
 		eventBus.emit({
 			type: "auth.signin",

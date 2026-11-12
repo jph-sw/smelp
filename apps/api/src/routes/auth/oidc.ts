@@ -135,9 +135,10 @@ export async function oidcCallback(request: Request, ip: string) {
 
 // Public: the sign-in and sign-up pages need this before anyone is signed in. It
 // only says whether the button shows, and what it says.
-export const findSignInOptions = base.handler(async () => ({
-	oidc: oidcConfig() ? { label: oidcConfig()?.label ?? "" } : null,
-}));
+export const findSignInOptions = base.handler(async () => {
+	const config = oidcConfig();
+	return { oidc: config ? { label: config.label } : null };
+});
 
 // Which sign-in methods the signed-in person has.
 export const findLinkedAccounts = base.handler(async ({ context }) => {

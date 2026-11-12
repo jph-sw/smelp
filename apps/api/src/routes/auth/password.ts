@@ -99,10 +99,29 @@ export const resetPassword = base
 			`;
 			if (claimed.length === 0) throw invalidLink();
 
-			await tx`
+			const updated = await tx`
 				UPDATE auth_account SET password = ${passwordHash}, updatedAt = ${now}
 				WHERE userId = ${reset.userId} AND providerId = 'password'
+				RETURNING id
 			`;
+			// Someone who has only signed in through a provider has no password row.
+			if (updated.length === 0) {
+				await tx`INSERT INTO auth_account ${tx({
+					id: auth.generateRandomId(),
+					userId: reset.userId,
+					accountId: auth.generateRandomId(),
+					providerId: "password",
+					password: passwordHash,
+					createdAt: now,
+					updatedAt: now,
+					accessToken: null,
+					refreshToken: null,
+					accessTokenExpiresAt: null,
+					refreshTokenExpiresAt: null,
+					scope: null,
+					idToken: null,
+				})}`;
+			}
 			// Anyone who was signed in as this person is signed out.
 			await tx`DELETE FROM auth_session WHERE userId = ${reset.userId}`;
 		});
