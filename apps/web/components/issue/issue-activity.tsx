@@ -21,6 +21,7 @@ import {
 } from "#/lib/data/issue";
 import { toastError } from "#/lib/errors";
 import { REACTION_EMOJIS, type ReactionEmoji } from "#/lib/reactions";
+import { RELATION_PHRASES } from "#/lib/relations";
 import { cn, formatDate, formatRelativeTime, initials } from "#/lib/utils";
 import {
 	AlertDialog,
@@ -37,7 +38,11 @@ import { Button } from "../ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Textarea } from "../ui/textarea";
 
+const relatedLabel = (entry: { relatedId?: string | null }) =>
+	entry.relatedId ?? "another work item";
+
 type Activity = {
+	relatedId?: string | null;
 	action: string;
 	field: string | null;
 	oldValue: string | null;
@@ -65,9 +70,30 @@ function describeActivity(
 				? `assigned this to ${memberName(entry.newValue)}`
 				: `unassigned ${memberName(entry.oldValue)}`;
 		case "issue.updated":
+			if (entry.field === "parent") {
+				return entry.newValue
+					? `made this a sub-item of ${entry.newValue}`
+					: "made this a top-level item";
+			}
 			return entry.field === "title"
 				? `renamed this to "${entry.newValue}"`
 				: "edited the description";
+		case "issue.relation_added":
+			return `marked this as ${RELATION_PHRASES[entry.newValue ?? ""] ?? "related to"} ${relatedLabel(entry)}`;
+		case "issue.relation_removed":
+			return `removed the relation to ${relatedLabel(entry)}`;
+		case "issue.link_added":
+			return entry.newValue
+				? `added the link "${entry.newValue}"`
+				: "added a link";
+		case "issue.link_updated": {
+			const name = entry.newValue ?? entry.oldValue;
+			return name ? `edited the link "${name}"` : "edited a link";
+		}
+		case "issue.link_removed":
+			return entry.oldValue
+				? `removed the link "${entry.oldValue}"`
+				: "removed a link";
 		default:
 			return "changed this work item";
 	}

@@ -36,7 +36,13 @@ import {
 	findIssue,
 	updateIssue,
 } from "./routes/issue";
+import {
+	addIssueRelation,
+	findIssueRelations,
+	removeIssueRelation,
+} from "./routes/issue-relation";
 import { findIssues, findMyIssues, searchIssues } from "./routes/issues";
+import { createLink, deleteLink, findLinks, updateLink } from "./routes/link";
 import {
 	archiveProject,
 	createProject,
@@ -149,10 +155,21 @@ export const router = {
 		update: updateIssue,
 		delete: deleteIssue,
 	},
+	issueRelations: {
+		find: findIssueRelations,
+		add: addIssueRelation,
+		remove: removeIssueRelation,
+	},
 	issues: {
 		find: findIssues,
 		findMine: findMyIssues,
 		search: searchIssues,
+	},
+	links: {
+		find: findLinks,
+		create: createLink,
+		update: updateLink,
+		delete: deleteLink,
 	},
 	comments: {
 		find: findComments,
