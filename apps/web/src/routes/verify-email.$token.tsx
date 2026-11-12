@@ -25,8 +25,12 @@ function RouteComponent() {
 	const { mutate: verify, status } = useMutation({
 		mutationFn: () => orpc.auth.verifyEmail({ token }),
 		// Refreshes the signed-in person, so the banner is gone when they continue.
-		onSettled: () =>
-			queryClient.fetchQuery({ ...currentUserQueryOptions, staleTime: 0 }),
+		// Not awaited: a failed refresh must not turn a confirmed address into an error.
+		onSettled: () => {
+			queryClient
+				.fetchQuery({ ...currentUserQueryOptions, staleTime: 0 })
+				.catch(() => {});
+		},
 	});
 
 	// A link works once, so it's only used one time, even when React runs this twice.

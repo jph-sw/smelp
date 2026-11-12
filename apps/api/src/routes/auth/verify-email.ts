@@ -18,8 +18,8 @@ const ONE_HOUR = 60 * 60 * 1000;
 const verifiesByIp = new RateLimiter(20, FIFTEEN_MINUTES);
 // Two limits, so one account can't flood an inbox and one address can't be
 // flooded through several accounts.
-const resendsByUser = new RateLimiter(5, ONE_HOUR);
-const resendsByEmail = new RateLimiter(3, ONE_HOUR);
+const resendsByUser = new RateLimiter(3, ONE_HOUR);
+const resendsByEmail = new RateLimiter(5, ONE_HOUR);
 
 // Public: holding the link is the proof.
 export const verifyEmail = base

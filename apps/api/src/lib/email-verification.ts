@@ -65,6 +65,8 @@ export async function consumeEmailVerification(token: string) {
 	});
 }
 
+// The gate follows whether email can deliver the link right now, not how the
+// account was made, so closing sign-up later does not free anyone unverified.
 // Unverified accounts can sign in and join workspaces, but not start their own.
 // Only applies while email can deliver the link; an admin can also mark someone
 // verified by hand.
