@@ -1,5 +1,11 @@
 import type { ProjectMember } from "@smelp/db";
-import { type ReactNode, useId, useRef, useState } from "react";
+import {
+	type ReactNode,
+	useId,
+	useLayoutEffect,
+	useRef,
+	useState,
+} from "react";
 import { cn } from "#/lib/utils";
 import { Textarea } from "../ui/textarea";
 
@@ -68,6 +74,7 @@ export function MentionTextarea({
 	onSubmit: () => void;
 }) {
 	const ref = useRef<HTMLTextAreaElement>(null);
+	const pendingCaret = useRef<number | null>(null);
 	const listId = useId();
 	const [caret, setCaret] = useState(0);
 	const [dismissed, setDismissed] = useState(false);
@@ -90,13 +97,21 @@ export function MentionTextarea({
 		const inserted = `@[${name}](user:${member.userId}) `;
 		const next = value.slice(0, queryStart) + inserted + value.slice(caret);
 		const position = queryStart + inserted.length;
+		pendingCaret.current = position;
 		onValueChange(next);
 		setCaret(position);
-		requestAnimationFrame(() => {
-			ref.current?.focus();
-			ref.current?.setSelectionRange(position, position);
-		});
 	};
+
+	// Put the cursor after the inserted mention as soon as React has written the new
+	// text, before the next key is handled. Waiting a frame let fast typing land
+	// first and then moved the cursor back into the middle of it.
+	useLayoutEffect(() => {
+		const position = pendingCaret.current;
+		if (position === null || !ref.current) return;
+		pendingCaret.current = null;
+		ref.current.focus();
+		ref.current.setSelectionRange(position, position);
+	});
 
 	return (
 		<div className="relative">
