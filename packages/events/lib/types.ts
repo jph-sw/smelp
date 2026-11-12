@@ -56,7 +56,6 @@ export type DomainEvent =
 				oldValue: string | null;
 				newValue: string | null;
 				relatedId: string;
-				relatedTitle: string;
 			}
 	  >
 	| Event<"comment.created", IssueRef & { issueId: string }>

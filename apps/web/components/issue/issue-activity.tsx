@@ -15,6 +15,7 @@ import {
 	updateComment,
 } from "#/lib/data/issue";
 import { toastError } from "#/lib/errors";
+import { RELATION_PHRASES } from "#/lib/relations";
 import { formatDate, formatRelativeTime, initials } from "#/lib/utils";
 import {
 	AlertDialog,
@@ -29,14 +30,6 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
-
-const RELATION_PHRASES: Record<string, string> = {
-	blocks: "blocking",
-	blocked_by: "blocked by",
-	relates: "related to",
-	duplicates: "a duplicate of",
-	duplicated_by: "duplicated by",
-};
 
 const relatedLabel = (entry: { relatedId?: string | null }) =>
 	entry.relatedId ?? "another work item";

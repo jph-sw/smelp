@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import type { FeedEvent } from "#/lib/data/activity";
+import { RELATION_PHRASES } from "#/lib/relations";
 
 const linkClass =
 	"font-medium text-foreground underline-offset-3 hover:underline";
@@ -73,14 +74,6 @@ const GROUP_LABELS: Record<string, string> = {
 	cancelled: "Cancelled",
 };
 
-const RELATION_PHRASES: Record<string, string> = {
-	blocks: "blocking",
-	blocked_by: "blocked by",
-	relates: "related to",
-	duplicates: "a duplicate of",
-	duplicated_by: "duplicated by",
-};
-
 function listWords(words: string[]) {
 	if (words.length <= 1) return words.join("");
 	return `${words.slice(0, -1).join(", ")} and ${words.at(-1)}`;
@@ -142,14 +135,14 @@ export function ActivitySentence({
 			return (
 				<>
 					marked {issue} as {RELATION_PHRASES[d.relation ?? ""] ?? "related to"}{" "}
-					<Strong>{d.relatedId}</Strong>
+					<Strong>{d.relatedId ?? "another work item"}</Strong>
 				</>
 			);
 		case "issue.relation_removed":
 			return (
 				<>
 					removed the relation between {issue} and{" "}
-					<Strong>{d.relatedId}</Strong>
+					<Strong>{d.relatedId ?? "another work item"}</Strong>
 				</>
 			);
 		case "comment.created":

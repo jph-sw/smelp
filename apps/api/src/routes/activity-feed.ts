@@ -43,6 +43,7 @@ type FeedRow = Pick<
 	newUserName: string | null;
 	memberUserId: string | null;
 	memberUserName: string | null;
+	relatedVisibleId: string | null;
 };
 
 export type FeedDetails = {
@@ -132,7 +133,8 @@ function toFeedEvent(row: FeedRow, canSeeInviteEmails: boolean): FeedEvent {
 		case "issue.relation_removed":
 			details = {
 				relation: row.newValue ?? row.oldValue,
-				relatedId: text("relatedId"),
+				// Only set when the viewer can read the related item's project.
+				relatedId: row.relatedVisibleId,
 			};
 			break;
 		case "project.created":
@@ -266,6 +268,16 @@ export const findWorkspaceActivity = base
 					newUser.displayName AS newUserName,
 					COALESCE(json_extract(a.metadata, '$.userId'), m.userId) AS memberUserId,
 					memberUser.displayName AS memberUserName,
+					CASE WHEN a.action IN ('issue.relation_added', 'issue.relation_removed')
+						AND EXISTS (
+							SELECT 1 FROM issue ri
+							JOIN project rp ON rp.id = ri.projectId
+							JOIN auth_space_member rm ON rm.spaceId = rp.spaceId
+							WHERE ri.id = json_extract(a.metadata, '$.relatedId')
+								AND rm.userId = ${userId}
+						)
+						THEN json_extract(a.metadata, '$.relatedId')
+					END AS relatedVisibleId,
 					CASE
 						WHEN a.entityType = 'auth' THEN 'hidden'
 						WHEN json_extract(a.metadata, '$.projectId') IS NOT NULL

@@ -33,6 +33,14 @@ const INVERSE: Record<RelationKind, RelationKind> = {
 	duplicated_by: "duplicates",
 };
 
+const EXISTING_PHRASES: Record<RelationKind, string> = {
+	blocks: "blocks",
+	blocked_by: "is blocked by",
+	relates: "relates to",
+	duplicates: "is a duplicate of",
+	duplicated_by: "is duplicated by",
+};
+
 function kindFrom(
 	type: tables["issue_relation"]["type"],
 	asSource: boolean,
@@ -166,33 +174,28 @@ export const addIssueRelation = base
 				message: "A work item can't be related to itself",
 			});
 		}
+		// Another workspace's item and one the caller can't read both look like a
+		// missing item, so the error can't be used to probe for private items.
 		const related = (
 			await sql`SELECT * FROM issue WHERE id = ${input.relatedId}`
 		)[0] as tables["issue"] | undefined;
-		if (!related) throw new ORPCError("NOT_FOUND");
-		if (related.workspaceId !== issue.workspaceId) {
-			throw new ORPCError("BAD_REQUEST", {
-				message: "Work items can only be related within the same workspace",
-			});
+		if (!related || related.workspaceId !== issue.workspaceId) {
+			throw new ORPCError("NOT_FOUND");
 		}
-		const { project: relatedProject } = await requireProjectPermission(
-			context.headers,
-			related.projectId,
-			"space:read",
-		);
+		let relatedProject: tables["project"];
+		try {
+			({ project: relatedProject } = await requireProjectPermission(
+				context.headers,
+				related.projectId,
+				"space:read",
+			));
+		} catch (e) {
+			if (e instanceof ORPCError && e.code === "FORBIDDEN") {
+				throw new ORPCError("NOT_FOUND");
+			}
+			throw e;
+		}
 		requireNotArchived(relatedProject);
-
-		const conflict = new ORPCError("CONFLICT", {
-			message: "These work items are already related",
-		});
-		const existing = (
-			await sql`
-				SELECT id FROM issue_relation
-				WHERE (sourceId = ${issue.id} AND targetId = ${related.id})
-					OR (sourceId = ${related.id} AND targetId = ${issue.id})
-			`
-		)[0];
-		if (existing) throw conflict;
 
 		const fromSource = !input.kind.endsWith("_by");
 		const type = (
@@ -206,14 +209,27 @@ export const addIssueRelation = base
 			createdAt: Date.now(),
 			createdBy: session.userId,
 		};
+		// The unique index on the pair is what keeps a pair to one relation.
 		try {
 			await sql`INSERT INTO issue_relation ${sql(relation)}`;
 		} catch (e) {
 			if (
 				e instanceof SQL.SQLiteError &&
-				e.code.startsWith("SQLITE_CONSTRAINT")
+				e.code === "SQLITE_CONSTRAINT_UNIQUE"
 			) {
-				throw conflict;
+				const existing = (
+					await sql`
+						SELECT * FROM issue_relation
+						WHERE (sourceId = ${issue.id} AND targetId = ${related.id})
+							OR (sourceId = ${related.id} AND targetId = ${issue.id})
+					`
+				)[0] as tables["issue_relation"] | undefined;
+				const phrase = existing
+					? ` (${issue.id} ${EXISTING_PHRASES[kindFrom(existing.type, existing.sourceId === issue.id)]} ${related.id})`
+					: "";
+				throw new ORPCError("CONFLICT", {
+					message: `These work items are already related${phrase}`,
+				});
 			}
 			throw e;
 		}
@@ -230,7 +246,6 @@ export const addIssueRelation = base
 				oldValue: null,
 				newValue: input.kind,
 				relatedId: related.id,
-				relatedTitle: related.title,
 			},
 		});
 
@@ -260,6 +275,19 @@ export const removeIssueRelation = base
 		const related = await findIssueOrThrow(
 			asSource ? relation.targetId : relation.sourceId,
 		);
+		// A relation to an item the caller can't read is invisible to them.
+		try {
+			await requireProjectPermission(
+				context.headers,
+				related.projectId,
+				"space:read",
+			);
+		} catch (e) {
+			if (e instanceof ORPCError && e.code === "FORBIDDEN") {
+				throw new ORPCError("NOT_FOUND");
+			}
+			throw e;
+		}
 		const relatedProject = (
 			await sql`SELECT * FROM project WHERE id = ${related.projectId}`
 		)[0] as tables["project"];
@@ -279,7 +307,6 @@ export const removeIssueRelation = base
 				oldValue: kindFrom(relation.type, asSource),
 				newValue: null,
 				relatedId: related.id,
-				relatedTitle: related.title,
 			},
 		});
 

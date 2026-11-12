@@ -213,7 +213,7 @@ describe("issue relations", () => {
 				relatedId: x,
 				kind: "relates",
 			}),
-			"BAD_REQUEST",
+			"NOT_FOUND",
 		);
 		await expectCode(
 			owner.client.issueRelations.add({
@@ -308,7 +308,7 @@ describe("issue relations", () => {
 				relatedId: secret,
 				kind: "relates",
 			}),
-			"FORBIDDEN",
+			"NOT_FOUND",
 		);
 	});
 
@@ -398,5 +398,94 @@ describe("issue relations", () => {
 			projectId: ALPHA,
 			relatedId: b,
 		});
+		// The payload doesn't carry the other item's title.
+		expect(JSON.parse(rows[0]?.metadata ?? "{}").relatedTitle).toBeUndefined();
+	});
+
+	test("a lost race on the unique index is a conflict naming the existing relation", async () => {
+		const a = await createIssue(owner, WORKSPACE, ALPHA, "Race one");
+		const b = await createIssue(owner, WORKSPACE, ALPHA, "Race two");
+		const results = await Promise.allSettled([
+			owner.client.issueRelations.add({
+				issueId: a,
+				relatedId: b,
+				kind: "blocks",
+			}),
+			owner.client.issueRelations.add({
+				issueId: b,
+				relatedId: a,
+				kind: "relates",
+			}),
+		]);
+		expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+		const failed = results.find((r) => r.status === "rejected");
+		expect(failed).toMatchObject({ reason: { code: "CONFLICT" } });
+		expect(await relationsOf(owner, a)).toHaveLength(1);
+
+		// Sequentially too: the message says how they're already related.
+		await expect(
+			owner.client.issueRelations.add({
+				issueId: b,
+				relatedId: a,
+				kind: "relates",
+			}),
+		).rejects.toMatchObject({
+			code: "CONFLICT",
+			message: expect.stringContaining(a),
+		});
+	});
+
+	test("removing a relation to an item the caller can't read is not found", async () => {
+		const visible = await createIssue(owner, WORKSPACE, BETA, "Rm visible");
+		const secret = await createIssue(owner, WORKSPACE, SECRET, "Rm secret");
+		await owner.client.issueRelations.add({
+			issueId: visible,
+			relatedId: secret,
+			kind: "relates",
+		});
+		const [relation] = await relationsOf(owner, visible);
+		if (!relation) throw new Error("Expected a relation");
+		await expectCode(
+			betaOnly.client.issueRelations.remove({
+				issueId: visible,
+				id: relation.id,
+			}),
+			"NOT_FOUND",
+		);
+		expect(await relationsOf(owner, visible)).toHaveLength(1);
+	});
+
+	test("the related item's id only shows in history to people who can read it", async () => {
+		const visible = await createIssue(owner, WORKSPACE, BETA, "Hist visible");
+		const secret = await createIssue(owner, WORKSPACE, SECRET, "Hist secret");
+		await owner.client.issueRelations.add({
+			issueId: visible,
+			relatedId: secret,
+			kind: "relates",
+		});
+		await Bun.sleep(30);
+
+		const entry = (user: User) =>
+			user.client.activity
+				.findForIssue({ issueId: visible })
+				.then((rows) =>
+					rows.find((row) => row.action === "issue.relation_added"),
+				);
+		expect((await entry(owner))?.relatedId).toBe(secret);
+		expect((await entry(betaOnly))?.relatedId).toBeNull();
+
+		const feedEntry = async (user: User) => {
+			const { events } = await user.client.activity.findWorkspace({
+				workspaceId: WORKSPACE,
+			});
+			return events.find(
+				(event) =>
+					event.type === "issue.relation_added" && event.issue?.id === visible,
+			);
+		};
+		expect((await feedEntry(owner))?.details.relatedId).toBe(secret);
+		const hidden = await feedEntry(betaOnly);
+		expect(hidden).toBeDefined();
+		expect(hidden?.details.relatedId).toBeNull();
 	});
 });

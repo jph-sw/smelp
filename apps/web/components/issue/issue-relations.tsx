@@ -40,10 +40,13 @@ const KIND_LABELS: { value: Kind; label: string }[] = [
 function AddRelation({
 	issueId,
 	workspaceId,
+	relatedIds,
 	onAdded,
 }: {
 	issueId: string;
 	workspaceId: string;
+	/** Items already related to this one: a pair can only have one relation. */
+	relatedIds: ReadonlySet<string>;
 	onAdded: () => Promise<unknown>;
 }) {
 	const [kind, setKind] = useState<Kind>("relates");
@@ -64,7 +67,10 @@ function AddRelation({
 	});
 
 	const candidates = (results ?? []).filter(
-		(result) => result.id !== issueId && !result.projectArchived,
+		(result) =>
+			result.id !== issueId &&
+			!relatedIds.has(result.id) &&
+			!result.projectArchived,
 	);
 
 	return (
@@ -212,6 +218,7 @@ export function IssueRelations({
 				<AddRelation
 					issueId={issueId}
 					workspaceId={workspaceId}
+					relatedIds={new Set(relations.map((relation) => relation.issue.id))}
 					onAdded={refresh}
 				/>
 			)}

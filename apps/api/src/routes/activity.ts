@@ -9,7 +9,7 @@ const sql = new DB().sqlite;
 export const findIssueActivity = base
 	.input(v.object({ issueId: v.string() }))
 	.handler(async ({ input, context }) => {
-		await requireSession(context.headers);
+		const session = await requireSession(context.headers);
 
 		const issue = (
 			await sql`SELECT projectId FROM issue WHERE id = ${input.issueId}`
@@ -30,7 +30,14 @@ export const findIssueActivity = base
 				activity_logs.oldValue,
 				activity_logs.newValue,
 				activity_logs.createdAt,
-				json_extract(activity_logs.metadata, '$.relatedId') AS relatedId,
+				-- The related item's id only shows to people who can read its project.
+				CASE WHEN EXISTS (
+					SELECT 1 FROM issue ri
+					JOIN project rp ON rp.id = ri.projectId
+					JOIN auth_space_member rm ON rm.spaceId = rp.spaceId
+					WHERE ri.id = json_extract(activity_logs.metadata, '$.relatedId')
+						AND rm.userId = ${session.userId}
+				) THEN json_extract(activity_logs.metadata, '$.relatedId') END AS relatedId,
 				auth_user.displayName AS actorName
 			FROM activity_logs
 			LEFT JOIN auth_user ON auth_user.id = activity_logs.actorId
