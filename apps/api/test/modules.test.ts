@@ -545,3 +545,41 @@ describe("archived projects", () => {
 		}
 	});
 });
+
+describe("modules next to cycles", () => {
+	test("an item keeps its cycle when its module changes, and the other way round", async () => {
+		const mod = await admin.client.modules.create({
+			projectId: PROJECT,
+			name: "With a cycle",
+		});
+		const cycle = await admin.client.cycles.create({
+			projectId: PROJECT,
+			name: "Cycle beside a module",
+			startDate: "2030-01-01",
+			endDate: "2030-01-14",
+		});
+		const item = await member.client.issue.create(newIssue("Both"));
+		await member.client.issue.update({ id: item.id, cycleId: cycle.id });
+		const withModule = await member.client.issue.update({
+			id: item.id,
+			moduleId: mod?.id,
+		});
+		expect(withModule.cycleId).toBe(cycle.id);
+		expect(withModule.moduleId).toBe(mod?.id ?? "");
+
+		const noCycle = await member.client.issue.update({
+			id: item.id,
+			cycleId: null,
+		});
+		expect(noCycle.cycleId).toBeNull();
+		expect(noCycle.moduleId).toBe(mod?.id ?? "");
+
+		// Each guard checks its own reference.
+		await expectCode(
+			member.client.issue.update({ id: item.id, cycleId: "missing" }),
+			"BAD_REQUEST",
+		);
+		const unchanged = await member.client.issue.find({ issueId: item.id });
+		expect(unchanged.moduleId).toBe(mod?.id ?? "");
+	});
+});

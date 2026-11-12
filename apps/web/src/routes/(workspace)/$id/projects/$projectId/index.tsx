@@ -9,6 +9,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import {
 	BoardFilterBar,
 	type BoardFilters,
+	NO_CYCLE,
 	NO_MODULE,
 	UNASSIGNED,
 } from "#/components/kanban/board-filters";
@@ -18,6 +19,7 @@ import { ArchivedBanner } from "#/components/project/archived-banner";
 import { IssueList } from "#/components/project/issue-list";
 import { ProjectHeader } from "#/components/project/project-header";
 import { usePageTitle } from "#/hooks/use-page-title";
+import { cyclesQueryOptions, invalidateCycles } from "#/lib/data/cycle";
 import { issuesQueryOptions, updateIssue } from "#/lib/data/issue";
 import { moduleQueryKeys, modulesQueryOptions } from "#/lib/data/module";
 import { projectQueryOptions } from "#/lib/data/project";
@@ -43,6 +45,7 @@ export const Route = createFileRoute("/(workspace)/$id/projects/$projectId/")({
 		assignee: asString(search.assignee),
 		state: asString(search.state),
 		module: asString(search.module),
+		cycle: asString(search.cycle),
 		view: search.view === "list" ? "list" : undefined,
 	}),
 	loader: async ({ context: { queryClient }, params: { projectId } }) => {
@@ -51,6 +54,7 @@ export const Route = createFileRoute("/(workspace)/$id/projects/$projectId/")({
 			queryClient.ensureQueryData(issuesQueryOptions({ projectId })),
 			queryClient.ensureQueryData(projectMembersQueryOptions({ projectId })),
 			queryClient.ensureQueryData(modulesQueryOptions({ projectId })),
+			queryClient.ensureQueryData(cyclesQueryOptions({ projectId })),
 		]);
 	},
 });
@@ -66,6 +70,11 @@ function matchesFilters(issue: tables["issue"], filters: BoardFilters) {
 	if (filters.assignee === UNASSIGNED) {
 		if (issue.assignee) return false;
 	} else if (filters.assignee && issue.assignee !== filters.assignee) {
+		return false;
+	}
+	if (filters.cycle === NO_CYCLE) {
+		if (issue.cycleId) return false;
+	} else if (filters.cycle && issue.cycleId !== filters.cycle) {
 		return false;
 	}
 	if (filters.module === NO_MODULE) {
@@ -93,6 +102,7 @@ function RouteComponent() {
 	const { data: modules } = useSuspenseQuery(
 		modulesQueryOptions({ projectId }),
 	);
+	const { data: cycles } = useSuspenseQuery(cyclesQueryOptions({ projectId }));
 
 	const isArchived = project.archivedAt !== null;
 	// Guests can look but not move cards, and nobody moves them while archived.
@@ -120,12 +130,14 @@ function RouteComponent() {
 
 			return { previousIssues };
 		},
+		// Progress of cycles and modules follows the state of their items.
 		onSettled: () =>
-			Promise.all(
-				moduleQueryKeys(projectId).map((queryKey) =>
+			Promise.all([
+				invalidateCycles(queryClient, projectId),
+				...moduleQueryKeys(projectId).map((queryKey) =>
 					queryClient.invalidateQueries({ queryKey }),
 				),
-			),
+			]),
 		onError: (error, _variables, context) => {
 			toastError(error, "Couldn't move the work item. Please try again.");
 			if (context?.previousIssues) {
@@ -144,7 +156,11 @@ function RouteComponent() {
 		visibleStates.some((state) => state.id === issue.state),
 	).length;
 	const isFiltered = Boolean(
-		filters.q || filters.assignee || filters.state || filters.module,
+		filters.q ||
+			filters.assignee ||
+			filters.state ||
+			filters.cycle ||
+			filters.module,
 	);
 
 	return (
@@ -163,6 +179,7 @@ function RouteComponent() {
 				members={members}
 				states={states}
 				modules={modules}
+				cycles={cycles}
 			/>
 			{isFiltered && shownCount === 0 && (
 				<p className="px-4 pt-3 text-sm text-muted-foreground">

@@ -34,6 +34,14 @@ import {
 	updateComment,
 } from "./routes/comment";
 import {
+	createCycle,
+	deleteCycle,
+	findCycle,
+	findCycles,
+	moveUnfinishedToCycle,
+	updateCycle,
+} from "./routes/cycle";
+import {
 	createPasswordReset,
 	findInstanceStatus,
 	findInstanceUsers,
@@ -229,6 +237,14 @@ export const router = {
 	},
 	states: {
 		find: findStates,
+	},
+	cycles: {
+		find: findCycles,
+		findOne: findCycle,
+		create: createCycle,
+		update: updateCycle,
+		delete: deleteCycle,
+		moveUnfinished: moveUnfinishedToCycle,
 	},
 	state: {
 		create: createState,

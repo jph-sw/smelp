@@ -7,6 +7,7 @@ export type issue = {
 	type: string;
 	parentId: string | null;
 	moduleId: string | null;
+	cycleId: string | null;
 	workspaceId: string;
 	projectId: string;
 	createdAt: number;
