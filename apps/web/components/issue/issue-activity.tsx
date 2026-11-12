@@ -58,6 +58,11 @@ function describeActivity(
 				? `assigned this to ${memberName(entry.newValue)}`
 				: `unassigned ${memberName(entry.oldValue)}`;
 		case "issue.updated":
+			if (entry.field === "parent") {
+				return entry.newValue
+					? `made this a sub-item of ${entry.newValue}`
+					: "made this a top-level item";
+			}
 			return entry.field === "title"
 				? `renamed this to "${entry.newValue}"`
 				: "edited the description";

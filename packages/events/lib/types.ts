@@ -48,7 +48,7 @@ export type DomainEvent =
 	| Event<
 			"issue.updated",
 			IssueRef & {
-				field: "title" | "description";
+				field: "title" | "description" | "parent";
 				oldValue: string | null;
 				newValue: string | null;
 			}

@@ -55,6 +55,7 @@ export const updateIssue = (input: {
 	title?: string;
 	description?: string;
 	assignee?: string | null;
+	parentId?: string | null;
 }) => orpc.issue.update(input);
 
 export const deleteIssue = ({ id }: { id: string }) =>
