@@ -91,6 +91,24 @@ Email turns on when `SMTP_HOST`, `SMTP_FROM` and `APP_URL` are all set. Invites 
 
 To check your settings, use **Send test email** at `/ceo`. Self-signed certificates on mail servers are rejected.
 
+### Sign in with OpenID Connect
+
+One OpenID Connect provider (Google, GitLab, Authentik, Keycloak and so on) can be added next to passwords. It turns on when `OIDC_ISSUER_URL`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET` and `APP_URL` are all set, and the sign-in and sign-up pages then show a button. Without them, nothing changes.
+
+| Setting | What it does |
+| --- | --- |
+| `OIDC_ISSUER_URL` | The provider's issuer address. smelp reads `/.well-known/openid-configuration` from it. It must be `https://`, except on this machine. |
+| `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET` | The client you registered with the provider |
+| `APP_URL` | Public address of this install, shared with email |
+| `OIDC_BUTTON_LABEL` | Text of the button. Defaults to `Sign in with SSO`. |
+
+Register `APP_URL/api/auth/oidc/callback` as the redirect URI with your provider. smelp asks for the `openid email profile` scopes and uses the authorization code flow with PKCE.
+
+- **Existing accounts:** a sign-in is linked to an account when the provider reports a verified email (`email_verified` set to `true`) that matches exactly one account. An unverified email never links. After that the account is matched by the provider's own id, so a changed email doesn't matter. Signing in this way ends the account's other sessions, and the password keeps working.
+- **New accounts:** they follow the same rule as sign-up. A person with no account gets one only if public sign-up is open at `/ceo`, or if they came through an invite link. The first account on a new install becomes the admin. Otherwise they see a message saying sign-ups are closed.
+- **Unlinking:** the account settings show the linked provider. It can be unlinked only by someone who also has a password.
+- Changing `OIDC_ISSUER_URL` to a different provider starts fresh. Existing links to the old one stop matching, and their owners can sign in by email again.
+
 ## Backup
 
 Your data is a SQLite database, which includes photos, and a folder of attached files (`/data/attachments`), both on the `smelp-data` Docker volume. This is safe while smelp is running:
