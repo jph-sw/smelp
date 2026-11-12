@@ -70,6 +70,25 @@ async function requireValidParent(
 	}
 }
 
+async function requireModuleInProject(moduleId: string, projectId: string) {
+	const found = (
+		await sql`SELECT id FROM module WHERE id = ${moduleId} AND projectId = ${projectId}`
+	)[0];
+	if (!found) {
+		throw new ORPCError("BAD_REQUEST", {
+			message: "The module must belong to this project",
+		});
+	}
+}
+
+async function moduleName(moduleId: string | null) {
+	if (!moduleId) return null;
+	const found = (
+		await sql`SELECT name FROM module WHERE id = ${moduleId}`
+	)[0] as Pick<tables["module"], "name"> | undefined;
+	return found?.name ?? null;
+}
+
 // An empty id would be stored as-is and skip the checks that guard real ones.
 const NonEmpty = v.pipe(v.string(), v.minLength(1));
 const Title = v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(120));
@@ -131,6 +150,7 @@ export const updateIssue = base
 			description: v.optional(Description),
 			assignee: v.optional(v.nullable(NonEmpty)),
 			parentId: v.optional(v.nullable(NonEmpty)),
+			moduleId: v.optional(v.nullable(NonEmpty)),
 		}),
 	)
 	.handler(async ({ input, context }) => {
@@ -155,6 +175,8 @@ export const updateIssue = base
 				input.assignee === undefined ? oldIssue.assignee : input.assignee,
 			parentId:
 				input.parentId === undefined ? oldIssue.parentId : input.parentId,
+			moduleId:
+				input.moduleId === undefined ? oldIssue.moduleId : input.moduleId,
 		};
 
 		const stateChanged = next.state !== oldIssue.state;
@@ -162,13 +184,15 @@ export const updateIssue = base
 		const descriptionChanged = next.description !== oldIssue.description;
 		const assigneeChanged = next.assignee !== oldIssue.assignee;
 		const parentChanged = next.parentId !== oldIssue.parentId;
+		const moduleChanged = next.moduleId !== oldIssue.moduleId;
 
 		if (
 			!stateChanged &&
 			!titleChanged &&
 			!descriptionChanged &&
 			!assigneeChanged &&
-			!parentChanged
+			!parentChanged &&
+			!moduleChanged
 		) {
 			return oldIssue;
 		}
@@ -181,12 +205,18 @@ export const updateIssue = base
 			await requireValidParent(next.parentId, project.id, oldIssue.id);
 		}
 
+		if (moduleChanged && next.moduleId) {
+			await requireModuleInProject(next.moduleId, project.id);
+		}
+
 		// The parent checks run again inside this one statement, so a concurrent move or
 		// delete can't slip in between the checks above and the write: the new parent must
 		// still exist in this project and must not have this item among its ancestors.
 		// Only a real parent change is written and checked, so an item whose parent is gone
 		// can still be edited, and an unrelated edit never fails over its parent.
+		// The module is checked the same way: it must still exist in this project.
 		const setParent = parentChanged ? 1 : 0;
+		const setModule = moduleChanged ? 1 : 0;
 		const written = await sql`
 			UPDATE issue SET
 				state = ${next.state},
@@ -194,9 +224,18 @@ export const updateIssue = base
 				description = ${next.description},
 				assignee = ${next.assignee},
 				parentId = CASE WHEN ${setParent} = 1 THEN ${next.parentId} ELSE parentId END,
+				moduleId = CASE WHEN ${setModule} = 1 THEN ${next.moduleId} ELSE moduleId END,
 				updatedAt = ${Date.now()},
 				updatedBy = ${session.userId}
 			WHERE id = ${input.id}
+				AND (
+					${setModule} = 0
+					OR ${next.moduleId} IS NULL
+					OR EXISTS (
+						SELECT 1 FROM module
+						WHERE module.id = ${next.moduleId} AND module.projectId = ${project.id}
+					)
+				)
 				AND (
 					${setParent} = 0
 					OR ${next.parentId} IS NULL
@@ -222,6 +261,16 @@ export const updateIssue = base
 		if (written.length === 0) {
 			const stillThere = await sql`SELECT id FROM issue WHERE id = ${input.id}`;
 			if (stillThere.length === 0) throw new ORPCError("NOT_FOUND");
+			if (moduleChanged && next.moduleId) {
+				const moduleStillThere = await sql`
+					SELECT id FROM module WHERE id = ${next.moduleId} AND projectId = ${project.id}
+				`;
+				if (moduleStillThere.length === 0) {
+					throw new ORPCError("BAD_REQUEST", {
+						message: "The module must belong to this project",
+					});
+				}
+			}
 			throw new ORPCError("BAD_REQUEST", {
 				message:
 					"The parent must be a work item in the same project, and not below this one",
@@ -301,6 +350,20 @@ export const updateIssue = base
 					field: "parent",
 					oldValue: oldIssue.parentId,
 					newValue: issue.parentId,
+				},
+			});
+		}
+
+		if (moduleChanged) {
+			// Logs the module's name, so the entry still reads well after it is deleted.
+			eventBus.emit({
+				...event,
+				type: "issue.updated",
+				payload: {
+					...ref,
+					field: "module",
+					oldValue: await moduleName(oldIssue.moduleId),
+					newValue: await moduleName(issue.moduleId),
 				},
 			});
 		}
@@ -407,6 +470,7 @@ export const createIssue = base
 			description: input.description,
 			type: input.type,
 			parentId: input.parentId || null,
+			moduleId: null,
 			workspaceId: project.workspaceId,
 			projectId: project.id,
 			createdAt: Date.now(),

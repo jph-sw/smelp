@@ -19,7 +19,7 @@ const LEGACY_ACTIONS: Record<string, string> = {
 };
 
 // issue.updated fields whose new value is short enough to show in the feed.
-const FIELDS_WITH_VALUE = new Set(["title", "parent"]);
+const FIELDS_WITH_VALUE = new Set(["title", "parent", "module"]);
 
 type FeedRow = Pick<
 	tables["activity_logs"],
@@ -129,6 +129,7 @@ function toFeedEvent(row: FeedRow, canSeeInviteEmails: boolean): FeedEvent {
 		case "issue.updated":
 			details = {
 				field: row.field,
+				from: row.field === "module" ? row.oldValue : null,
 				to: row.field && FIELDS_WITH_VALUE.has(row.field) ? row.newValue : null,
 			};
 			break;
@@ -176,6 +177,17 @@ function toFeedEvent(row: FeedRow, canSeeInviteEmails: boolean): FeedEvent {
 			break;
 		case "state.deleted":
 			details = { name: text("name"), movedToName: text("movedToName") };
+			break;
+		case "module.created":
+		case "module.deleted":
+			details = { name: text("name") };
+			break;
+		case "module.updated":
+			details = {
+				name: text("name"),
+				oldName: text("oldName"),
+				changes: list("changes"),
+			};
 			break;
 		case "project.member_added":
 		case "project.member_removed":

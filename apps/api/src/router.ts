@@ -55,6 +55,13 @@ import {
 import { findIssues, findMyIssues, searchIssues } from "./routes/issues";
 import { createLink, deleteLink, findLinks, updateLink } from "./routes/link";
 import {
+	createModule,
+	deleteModule,
+	findModule,
+	findModules,
+	updateModule,
+} from "./routes/module";
+import {
 	countUnreadNotifications,
 	findNotifications,
 	markAllNotificationsRead,
@@ -189,6 +196,13 @@ export const router = {
 		create: createLink,
 		update: updateLink,
 		delete: deleteLink,
+	},
+	modules: {
+		find: findModules,
+		get: findModule,
+		create: createModule,
+		update: updateModule,
+		delete: deleteModule,
 	},
 	comments: {
 		find: findComments,

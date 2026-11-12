@@ -21,6 +21,7 @@ type LinkChange = IssueRef & {
 type MemberRef = { userId: string; userName: string | null; role: string };
 
 export type ProjectChange = "name" | "description" | "icon" | "access";
+export type ModuleChange = "name" | "description" | "lead" | "targetDate";
 export type StateChange = "name" | "color" | "group" | "isDefault";
 
 export type DomainEvent =
@@ -48,7 +49,7 @@ export type DomainEvent =
 	| Event<
 			"issue.updated",
 			IssueRef & {
-				field: "title" | "description" | "parent";
+				field: "title" | "description" | "parent" | "module";
 				oldValue: string | null;
 				newValue: string | null;
 			}
@@ -145,6 +146,24 @@ export type DomainEvent =
 			}
 	  >
 	| Event<"state.reordered", { projectId: string; projectName: string }>
+	| Event<
+			"module.created",
+			{ projectId: string; projectName: string; name: string }
+	  >
+	| Event<
+			"module.updated",
+			{
+				projectId: string;
+				projectName: string;
+				name: string;
+				oldName: string;
+				changes: ModuleChange[];
+			}
+	  >
+	| Event<
+			"module.deleted",
+			{ projectId: string; projectName: string; name: string }
+	  >
 	| Event<"workspace.member_invited", { email: string | null; role: string }>
 	| Event<"workspace.member_joined", MemberRef>
 	| Event<
