@@ -180,18 +180,22 @@ export const updateIssue = base
 		// The parent checks run again inside this one statement, so a concurrent move or
 		// delete can't slip in between the checks above and the write: the new parent must
 		// still exist in this project and must not have this item among its ancestors.
+		// Only a real parent change is written and checked, so an item whose parent is gone
+		// can still be edited, and an unrelated edit never fails over its parent.
+		const setParent = parentChanged ? 1 : 0;
 		const written = await sql`
 			UPDATE issue SET
 				state = ${next.state},
 				title = ${next.title},
 				description = ${next.description},
 				assignee = ${next.assignee},
-				parentId = ${next.parentId},
+				parentId = CASE WHEN ${setParent} = 1 THEN ${next.parentId} ELSE parentId END,
 				updatedAt = ${Date.now()},
 				updatedBy = ${session.userId}
 			WHERE id = ${input.id}
 				AND (
-					${next.parentId} IS NULL
+					${setParent} = 0
+					OR ${next.parentId} IS NULL
 					OR (
 						EXISTS (
 							SELECT 1 FROM issue AS p
@@ -212,6 +216,8 @@ export const updateIssue = base
 			RETURNING id
 		`;
 		if (written.length === 0) {
+			const stillThere = await sql`SELECT id FROM issue WHERE id = ${input.id}`;
+			if (stillThere.length === 0) throw new ORPCError("NOT_FOUND");
 			throw new ORPCError("BAD_REQUEST", {
 				message:
 					"The parent must be a work item in the same project, and not below this one",

@@ -328,3 +328,23 @@ describe("sub-item hardening", () => {
 		]);
 	});
 });
+
+describe("an item whose parent is missing", () => {
+	test("can still be edited, and its parent can be cleared", async () => {
+		const item = await member.client.issue.create(newIssue("Orphan"));
+		await sql`UPDATE issue SET parentId = 'SUB-424242' WHERE id = ${item.id}`;
+
+		const renamed = await member.client.issue.update({
+			id: item.id,
+			title: "Orphan renamed",
+		});
+		expect(renamed.title).toBe("Orphan renamed");
+		expect(renamed.parentId).toBe("SUB-424242");
+
+		const cleared = await member.client.issue.update({
+			id: item.id,
+			parentId: null,
+		});
+		expect(cleared.parentId).toBeNull();
+	});
+});
