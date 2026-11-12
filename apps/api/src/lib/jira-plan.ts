@@ -73,6 +73,8 @@ export type DryRunProject = {
 	name: string;
 	access: "public" | "private";
 	idProblem: IdProblem | null;
+	/** Imported into this workspace before, so it's left out by default. */
+	alreadyImported: boolean;
 	states: string[];
 	workItems: number;
 	subItems: number;
@@ -748,6 +750,7 @@ export function buildPlan(
 			name: p.name,
 			access: p.access,
 			idProblem: problemOf(p),
+			alreadyImported: p.imported,
 			states: write ? write.states.map((s) => s.name) : [],
 			workItems: write?.issues.length ?? 0,
 			subItems: write?.issues.filter((i) => i.parentId).length ?? 0,

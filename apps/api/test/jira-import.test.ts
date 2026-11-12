@@ -345,6 +345,7 @@ describe("jira import: dry run", () => {
 			name: "Zephyr Alpha",
 			include: true,
 			idProblem: null,
+			alreadyImported: false,
 			workItems: 5,
 			subItems: 1,
 			comments: 3,
@@ -742,6 +743,8 @@ describe("jira import: apply", () => {
 			csv: mainExport(),
 		});
 		expect(plan.projects.every((p) => !p.include)).toBe(true);
+		// Each one says why it's left out.
+		expect(plan.projects.every((p) => p.alreadyImported)).toBe(true);
 		expect(plan.errors.join(" ")).toContain("Select at least one project");
 
 		const forced = await admin.client.jiraImport.preview({
