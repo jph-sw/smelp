@@ -58,7 +58,7 @@ export function CreateProjectForm({
 					access: value.access as "public" | "private",
 					workspaceId: workspace.id,
 				});
-				toast.add({
+				toast({
 					type: "success",
 					description: `Project "${res.name}" created.`,
 				});

@@ -44,7 +44,7 @@ export function ModuleDialog({
 	projectId: string;
 	members: ProjectMember[];
 	existing?: EditableModule;
-	trigger: ReactElement;
+	trigger: ReactElement<Record<string, unknown>>;
 	onSaved?: (moduleId: string) => void;
 }) {
 	const queryClient = useQueryClient();

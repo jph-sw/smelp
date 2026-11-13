@@ -55,12 +55,12 @@ function RouteComponent() {
 			// A module's lead who was just removed no longer shows as the lead.
 			await queryClient.invalidateQueries({ queryKey: ["modules", projectId] });
 			await queryClient.invalidateQueries({ queryKey: ["module"] });
-			toast.add({
+			toast({
 				type: "success",
 				description: `Removed ${member.fullName} from the project.`,
 			});
 		} catch {
-			toast.add({
+			toast({
 				type: "error",
 				description: "Failed to remove member.",
 			});

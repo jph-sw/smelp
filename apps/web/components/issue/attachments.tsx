@@ -75,7 +75,7 @@ function AttachButton({
 		onSettled: onUploaded,
 		onError: (error) => {
 			if (error instanceof AttachmentUploadError) {
-				toast.add({ type: "error", description: error.message });
+				toast({ type: "error", description: error.message });
 			} else {
 				toastError(error);
 			}
@@ -97,7 +97,7 @@ function AttachButton({
 					const maxBytes = limits?.maxBytes ?? Number.POSITIVE_INFINITY;
 					const allowed = files.filter((file) => file.size <= maxBytes);
 					for (const file of files.filter((file) => file.size > maxBytes)) {
-						toast.add({
+						toast({
 							type: "error",
 							description: `${file.name} is too large. The limit is ${formatBytes(maxBytes)}.`,
 						});

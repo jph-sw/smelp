@@ -1,4 +1,3 @@
-import { useId } from "react";
 import { Input } from "#/components/ui/input";
 import { useFieldContext } from "#/hooks/form-context";
 import { Field, FieldError, FieldLabel } from "../ui/field";
@@ -18,15 +17,13 @@ export default function TextField({
 	disabled?: boolean;
 	className?: React.ComponentProps<"input">["className"];
 }) {
-	const id = useId();
 	const field = useFieldContext<string>();
 	const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
 
 	return (
-		<Field className={className}>
-			<FieldLabel htmlFor={id}>{label}</FieldLabel>
+		<Field className={className} invalid={isInvalid}>
+			<FieldLabel>{label}</FieldLabel>
 			<Input
-				id={id}
 				name={field.name}
 				value={field.state.value}
 				type={type}
@@ -35,7 +32,6 @@ export default function TextField({
 				onBlur={field.handleBlur}
 				readOnly={readOnly}
 				disabled={disabled}
-				aria-invalid={isInvalid}
 			/>
 			{isInvalid && <FieldError errors={field.state.meta.errors} />}
 		</Field>

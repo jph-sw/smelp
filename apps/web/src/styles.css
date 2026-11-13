@@ -1,7 +1,9 @@
 /* biome-ignore-all lint/complexity/noImportantStyles: reduced-motion overrides must beat utility classes */
+/* ui-sdk's layer goes after Tailwind's preflight, which would otherwise reset its
+   borders and backgrounds, and under the utilities, so page classes still win. */
+@layer theme, base, ui-sdk, components, utilities;
 @import "tailwindcss";
-@import "tw-animate-css";
-@import "shadcn/tailwind.css";
+@import "@ui-sdk/core/web.css";
 @import "@fontsource-variable/figtree";
 
 @custom-variant dark (&:is(.dark *));
@@ -122,6 +124,76 @@
   --sidebar-ring: oklch(0.56 0.021 213.5);
 }
 
+/* ui-sdk's tokens follow the app's theme, including the .dark class, instead of
+   the system setting. The look itself is minimal for now. */
+:root {
+  color-scheme: light;
+  --ui-background: var(--background);
+  --ui-foreground: var(--foreground);
+  --ui-muted: var(--muted);
+  --ui-muted-foreground: var(--muted-foreground);
+  --ui-border: var(--border);
+  --ui-input: var(--input);
+  --ui-primary: var(--primary);
+  --ui-primary-foreground: var(--primary-foreground);
+  --ui-destructive: var(--destructive);
+  --ui-ring: color-mix(in oklab, var(--ring) 40%, transparent);
+  --ui-ring-border: var(--ring);
+  --ui-radius: 0.375rem;
+  --ui-font-sans: var(--font-sans);
+}
+
+@layer components {
+  /* web.css underlines every link; here links are mostly navigation, styled per page. */
+  a:not([data-slot]) {
+    color: inherit;
+    text-decoration: inherit;
+  }
+  a[data-slot] {
+    text-decoration: none;
+  }
+  [data-slot="button"][data-variant="ghost"],
+  [data-slot="button"][data-variant="link"] {
+    border-color: transparent;
+    background: transparent;
+  }
+  [data-slot="button"][data-variant="link"] {
+    height: auto;
+    padding-inline: 0;
+    text-underline-offset: 4px;
+    &:hover {
+      background: transparent;
+      text-decoration: underline;
+    }
+  }
+  [data-slot="button"][data-size="sm"] {
+    height: calc(var(--ui-spacing) * 7);
+    padding-inline: calc(var(--ui-spacing) * 2);
+  }
+  [data-slot="button"][data-size="lg"] {
+    height: calc(var(--ui-spacing) * 9);
+  }
+  [data-slot="button"]:is(
+      [data-size="icon"],
+      [data-size="icon-sm"],
+      [data-size="icon-lg"]
+    ) {
+    aspect-ratio: 1;
+    padding-inline: 0;
+  }
+  [data-slot="button"][data-size="icon-sm"] {
+    height: calc(var(--ui-spacing) * 7);
+  }
+  [data-slot="button"][data-size="icon-lg"] {
+    height: calc(var(--ui-spacing) * 9);
+  }
+  [data-slot="button"] svg:not([class*="size-"]) {
+    width: 1rem;
+    height: 1rem;
+    flex-shrink: 0;
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -185,22 +257,11 @@
 
 /* Reduced motion keeps fades and color changes but removes movement. */
 @media (prefers-reduced-motion: reduce) {
-  [data-slot] {
-    --tw-enter-scale: 1 !important;
-    --tw-enter-translate-x: 0 !important;
-    --tw-enter-translate-y: 0 !important;
-    --tw-exit-scale: 1 !important;
-    --tw-exit-translate-x: 0 !important;
-    --tw-exit-translate-y: 0 !important;
-  }
-  [data-slot="button"]:active {
-    scale: none !important;
-  }
   [data-slot="toast"],
-  [data-slot="sheet-content"] {
+  [data-slot="drawer-content"] {
     transition-property: opacity !important;
   }
-  [data-slot="collapsible-content"] {
+  [data-slot="collapsible-panel"] {
     transition: none !important;
   }
 }

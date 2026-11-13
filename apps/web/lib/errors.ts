@@ -8,10 +8,10 @@ export function toastError(
 	fallback = "Something went wrong. Please try again.",
 ) {
 	if (error instanceof ORPCError) {
-		toast.add({ type: "error", description: error.message });
+		toast({ type: "error", description: error.message });
 		return;
 	}
 
 	console.error(error);
-	toast.add({ type: "error", description: fallback });
+	toast({ type: "error", description: fallback });
 }

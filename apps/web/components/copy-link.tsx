@@ -15,9 +15,9 @@ export function CopyLink({
 	const copy = async () => {
 		try {
 			await navigator.clipboard.writeText(link);
-			toast.add({ type: "success", description: "Link copied." });
+			toast({ type: "success", description: "Link copied." });
 		} catch {
-			toast.add({
+			toast({
 				type: "error",
 				description: "Couldn't copy the link. Select it and copy it yourself.",
 			});

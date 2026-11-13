@@ -56,7 +56,7 @@ function RouteComponent() {
 		onSubmit: async ({ value }) => {
 			try {
 				await orpc.auth.resetPassword({ token, newPassword: value.password });
-				toast.add({
+				toast({
 					type: "success",
 					description: "Password changed. Sign in with your new password.",
 				});

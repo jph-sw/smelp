@@ -122,7 +122,7 @@ function RouteComponent() {
 	const { mutate: remove, isPending: isDeleting } = useMutation({
 		mutationFn: deleteModule,
 		onSuccess: async () => {
-			toast.add({ type: "success", description: `Deleted ${found.name}.` });
+			toast({ type: "success", description: `Deleted ${found.name}.` });
 			await navigate({
 				to: "/$id/projects/$projectId/modules",
 				params: { id: workspaceId, projectId },

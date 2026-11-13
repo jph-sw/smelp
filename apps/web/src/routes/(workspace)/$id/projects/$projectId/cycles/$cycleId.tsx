@@ -113,7 +113,7 @@ function MoveUnfinished({
 		mutationFn: moveUnfinishedToCycle,
 		onSuccess: async ({ moved }) => {
 			const targetName = others.find((other) => other.id === target)?.name;
-			toast.add({
+			toast({
 				type: "success",
 				description: `Moved ${moved} work ${moved === 1 ? "item" : "items"} to ${targetName}.`,
 			});
@@ -198,7 +198,7 @@ function RouteComponent() {
 	const { mutate: remove, isPending: isDeleting } = useMutation({
 		mutationFn: deleteCycle,
 		onSuccess: async () => {
-			toast.add({ type: "success", description: `Deleted ${cycle.name}.` });
+			toast({ type: "success", description: `Deleted ${cycle.name}.` });
 			// Leave first: while this page is open, refreshing the cycle would ask
 			// for one that no longer exists.
 			await navigate({

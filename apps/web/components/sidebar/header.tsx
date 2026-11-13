@@ -183,7 +183,7 @@ export function SiteHeader({
 							</DropdownMenuGroup>
 							<DropdownMenuSeparator />
 							<DropdownMenuGroup>
-								<DropdownMenuItem onClick={handleSignOut}>
+								<DropdownMenuItem onSelect={handleSignOut}>
 									Sign Out
 								</DropdownMenuItem>
 							</DropdownMenuGroup>

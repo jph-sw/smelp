@@ -83,7 +83,7 @@ function RouteComponent() {
 	// Where linking a provider ends up. Said once, then taken out of the address.
 	useEffect(() => {
 		if (!oidc) return;
-		toast.add({
+		toast({
 			type: oidc === "linked" ? "success" : "error",
 			description: Object.hasOwn(OIDC_LINK_MESSAGES, oidc)
 				? OIDC_LINK_MESSAGES[oidc]
@@ -102,7 +102,7 @@ function RouteComponent() {
 					newPassword: value.password,
 				});
 				formApi.reset();
-				toast.add({
+				toast({
 					type: "success",
 					description: "Password changed. Your other devices were signed out.",
 				});
@@ -209,7 +209,7 @@ function SetPasswordCard() {
 				await queryClient.invalidateQueries({
 					queryKey: linkedAccountsQueryOptions.queryKey,
 				});
-				toast.add({ type: "success", description: "Password set." });
+				toast({ type: "success", description: "Password set." });
 			} catch (e) {
 				toastError(e);
 			}
@@ -295,7 +295,7 @@ function SignInMethodsCard({
 			await queryClient.invalidateQueries({
 				queryKey: linkedAccountsQueryOptions.queryKey,
 			});
-			toast.add({ type: "success", description: "Provider unlinked." });
+			toast({ type: "success", description: "Provider unlinked." });
 		} catch (e) {
 			toastError(e);
 		} finally {
@@ -368,7 +368,7 @@ function ProfileCard({ user }: { user: AuthUser }) {
 				// Shows the names as saved, without any spaces the server trimmed.
 				formApi.reset(profile);
 				await refresh();
-				toast.add({ type: "success", description: "Profile saved." });
+				toast({ type: "success", description: "Profile saved." });
 			} catch (e) {
 				toastError(e);
 			}
@@ -382,7 +382,7 @@ function ProfileCard({ user }: { user: AuthUser }) {
 			await refresh();
 		} catch (e) {
 			if (e instanceof AvatarFileError) {
-				toast.add({ type: "error", description: e.message });
+				toast({ type: "error", description: e.message });
 			} else {
 				toastError(e);
 			}

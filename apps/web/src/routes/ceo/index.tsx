@@ -67,7 +67,7 @@ function RouteComponent() {
 	const { mutate: sendTest, isPending: isSendingTest } = useMutation({
 		mutationFn: sendTestEmail,
 		onSuccess: ({ to }) =>
-			toast.add({ type: "success", description: `Test email sent to ${to}.` }),
+			toast({ type: "success", description: `Test email sent to ${to}.` }),
 		onError: (e) => toastError(e),
 	});
 
@@ -80,7 +80,7 @@ function RouteComponent() {
 				emailed: emailDelivery === "sent",
 			});
 			if (emailDelivery === "failed") {
-				toast.add({
+				toast({
 					type: "error",
 					description:
 						"The reset email couldn't be sent. Copy the link instead.",

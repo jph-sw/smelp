@@ -19,9 +19,8 @@ import {
 	SidebarMenuItem,
 } from "#/components/ui/sidebar";
 import { unreadCountQueryOptions } from "#/lib/data/notifications";
-import { cn } from "#/lib/utils";
 import { openCreateIssueDialog } from "../issue/create-issue-dialog-store";
-import { buttonVariants } from "../ui/button";
+import { Button } from "../ui/button";
 import { NavProjects } from "./nav-projects";
 import { NavWorkspaces } from "./nav-workspaces";
 
@@ -64,7 +63,10 @@ export function AppSidebar({
 					<SidebarGroupContent>
 						<SidebarMenu>
 							<SidebarMenuItem>
-								<SidebarMenuButton
+								<Button
+									variant="outline"
+									size="lg"
+									className="mb-2 w-full"
 									disabled={!targetProject}
 									onClick={() =>
 										targetProject &&
@@ -74,14 +76,10 @@ export function AppSidebar({
 											projectName: targetProject.name,
 										})
 									}
-									className={cn(
-										buttonVariants({ variant: "outline", size: "lg" }),
-										"mb-2",
-									)}
 								>
 									<HugeiconsIcon icon={PlusSignIcon} />
 									New work item
-								</SidebarMenuButton>
+								</Button>
 							</SidebarMenuItem>
 							<SidebarMenuItem>
 								<SidebarMenuButton
