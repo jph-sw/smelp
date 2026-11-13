@@ -228,7 +228,7 @@ function RouteComponent() {
 		<div className="flex h-full min-h-0 w-full flex-col overflow-hidden">
 			<ProjectHeader workspaceId={workspaceId} projectId={issue.projectId} />
 
-			<div className="flex h-10 w-full shrink-0 items-center border-b px-4 sm:px-5">
+			<div className="flex h-10 w-full shrink-0 items-center border-b px-4 pointer-coarse:h-12 sm:px-5">
 				<Breadcrumb>
 					<BreadcrumbList>
 						<BreadcrumbItem>

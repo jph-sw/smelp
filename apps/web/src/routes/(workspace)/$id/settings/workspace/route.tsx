@@ -19,7 +19,7 @@ function RouteComponent() {
 	const { id: workspaceId } = Route.useParams();
 
 	return (
-		<div className="flex h-full w-full flex-col md:flex-row">
+		<div className="flex h-full w-full flex-col md:flex-row pointer-coarse:max-lg:flex-col">
 			<SettingsNav title="Workspace Settings">
 				<SettingsNavGroup label="General">
 					<Link
