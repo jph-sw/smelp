@@ -4,6 +4,7 @@ import { ErrorPage } from "#/components/error-page";
 import { SiteHeader } from "#/components/sidebar/header";
 import { AppSidebar } from "#/components/sidebar/sidebar";
 import { SidebarInset, SidebarProvider } from "#/components/ui/sidebar";
+import { VerifyEmailBanner } from "#/components/verify-email-banner";
 import { projectsQueryOptions } from "#/lib/data/project";
 import {
 	workspaceQueryOptions,
@@ -54,6 +55,7 @@ function RouteComponent() {
 	return (
 		<div className="h-dvh [--header-height:calc(--spacing(10))] pointer-coarse:[--header-height:calc(--spacing(14))]">
 			<SidebarProvider className="flex h-full min-h-0 flex-col">
+				<VerifyEmailBanner user={user} />
 				<SiteHeader workspace={workspace} workspaces={workspaces} user={user} />
 				<div className="flex flex-1 min-h-0 pr-[env(safe-area-inset-right)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)]">
 					<AppSidebar workspace={workspace} projects={projects} />

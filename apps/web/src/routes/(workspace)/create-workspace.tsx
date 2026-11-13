@@ -11,6 +11,7 @@ import {
 } from "#/components/ui/card";
 import { FieldGroup } from "#/components/ui/field";
 import { toast } from "#/components/ui/toast";
+import { VerifyEmailBanner } from "#/components/verify-email-banner";
 import { useAppForm } from "#/hooks/form";
 import { usePageTitle } from "#/hooks/use-page-title";
 import { workspacesQueryOptions } from "#/lib/data/workspace";
@@ -76,6 +77,11 @@ function RouteComponent() {
 							<CardTitle>Create your workspace</CardTitle>
 						</CardHeader>
 						<CardContent>
+							{user?.emailVerificationPending && (
+								<div className="mb-4 overflow-hidden rounded-lg">
+									<VerifyEmailBanner user={user} />
+								</div>
+							)}
 							<form
 								onSubmit={(e) => {
 									e.preventDefault();

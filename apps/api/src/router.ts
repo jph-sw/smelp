@@ -27,6 +27,10 @@ import { signIn } from "./routes/auth/signin";
 import { signOut } from "./routes/auth/signout";
 import { signUp } from "./routes/auth/signup";
 import {
+	resendEmailVerification,
+	verifyEmail,
+} from "./routes/auth/verify-email";
+import {
 	createComment,
 	deleteComment,
 	findComments,
@@ -46,6 +50,7 @@ import {
 	findInstanceStatus,
 	findInstanceUsers,
 	findInstanceVersion,
+	markEmailVerifiedByAdmin,
 	sendTestEmail,
 	updateInstance,
 } from "./routes/instance";
@@ -129,6 +134,7 @@ export const router = {
 		version: findInstanceVersion,
 		createPasswordReset,
 		sendTestEmail,
+		markEmailVerified: markEmailVerifiedByAdmin,
 	},
 	auth: {
 		signIn,
@@ -143,6 +149,8 @@ export const router = {
 		setAvatar,
 		removeAvatar,
 		updateNotificationPreferences,
+		verifyEmail,
+		resendEmailVerification,
 	},
 	workspace: {
 		find: findWorkspace,

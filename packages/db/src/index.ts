@@ -6,6 +6,7 @@ import type { activity_logs } from "../types/tables/activity";
 import type { attachment } from "../types/tables/attachment";
 import type {
 	auth_account,
+	auth_email_verification,
 	auth_password_reset,
 	auth_session,
 	auth_space,
@@ -163,6 +164,7 @@ export type tables = {
 	auth_space_member: auth_space_member;
 	auth_space_invite: auth_space_invite;
 	auth_password_reset: auth_password_reset;
+	auth_email_verification: auth_email_verification;
 	auth_user_avatar: auth_user_avatar;
 	activity_logs: activity_logs;
 	workspace: workspace;

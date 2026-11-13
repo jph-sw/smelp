@@ -15,6 +15,8 @@ export type auth_user = {
 	image: string | null;
 	/** 1 when they asked for notification emails; off (0) by default. */
 	notifyByEmail: number;
+	/** 0 until they confirm the address, for public sign-ups on an instance with email. */
+	emailVerified: number;
 	createdAt: number;
 	updatedAt: number;
 };
@@ -70,6 +72,16 @@ export type auth_password_reset = {
 	userId: string;
 	tokenHash: string;
 	createdByUserId: string | null;
+	createdAt: number;
+	expiresAt: number;
+	usedAt: number | null;
+};
+
+export type auth_email_verification = {
+	id: string;
+	userId: string;
+	email: string;
+	tokenHash: string;
 	createdAt: number;
 	expiresAt: number;
 	usedAt: number | null;

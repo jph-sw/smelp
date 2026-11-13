@@ -114,6 +114,7 @@ export class Auth {
 		fullName: string,
 		displayName: string,
 		password: string,
+		emailVerified = true,
 	) {
 		const now = Date.now();
 		const passwordHash = await Bun.password.hash(password, {
@@ -131,6 +132,7 @@ export class Auth {
 			role: "user",
 			image: null,
 			notifyByEmail: 0,
+			emailVerified: emailVerified ? 1 : 0,
 		};
 
 		const account: tables["auth_account"] = {

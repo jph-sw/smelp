@@ -17,6 +17,7 @@ import {
 	instanceStatusQueryOptions,
 	instanceUsersQueryOptions,
 	instanceVersionQueryOptions,
+	markEmailVerified,
 	sendTestEmail,
 	updateInstance,
 } from "#/lib/data/instance";
@@ -52,6 +53,15 @@ function RouteComponent() {
 			queryClient.invalidateQueries({
 				queryKey: instanceStatusQueryOptions.queryKey,
 			}),
+	});
+
+	const { mutate: verifyByHand, isPending: isVerifying } = useMutation({
+		mutationFn: markEmailVerified,
+		onSuccess: () =>
+			queryClient.invalidateQueries({
+				queryKey: instanceUsersQueryOptions.queryKey,
+			}),
+		onError: (e) => toastError(e),
 	});
 
 	const { mutate: sendTest, isPending: isSendingTest } = useMutation({
@@ -177,6 +187,23 @@ function RouteComponent() {
 						>
 							{user.role === "admin" ? "Instance admin" : "User"}
 						</span>
+						{user.emailVerified !== 1 && (
+							<>
+								<span className="shrink-0 text-xs text-muted-foreground">
+									Email not verified
+								</span>
+								<Button
+									variant="ghost"
+									size="sm"
+									className="shrink-0"
+									disabled={isVerifying}
+									aria-label={`Mark the email of ${user.displayName} as verified`}
+									onClick={() => verifyByHand({ userId: user.id })}
+								>
+									Mark verified
+								</Button>
+							</>
+						)}
 						<Button
 							variant="ghost"
 							size="sm"
