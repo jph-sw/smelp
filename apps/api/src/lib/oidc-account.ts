@@ -148,6 +148,8 @@ async function resolve(
 		role: "user",
 		image: null,
 		notifyByEmail: 0,
+		// The provider said the address is verified, or we'd have stopped above.
+		emailVerified: 1,
 	};
 	await tx`INSERT INTO auth_user ${tx(user)}`;
 	await tx`INSERT INTO auth_account ${tx(identityRow(userId, providerId, claims.sub))}`;

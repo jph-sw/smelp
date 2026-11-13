@@ -328,9 +328,15 @@ async function linkedUser(prefix: string) {
 
 const userByEmail = async (email: string) =>
 	(
-		await sql`SELECT id, displayName, fullName, role FROM auth_user WHERE email = ${email}`
+		await sql`SELECT id, displayName, fullName, role, emailVerified FROM auth_user WHERE email = ${email}`
 	)[0] as
-		| { id: string; displayName: string; fullName: string; role: string }
+		| {
+				id: string;
+				displayName: string;
+				fullName: string;
+				role: string;
+				emailVerified: number;
+		  }
 		| undefined;
 
 const identitiesOf = async (userId: string) =>
@@ -816,6 +822,8 @@ describe("new accounts", () => {
 			expect(user?.fullName).toBe("Opened Up");
 			expect(user?.displayName).toBe(scenario.preferred_username);
 			expect(user?.role).toBe("user");
+			// The provider verified the address, so email verification doesn't ask again.
+			expect(user?.emailVerified).toBe(1);
 			expect(await sessionUser(result.sessionToken)).toBe(user?.id);
 			expect(await identitiesOf(user?.id ?? "")).toEqual([
 				{ providerId: `oidc:${issuer}`, accountId: sub },
