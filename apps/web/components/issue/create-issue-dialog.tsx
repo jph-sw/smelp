@@ -17,10 +17,14 @@ export function CreateIssueDialog() {
 	return (
 		<Dialog
 			open={state.isOpen}
-			onOpenChange={(open) => {
+			onOpenChange={(open, details) => {
+				// A stray click outside shouldn't throw away a half-written work item.
+				if (!open && details.reason === "outside-press") {
+					details.cancel();
+					return;
+				}
 				if (!open) closeCreateIssueDialog();
 			}}
-			disablePointerDismissal
 		>
 			<DialogContent className="sm:max-w-2xl">
 				{state.isOpen && (

@@ -55,7 +55,7 @@ function RouteComponent() {
 		try {
 			await deleteWorkspace({ workspaceId });
 			await queryClient.invalidateQueries({ queryKey: ["workspaces"] });
-			toast.add({
+			toast({
 				type: "success",
 				description: "Workspace deleted.",
 			});
@@ -84,7 +84,7 @@ function RouteComponent() {
 					}),
 					queryClient.invalidateQueries({ queryKey: ["workspaces"] }),
 				]);
-				toast.add({
+				toast({
 					type: "success",
 					description: "Workspace updated.",
 				});

@@ -3,6 +3,9 @@
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+		<!-- ui-sdk adds its CSS as constructed style sheets with this tag, after ours, so
+		     the layer order in styles.css holds. Its own <style> tags would go first. -->
+		<meta property="csp-nonce" />
 		<title>smelp</title>
 		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 		<script>

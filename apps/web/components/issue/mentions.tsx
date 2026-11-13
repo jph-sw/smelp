@@ -129,7 +129,9 @@ export function MentionTextarea({
 					setDismissed(false);
 					setHighlighted(0);
 				}}
-				onSelect={(event) => setCaret(event.currentTarget.selectionStart)}
+				onSelectCapture={(event) =>
+					setCaret(event.currentTarget.selectionStart)
+				}
 				onKeyDown={(event) => {
 					if (isOpen) {
 						const choice = options[highlighted];

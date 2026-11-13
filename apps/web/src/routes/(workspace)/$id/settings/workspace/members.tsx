@@ -110,7 +110,7 @@ function InviteSection({ workspaceId }: { workspaceId: string }) {
 					emailedTo: invite.emailDelivery === "sent" ? invite.email : null,
 				});
 				if (invite.emailDelivery === "failed") {
-					toast.add({
+					toast({
 						type: "error",
 						description:
 							"The invite email couldn't be sent. Copy the link instead.",
@@ -340,7 +340,7 @@ function RouteComponent() {
 			queryClient.removeQueries({
 				queryKey: ["workspace-members", workspaceId],
 			});
-			toast.add({ type: "success", description: "You left the workspace." });
+			toast({ type: "success", description: "You left the workspace." });
 			navigate({ to: "/" });
 		},
 		onError: (e) => toastError(e),

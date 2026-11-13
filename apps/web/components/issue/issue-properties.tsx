@@ -141,7 +141,7 @@ export function IssueProperties({
 				queryClient.invalidateQueries({ queryKey: ["my-issues"] }),
 				invalidateCycles(queryClient, issue.projectId),
 			]);
-			toast.add({ type: "success", description: `Deleted ${issue.id}.` });
+			toast({ type: "success", description: `Deleted ${issue.id}.` });
 			navigate({
 				to: "/$id/projects/$projectId",
 				params: { id: workspaceId, projectId: issue.projectId },

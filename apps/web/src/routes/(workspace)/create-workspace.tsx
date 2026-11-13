@@ -51,7 +51,7 @@ function RouteComponent() {
 		onSubmit: async ({ value }) => {
 			try {
 				const res = await orpc.workspace.create({ name: value.name });
-				toast.add({
+				toast({
 					type: "success",
 					description: `Workspace "${res.name}" created.`,
 				});

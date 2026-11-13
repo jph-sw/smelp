@@ -10,7 +10,7 @@ export function VerifyEmailBanner({ user }: { user: AuthUser }) {
 	const { mutate: resend, isPending } = useMutation({
 		mutationFn: () => orpc.auth.resendEmailVerification(),
 		onSuccess: () =>
-			toast.add({
+			toast({
 				type: "success",
 				description: `We sent a new link to ${user.email}.`,
 			}),

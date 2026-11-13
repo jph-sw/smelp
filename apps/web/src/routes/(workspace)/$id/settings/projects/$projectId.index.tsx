@@ -84,7 +84,7 @@ function ProjectDetailsForm({
 						queryKey: ["projects", project.workspaceId],
 					}),
 				]);
-				toast.add({ type: "success", description: "Project updated." });
+				toast({ type: "success", description: "Project updated." });
 			} catch (e) {
 				toastError(e);
 			}
@@ -179,7 +179,7 @@ function RouteComponent() {
 				queryClient.invalidateQueries({ queryKey: ["projects", workspaceId] }),
 				queryClient.invalidateQueries({ queryKey: ["my-issues"] }),
 			]);
-			toast.add({
+			toast({
 				type: "success",
 				description: isArchived ? "Project unarchived." : "Project archived.",
 			});
@@ -198,7 +198,7 @@ function RouteComponent() {
 			await queryClient.invalidateQueries({
 				queryKey: ["projects", workspaceId],
 			});
-			toast.add({
+			toast({
 				type: "success",
 				description: "Project deleted.",
 			});

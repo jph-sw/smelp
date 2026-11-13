@@ -48,7 +48,7 @@ export function CreateIssueForm({
 		},
 		onSubmit: async ({ value }) => {
 			if (!defaultState) {
-				toast.add({
+				toast({
 					type: "error",
 					description: "No default state found for this project.",
 				});
@@ -66,7 +66,7 @@ export function CreateIssueForm({
 					workspaceId: params.workspaceId,
 					projectId: params.projectId,
 				});
-				toast.add({
+				toast({
 					type: "success",
 					description: `Work item "${res.title}" created.`,
 				});

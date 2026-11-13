@@ -45,7 +45,7 @@ export function AddMemberForm({
 			await queryClient.invalidateQueries({
 				queryKey: ["project-members", projectId],
 			});
-			toast.add({
+			toast({
 				type: "success",
 				description: `Added ${selectedUser?.displayName ?? "member"} to the project.`,
 			});
