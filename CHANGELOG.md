@@ -2,6 +2,17 @@
 
 Each release is a git tag. To upgrade, follow [Upgrade](README.md#upgrade) in the README.
 
+## 0.5.0 (2026-11-13)
+
+Sign in with your own identity provider, confirm email addresses, use smelp on a phone, and a new set of components underneath.
+
+- **Sign-in with OpenID Connect:** one provider, like Google, GitLab, Authentik or Keycloak, next to passwords. Set `OIDC_ISSUER_URL`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET` and `APP_URL` (and optionally `OIDC_BUTTON_LABEL`), and the sign-in and sign-up pages show a button. An existing account links the provider itself, under Account, Single sign-on; nothing is ever linked by email. A sign-in with no linked account makes a new one only on first run, with public sign-up open, or through an invite, and only from a verified email no account uses. Accounts made this way can set a password later. See the README.
+- **Email verification:** when public sign-up is open and email is set up, new accounts get a link to confirm their address, and can't create workspaces until they do. Accounts from invites, the first account and every existing account count as confirmed. Admins see unconfirmed accounts at `/ceo` and can confirm them by hand.
+- **Phones:** everything you tap is at least 44 px on touch screens, text fields don't zoom in on iOS, dialogs fit the screen, and the board scrolls column by column. Each card has a Move to menu for changing its state on a phone.
+- **New components:** the interface moved from shadcn/ui to [ui-sdk](https://ui-sdk.dev), with its plain default look for now. The design comes next. Mentions in comments use ui-sdk's Trigger Menu.
+
+Upgrading runs two database changes automatically: one for email verification and one for provider sign-ins. Back up first, as the README describes.
+
 ## 0.4.0 (2026-11-12)
 
 Plan time-boxed work, group it into features, and bring your projects across from Jira.
