@@ -402,6 +402,25 @@ try {
 		);
 	}
 
+	// Sign-in options and email verification: an old account counts as verified.
+	const options = await rpc<{ oidc: unknown }>("auth/signInOptions");
+	if (!missing(options.status)) {
+		check(
+			options.status === 200 && options.data.oidc === null,
+			"sign-in options answer, with SSO off",
+		);
+	}
+	const verified = await ok<{
+		user: { emailVerified?: number };
+		emailVerificationPending?: boolean;
+	}>("auth/me");
+	if (verified.user.emailVerified !== undefined) {
+		check(
+			verified.user.emailVerified === 1 && !verified.emailVerificationPending,
+			"the old account counts as verified",
+		);
+	}
+
 	if (!useBun) {
 		const backup = await $`docker exec ${name} bun run --silent backup`.text();
 		check(backup.includes("Backup saved"), "backups still work");
