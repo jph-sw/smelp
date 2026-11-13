@@ -3,6 +3,7 @@ import { DB, type tables } from "@smelp/db";
 import * as v from "valibot";
 import { requireInstanceAdmin } from "../lib/access";
 import { useSecureCookies } from "../lib/cookies";
+import { markEmailVerified } from "../lib/email-verification";
 import { isFirstRun, isSignupOpen, setSignupOpen } from "../lib/instance";
 import {
 	isMailEnabled,
@@ -41,14 +42,32 @@ export const findInstanceUsers = base.handler(async ({ context }) => {
 	await requireInstanceAdmin(context.headers);
 
 	return (await sql`
-		SELECT id, fullName, displayName, email, role, image, createdAt
+		SELECT id, fullName, displayName, email, role, image, emailVerified, createdAt
 		FROM auth_user
 		ORDER BY createdAt ASC
 	`) as Pick<
 		tables["auth_user"],
-		"id" | "fullName" | "displayName" | "email" | "role" | "image" | "createdAt"
+		| "id"
+		| "fullName"
+		| "displayName"
+		| "email"
+		| "role"
+		| "image"
+		| "emailVerified"
+		| "createdAt"
 	>[];
 });
+
+// For when someone can't get the email, or the admin knows the address is theirs.
+export const markEmailVerifiedByAdmin = base
+	.input(v.object({ userId: v.string() }))
+	.handler(async ({ input, context }) => {
+		await requireInstanceAdmin(context.headers);
+		if (!(await markEmailVerified(input.userId))) {
+			throw new ORPCError("NOT_FOUND");
+		}
+		return { success: true };
+	});
 
 export const createPasswordReset = base
 	.input(v.object({ userId: v.string() }))

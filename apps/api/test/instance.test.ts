@@ -136,6 +136,7 @@ describe("sign-up policy", () => {
 			"createdAt",
 			"displayName",
 			"email",
+			"emailVerified",
 			"fullName",
 			"id",
 			"image",

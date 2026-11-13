@@ -9,6 +9,7 @@ import {
 	attachmentKeysOfWorkspace,
 	removeAttachmentFiles,
 } from "../lib/attachments";
+import { requireVerifiedEmail } from "../lib/email-verification";
 import { base } from "../orpc";
 
 const sql = new DB().sqlite;
@@ -27,6 +28,7 @@ const RESERVED_WORKSPACE_IDS = new Set([
 	"rpc",
 	"signin",
 	"signup",
+	"verify-email",
 ]);
 
 export const findWorkspace = base
@@ -168,6 +170,8 @@ export const createWorkspace = base
 
 		const session = await auth.validateAuthSessionToken(token);
 		if (!session) throw new ORPCError("UNAUTHORIZED");
+
+		await requireVerifiedEmail(session.userId);
 
 		const slug = utils.toSlug(input.name);
 		if (!slug) {

@@ -6,7 +6,7 @@ export function SettingsNav({
 	title: string;
 }) {
 	return (
-		<nav className="flex shrink-0 flex-col gap-2 border-b py-3 md:w-56 md:gap-4 md:border-r md:border-b-0 md:py-4">
+		<nav className="flex shrink-0 flex-col gap-2 border-b py-3 md:w-56 md:gap-4 md:border-r md:border-b-0 md:py-4 pointer-coarse:max-lg:w-auto pointer-coarse:max-lg:gap-2 pointer-coarse:max-lg:border-r-0 pointer-coarse:max-lg:border-b pointer-coarse:max-lg:py-3">
 			<h2 className="px-3 text-sm font-medium">{title}</h2>
 			{children}
 		</nav>
@@ -22,10 +22,10 @@ export function SettingsNavGroup({
 }) {
 	return (
 		<div className="flex flex-col gap-0.5">
-			<div className="hidden px-3 py-1 text-[11px] font-semibold text-muted-foreground md:block">
+			<div className="hidden px-3 py-1 text-[11px] font-semibold text-muted-foreground md:block pointer-coarse:max-lg:hidden">
 				{label}
 			</div>
-			<div className="flex gap-0.5 overflow-x-auto px-2 md:flex-col">
+			<div className="flex gap-0.5 overflow-x-auto px-2 md:flex-col pointer-coarse:max-lg:flex-row">
 				{children}
 			</div>
 		</div>

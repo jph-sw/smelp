@@ -86,7 +86,7 @@ function SignIn() {
 	});
 
 	return (
-		<div className="flex h-dvh w-full items-center justify-center p-4">
+		<div className="flex min-h-dvh w-full items-center justify-center p-4">
 			<Card className="w-full max-w-sm">
 				<CardHeader>
 					<CardTitle>Sign in</CardTitle>
