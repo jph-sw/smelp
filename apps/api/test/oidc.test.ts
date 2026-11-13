@@ -1121,6 +1121,7 @@ describe("where people are sent afterwards", () => {
 			["https://evil.example.test/", "/"],
 			["//evil.example.test/", "/"],
 			["/\\evil.example.test/", "/"],
+			["/.//evil.example.test/", "/"],
 			["javascript:alert(1)", "/"],
 			["evil.example.test", "/"],
 			["/%0d%0aSet-Cookie:x=1", "/%0d%0aSet-Cookie:x=1"],
@@ -1140,6 +1141,11 @@ describe("where people are sent afterwards", () => {
 		expect(safeLocalPath("/a\nb")).toBeNull();
 		expect(safeLocalPath("///evil")).toBeNull();
 		expect(safeLocalPath("/\\/evil")).toBeNull();
+		// Dot segments that would collapse into another site.
+		expect(safeLocalPath("/.//evil.example.test")).toBeNull();
+		expect(safeLocalPath("/a/../..//evil.example.test")).toBeNull();
+		expect(safeLocalPath("/%2e%2e//evil.example.test")).toBeNull();
+		expect(safeLocalPath("/a/./b")).toBe("/a/b");
 		expect(safeLocalPath("")).toBeNull();
 		expect(safeLocalPath(null)).toBeNull();
 		expect(safeLocalPath(`/${"a".repeat(600)}`)).toBeNull();

@@ -85,7 +85,9 @@ function RouteComponent() {
 		if (!oidc) return;
 		toast.add({
 			type: oidc === "linked" ? "success" : "error",
-			description: OIDC_LINK_MESSAGES[oidc] ?? OIDC_LINK_MESSAGES.failed,
+			description: Object.hasOwn(OIDC_LINK_MESSAGES, oidc)
+				? OIDC_LINK_MESSAGES[oidc]
+				: OIDC_LINK_MESSAGES.failed,
 		});
 		navigate({ search: {}, replace: true });
 	}, [oidc, navigate]);

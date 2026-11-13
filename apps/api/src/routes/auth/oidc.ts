@@ -298,8 +298,8 @@ export const unlinkOidc = base.handler(async ({ context }) => {
 	});
 });
 
-// For people who signed in through a provider and have no password yet, or whose
-// old one was removed when the provider linked to their account. Changing an
+// For people whose account was made through a provider and who have no password
+// yet. Changing an
 // existing password still needs the current one, in changePassword.
 export const setPassword = base
 	.input(

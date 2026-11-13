@@ -95,7 +95,9 @@ function SignIn() {
 					<InsecureCookieWarning />
 					{oidcError && (
 						<p role="alert" className="text-sm text-destructive">
-							{OIDC_ERROR_MESSAGES[oidcError] ?? OIDC_ERROR_MESSAGES.failed}
+							{Object.hasOwn(OIDC_ERROR_MESSAGES, oidcError)
+								? OIDC_ERROR_MESSAGES[oidcError]
+								: OIDC_ERROR_MESSAGES.failed}
 						</p>
 					)}
 					<form

@@ -143,9 +143,11 @@ export function safeLocalPath(value: string | null | undefined): string | null {
 	}
 	try {
 		const parsed = new URL(value, "http://local.invalid");
-		return parsed.origin === "http://local.invalid"
-			? parsed.pathname + parsed.search + parsed.hash
-			: null;
+		const path = parsed.pathname + parsed.search + parsed.hash;
+		// Parsing removes "." and ".." segments, so "/.//host" becomes "//host", which
+		// a browser reads as another site. The result has to pass the same test.
+		if (parsed.origin !== "http://local.invalid") return null;
+		return path.startsWith("/") && !path.startsWith("//") ? path : null;
 	} catch {
 		return null;
 	}
