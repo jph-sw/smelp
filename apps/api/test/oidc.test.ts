@@ -200,6 +200,8 @@ type Outcome = {
 	sessionCookie: string | undefined;
 	callbackUrl: string;
 	loginCookie: string;
+	// The result of a link attempt, which ends in account settings.
+	oidc: string | null;
 };
 
 // Start and visit the provider, which hands back the address to return to.
@@ -235,13 +237,18 @@ async function finishAt(
 	callbackUrl: string,
 	loginCookie: string,
 	cookie: "keep" | "drop" | string = "keep",
+	// The browser's own session, sent along when someone is signed in.
+	authToken?: string,
 ): Promise<Outcome> {
 	const name = oidcCookieName(
 		new URL(callbackUrl).searchParams.get("state") ?? "",
 	);
+	const cookies: string[] = [];
+	if (cookie === "keep") cookies.push(`${name}=${loginCookie}`);
+	else if (cookie !== "drop") cookies.push(`${name}=${cookie}`);
+	if (authToken) cookies.push(`auth_session=${encodeURIComponent(authToken)}`);
 	const headers = new Headers();
-	if (cookie === "keep") headers.set("cookie", `${name}=${loginCookie}`);
-	else if (cookie !== "drop") headers.set("cookie", `${name}=${cookie}`);
+	if (cookies.length > 0) headers.set("cookie", cookies.join("; "));
 	const response = await oidcCallback(
 		new Request(callbackUrl, { headers }),
 		nextIp(),
@@ -255,7 +262,44 @@ async function finishAt(
 		sessionCookie: session,
 		callbackUrl,
 		loginCookie,
+		oidc: new URL(location, "http://app.test").searchParams.get("oidc"),
 	};
+}
+
+// Someone signed in presses "Link": the server starts the flow for their session.
+async function beginLink(token: string, scenario: Scenario) {
+	const resHeaders = new Headers();
+	const client = createRouterClient(router, {
+		context: {
+			headers: new Headers({ cookie: `auth_session=${token}` }),
+			ip: nextIp(),
+			resHeaders,
+		},
+	});
+	const { url } = await client.auth.startOidcLink();
+	const authorizeUrl = new URL(url);
+	const state = authorizeUrl.searchParams.get("state") ?? "";
+	scenarios.set(state, scenario);
+	const visited = await fetch(authorizeUrl, { redirect: "manual" });
+	const setCookie =
+		resHeaders
+			.getSetCookie()
+			.find((value) => value.startsWith(`${oidcCookieName(state)}=`)) ?? "";
+	return {
+		state,
+		resHeaders,
+		callbackUrl: visited.headers.get("location") ?? "",
+		loginCookie: cookieValue(setCookie) ?? "",
+	};
+}
+
+async function linkIdentity(
+	token: string,
+	scenario: Scenario,
+	authToken: string | undefined = token,
+) {
+	const link = await beginLink(token, scenario);
+	return await finishAt(link.callbackUrl, link.loginCookie, "keep", authToken);
 }
 
 // --- Test data ---------------------------------------------------------------------
@@ -271,6 +315,15 @@ async function passwordUser(prefix: string) {
 	const email = `${name}@${EMAIL_DOMAIN}`;
 	const { user, session } = await auth.signUp(email, name, name, PASSWORD);
 	return { id: user.id, email, token: session.authSessionToken };
+}
+
+// Someone with a password account who has linked the provider from settings.
+async function linkedUser(prefix: string) {
+	const person = await passwordUser(prefix);
+	const sub = unique("sub");
+	const result = await linkIdentity(person.token, verified(sub, person.email));
+	expect(result.oidc).toBe("linked");
+	return { ...person, sub };
 }
 
 const userByEmail = async (email: string) =>
@@ -441,170 +494,302 @@ describe("setup", () => {
 	});
 });
 
-describe("signing in to an account that is already linked", () => {
-	test("links a verified email to the one matching account, then matches by sub", async () => {
-		const person = await passwordUser("link");
-		const sub = unique("sub");
+describe("signing in never links by email", () => {
+	test("a verified email that belongs to an account gets the generic answer and no session", async () => {
+		const person = await passwordUser("no-auto");
+		const result = await signInWith(verified(unique("sub"), person.email));
+		expect(result.error).toBe("not_linked");
+		expect(result.sessionToken).toBeUndefined();
+		expect(await identitiesOf(person.id)).toHaveLength(0);
 
-		// The old session ends, in case someone registered this address first
-		// without proving it was theirs.
-		const result = await signInWith(verified(sub, person.email));
-		expect(result.error).toBeNull();
-		// Sent to account settings, because the old password was removed.
-		expect(result.location).toBe("/account");
-		expect(await sessionUser(result.sessionToken)).toBe(person.id);
-		expect(await sessionUser(person.token)).toBeUndefined();
-		expect(await identitiesOf(person.id)).toHaveLength(1);
-		await expect(
-			clientFor().auth.signIn({ email: person.email, password: PASSWORD }),
-		).rejects.toMatchObject({ code: "UNAUTHORIZED" });
-
-		// Setting a new password gives them both ways in.
-		await clientFor(result.sessionToken).auth.setPassword({
-			newPassword: "a-brand-new-password-9",
-		});
+		// And the person's own password and sessions are untouched.
+		expect(await sessionUser(person.token)).toBe(person.id);
 		const viaPassword = await clientFor().auth.signIn({
 			email: person.email,
-			password: "a-brand-new-password-9",
+			password: PASSWORD,
 		});
 		expect(viaPassword.user.id).toBe(person.id);
-
-		// Once linked it's the sub that counts: a different, even unverified, email
-		// still reaches the same account.
-		const later = await signInWith({
-			sub,
-			email: `somebody-else@${EMAIL_DOMAIN}`,
-			email_verified: false,
-		});
-		expect(later.error).toBeNull();
-		expect(await sessionUser(later.sessionToken)).toBe(person.id);
-		expect(await userByEmail(`somebody-else@${EMAIL_DOMAIN}`)).toBeUndefined();
 	});
 
-	test("an account someone registered first can't be used through its old password", async () => {
-		// Sign-up doesn't check that an address is the person's own, so an attacker
-		// could register a victim's address ahead of time and know its password.
-		const victim = await passwordUser("preregistered");
-		const resetToken = crypto.randomUUID();
-		await sql`INSERT INTO auth_password_reset ${sql({
-			id: crypto.randomUUID(),
-			userId: victim.id,
-			tokenHash: resetToken,
-			createdByUserId: null,
-			createdAt: Date.now(),
-			expiresAt: Date.now() + 60_000,
-			usedAt: null,
-		})}`;
-
-		const result = await signInWith(verified(unique("sub"), victim.email));
-		expect(await sessionUser(result.sessionToken)).toBe(victim.id);
-
-		// The attacker's password, their session and any reset link are all dead.
-		await expect(
-			clientFor().auth.signIn({ email: victim.email, password: PASSWORD }),
-		).rejects.toMatchObject({ code: "UNAUTHORIZED" });
-		expect(await sessionUser(victim.token)).toBeUndefined();
-		const resets =
-			await sql`SELECT 1 FROM auth_password_reset WHERE userId = ${victim.id}`;
-		expect(resets).toHaveLength(0);
-	});
-
-	test("a password change racing the link can't leave the squatter's password working", async () => {
-		const victim = await passwordUser("racing");
-		const squatter = clientFor(victim.token);
-
-		// Whichever of these lands first, the squatter must end up locked out.
-		await Promise.allSettled([
-			squatter.auth.changePassword({
-				currentPassword: PASSWORD,
-				newPassword: "squatters-new-password-1",
-			}),
-			signInWith(verified(unique("sub"), victim.email)),
-		]);
-
-		for (const password of [PASSWORD, "squatters-new-password-1"]) {
-			await expect(
-				clientFor().auth.signIn({ email: victim.email, password }),
-			).rejects.toMatchObject({ code: "UNAUTHORIZED" });
-		}
-		expect(await sessionUser(victim.token)).toBeUndefined();
-	});
-
-	test("matches the email without regard to case", async () => {
-		const person = await passwordUser("case");
-		const result = await signInWith(
-			verified(unique("sub"), person.email.toUpperCase()),
+	test("the answer is identical whether or not an account has the email", async () => {
+		await setSignupOpen(false);
+		const person = await passwordUser("same-answer");
+		const known = await signInWith(verified(unique("sub"), person.email));
+		const unknown = await signInWith(
+			verified(unique("sub"), `nobody-${unique("x")}@${EMAIL_DOMAIN}`),
 		);
-		expect(await sessionUser(result.sessionToken)).toBe(person.id);
+		expect(known.location).toBe(unknown.location);
+		expect(known.location).toBe("/signin?oidcError=not_linked");
+		expect(known.sessionToken).toBeUndefined();
+		expect(unknown.sessionToken).toBeUndefined();
 	});
 
-	test("never links on an email the provider hasn't verified", async () => {
+	test("with sign-up open, an email that has an account still gets that answer", async () => {
+		await setSignupOpen(true);
+		try {
+			const person = await passwordUser("open-exists");
+			const result = await signInWith(verified(unique("sub"), person.email));
+			expect(result.error).toBe("not_linked");
+			expect(result.sessionToken).toBeUndefined();
+			expect(await identitiesOf(person.id)).toHaveLength(0);
+
+			// Even in other case.
+			const upper = await signInWith(
+				verified(unique("sub"), person.email.toUpperCase()),
+			);
+			expect(upper.error).toBe("not_linked");
+			const users =
+				await sql`SELECT 1 FROM auth_user WHERE lower(email) = ${person.email}`;
+			expect(users).toHaveLength(1);
+		} finally {
+			await setSignupOpen(false);
+		}
+	});
+
+	test("an unverified or missing email gives the same answer for any email while sign-up is closed", async () => {
+		await setSignupOpen(false);
 		const person = await passwordUser("unverified");
+		const sub = unique("sub");
+		const results = [];
 		for (const email_verified of [false, "true", null, undefined]) {
-			const result = await signInWith({
-				sub: unique("sub"),
-				email: person.email,
-				email_verified,
-			});
-			expect(result.error).toBe("email_unverified");
+			results.push(
+				await signInWith({ sub, email: person.email, email_verified }),
+			);
+		}
+		results.push(await signInWith({ sub: unique("sub") }));
+		for (const result of results) {
+			expect(result.error).toBe("not_linked");
 			expect(result.sessionToken).toBeUndefined();
 		}
 		expect(await identitiesOf(person.id)).toHaveLength(0);
 	});
+});
 
-	test("an unverified email gives the same answer whether or not an account has it", async () => {
-		const person = await passwordUser("same-answer");
-		const known = await signInWith({
-			sub: unique("sub"),
+describe("signing in to a linked account", () => {
+	test("matches by sub, whatever the email says now", async () => {
+		const person = await linkedUser("by-sub");
+		const later = await signInWith({
+			sub: person.sub,
+			email: `somebody-else@${EMAIL_DOMAIN}`,
+			email_verified: false,
+		});
+		expect(later.error).toBeNull();
+		expect(later.location).toBe("/");
+		expect(await sessionUser(later.sessionToken)).toBe(person.id);
+		expect(await userByEmail(`somebody-else@${EMAIL_DOMAIN}`)).toBeUndefined();
+	});
+
+	test("the password keeps working next to the link", async () => {
+		const person = await linkedUser("both");
+		const viaPassword = await clientFor().auth.signIn({
 			email: person.email,
+			password: PASSWORD,
+		});
+		expect(viaPassword.user.id).toBe(person.id);
+		// Linking doesn't end any session.
+		expect(await sessionUser(person.token)).toBe(person.id);
+	});
+});
+
+describe("linking from account settings", () => {
+	test("attaches the identity to the signed-in account, whatever email the provider has", async () => {
+		const person = await passwordUser("link");
+		const sub = unique("sub");
+		const options = await clientFor(person.token).auth.linkedAccounts();
+		expect(options.linkable).toEqual({ name: "Testprovider" });
+
+		// The provider's email is a different one, and isn't even verified.
+		const result = await linkIdentity(person.token, {
+			sub,
+			email: `elsewhere-${unique("e")}@${EMAIL_DOMAIN}`,
 			email_verified: false,
 		});
-		const unknown = await signInWith({
-			sub: unique("sub"),
-			email: `nobody-${unique("x")}@${EMAIL_DOMAIN}`,
-			email_verified: false,
-		});
-		expect(known.location).toBe(unknown.location);
-	});
-
-	test("a sign-in with no email at all can't be matched", async () => {
-		const result = await signInWith({ sub: unique("sub") });
-		expect(result.error).toBe("email_unverified");
-	});
-
-	test("two accounts with the same address, in different case, are never guessed between", async () => {
-		const name = unique("dup");
-		const lower = `${name}@${EMAIL_DOMAIN}`;
-		const now = Date.now();
-		for (const [index, email] of [lower, lower.toUpperCase()].entries()) {
-			await sql`INSERT INTO auth_user ${sql({
-				id: `${name}-${index}`,
-				fullName: name,
-				displayName: `${name}-${index}`,
-				email,
-				createdAt: now,
-				updatedAt: now,
-				role: "user",
-				image: null,
-				notifyByEmail: 0,
-			})}`;
-		}
-		const result = await signInWith(verified(unique("sub"), lower));
-		expect(result.error).toBe("no_match");
+		expect(result.oidc).toBe("linked");
+		expect(result.location).toBe("/account?oidc=linked");
 		expect(result.sessionToken).toBeUndefined();
-		const created =
-			await sql`SELECT 1 FROM auth_account WHERE userId LIKE ${`${name}-%`}`;
-		expect(created).toHaveLength(0);
+		expect(await identitiesOf(person.id)).toEqual([
+			{ providerId: `oidc:${issuer}`, accountId: sub },
+		]);
+		expect(
+			(await clientFor(person.token).auth.linkedAccounts()).linkable,
+		).toBeNull();
+
+		const signedIn = await signInWith({ sub });
+		expect(await sessionUser(signedIn.sessionToken)).toBe(person.id);
 	});
 
-	test("an account that already uses another identity at this provider isn't taken over", async () => {
-		const person = await passwordUser("taken");
-		const first = await signInWith(verified(unique("sub"), person.email));
-		expect(first.error).toBeNull();
+	test("the target is the session that started it, kept on the server", async () => {
+		const a = await passwordUser("bound-a");
+		const b = await passwordUser("bound-b");
+		const link = await beginLink(a.token, verified(unique("sub"), a.email));
 
-		const second = await signInWith(verified(unique("sub"), person.email));
-		expect(second.error).toBe("no_match");
+		// The browser of someone else, signed in as b, can't finish a's link even
+		// with the address.
+		const withB = await finishAt(
+			link.callbackUrl,
+			link.loginCookie,
+			"keep",
+			b.token,
+		);
+		expect(withB.error).toBe("session_ended");
+		expect(await identitiesOf(a.id)).toHaveLength(0);
+		expect(await identitiesOf(b.id)).toHaveLength(0);
+		expect(await identitiesOf(a.id)).toHaveLength(1);
+	});
+
+	test("starting needs a session and offers nothing without the settings", async () => {
+		await expect(clientFor().auth.startOidcLink()).rejects.toMatchObject({
+			code: "UNAUTHORIZED",
+		});
+		const saved = process.env.OIDC_CLIENT_SECRET;
+		delete process.env.OIDC_CLIENT_SECRET;
+		try {
+			const person = await passwordUser("link-off");
+			await expect(
+				clientFor(person.token).auth.startOidcLink(),
+			).rejects.toMatchObject({ code: "BAD_REQUEST" });
+			expect(
+				(await clientFor(person.token).auth.linkedAccounts()).linkable,
+			).toBeNull();
+		} finally {
+			process.env.OIDC_CLIENT_SECRET = saved;
+		}
+	});
+
+	test("refuses an identity that already belongs to another account", async () => {
+		const owner = await linkedUser("owner");
+		const other = await passwordUser("grabber");
+		const result = await linkIdentity(
+			other.token,
+			verified(owner.sub, other.email),
+		);
+		expect(result.oidc).toBe("identity_taken");
+		expect(await identitiesOf(other.id)).toHaveLength(0);
+		expect(await identitiesOf(owner.id)).toHaveLength(1);
+	});
+
+	test("refuses a second identity for an account that is already linked", async () => {
+		const person = await linkedUser("twice");
+		await expect(
+			clientFor(person.token).auth.startOidcLink(),
+		).rejects.toMatchObject({ code: "BAD_REQUEST" });
+
+		// A flow started before the link was made can't add a second one either.
+		const other = await passwordUser("twice-late");
+		const late = await beginLink(
+			other.token,
+			verified(unique("sub"), other.email),
+		);
+		await linkIdentity(other.token, verified(unique("sub"), other.email));
+		const result = await finishAt(
+			late.callbackUrl,
+			late.loginCookie,
+			"keep",
+			other.token,
+		);
+		expect(result.oidc).toBe("already_linked");
+		expect(await identitiesOf(other.id)).toHaveLength(1);
+	});
+
+	test("refuses to finish when the session is gone", async () => {
+		const person = await passwordUser("gone");
+		const sub = unique("sub");
+		const link = await beginLink(person.token, verified(sub, person.email));
+
+		const signedOut = await finishAt(
+			link.callbackUrl,
+			link.loginCookie,
+			"keep",
+		);
+		expect(signedOut.error).toBe("session_ended");
+
+		// Same with a session that was ended on the server in the meantime.
+		const second = await beginLink(person.token, verified(sub, person.email));
+		await auth.invalidateAuthSession(
+			(await auth.validateAuthSessionToken(person.token))?.id ?? "",
+		);
+		const ended = await finishAt(
+			second.callbackUrl,
+			second.loginCookie,
+			"keep",
+			person.token,
+		);
+		expect(ended.error).toBe("session_ended");
+		expect(await identitiesOf(person.id)).toHaveLength(0);
+	});
+
+	test("the state is single-use and belongs to the browser that started it", async () => {
+		const person = await passwordUser("link-state");
+		const sub = unique("sub");
+		const link = await beginLink(person.token, verified(sub, person.email));
+
+		const stranger = await finishAt(
+			link.callbackUrl,
+			link.loginCookie,
+			"drop",
+			person.token,
+		);
+		expect(stranger.error).toBe("failed");
+		const wrong = await finishAt(
+			link.callbackUrl,
+			link.loginCookie,
+			"someone-elses-binding",
+			person.token,
+		);
+		expect(wrong.error).toBe("failed");
+		expect(await identitiesOf(person.id)).toHaveLength(0);
+
+		const real = await finishAt(
+			link.callbackUrl,
+			link.loginCookie,
+			"keep",
+			person.token,
+		);
+		expect(real.oidc).toBe("linked");
+
+		const replay = await finishAt(
+			link.callbackUrl,
+			link.loginCookie,
+			"keep",
+			person.token,
+		);
+		expect(replay.error).toBe("failed");
 		expect(await identitiesOf(person.id)).toHaveLength(1);
+	});
+
+	test("a link flow can't be finished as a sign-in, or the other way round", async () => {
+		const victim = await passwordUser("cross");
+		const attacker = await passwordUser("cross-attacker");
+		// The attacker's own link flow, visited by the victim's browser without the
+		// attacker's binding cookie.
+		const link = await beginLink(
+			attacker.token,
+			verified(unique("sub"), attacker.email),
+		);
+		const result = await finishAt(
+			link.callbackUrl,
+			link.loginCookie,
+			"drop",
+			victim.token,
+		);
+		expect(result.error).toBe("failed");
+		expect(await identitiesOf(victim.id)).toHaveLength(0);
+		expect(await identitiesOf(attacker.id)).toHaveLength(0);
+	});
+
+	test("two links for one identity at once leave it with one account", async () => {
+		const a = await passwordUser("race-a");
+		const b = await passwordUser("race-b");
+		const sub = unique("sub");
+		const [x, y] = await Promise.all([
+			linkIdentity(a.token, verified(sub, a.email)),
+			linkIdentity(b.token, verified(sub, b.email)),
+		]);
+		expect([x.oidc, y.oidc].sort()).toEqual(["identity_taken", "linked"]);
+		const rows = await sql`
+			SELECT userId FROM auth_account WHERE providerId = ${`oidc:${issuer}`} AND accountId = ${sub}
+		`;
+		expect(rows).toHaveLength(1);
 	});
 });
 
@@ -613,7 +798,7 @@ describe("new accounts", () => {
 		await setSignupOpen(false);
 		const email = `${unique("closed")}@${EMAIL_DOMAIN}`;
 		const result = await signInWith(verified(unique("sub"), email));
-		expect(result.error).toBe("signup_closed");
+		expect(result.error).toBe("not_linked");
 		expect(result.sessionToken).toBeUndefined();
 		expect(await userByEmail(email)).toBeUndefined();
 	});
@@ -718,7 +903,7 @@ describe("new accounts", () => {
 		const result = await signInWith(verified(unique("sub"), email), {
 			query: "?invite=not-a-real-token",
 		});
-		expect(result.error).toBe("signup_closed");
+		expect(result.error).toBe("not_linked");
 		expect(result.location).toContain("invite=not-a-real-token");
 		expect(await userByEmail(email)).toBeUndefined();
 	});
@@ -817,8 +1002,8 @@ describe("ID token validation", () => {
 
 describe("the callback", () => {
 	test("a state can be used once", async () => {
-		const person = await passwordUser("replay");
-		const scenario = verified(unique("sub"), person.email);
+		const person = await linkedUser("replay");
+		const scenario = verified(person.sub, person.email);
 		const first = await signInWith(scenario);
 		expect(first.error).toBeNull();
 
@@ -828,10 +1013,10 @@ describe("the callback", () => {
 	});
 
 	test("two logins started in different tabs can finish in either order", async () => {
-		const a = await passwordUser("tab-a");
-		const b = await passwordUser("tab-b");
-		const first = await begin(verified(unique("sub"), a.email));
-		const second = await begin(verified(unique("sub"), b.email));
+		const a = await linkedUser("tab-a");
+		const b = await linkedUser("tab-b");
+		const first = await begin(verified(a.sub, a.email));
+		const second = await begin(verified(b.sub, b.email));
 
 		const secondDone = await finishAt(second.callbackUrl, second.loginCookie);
 		const firstDone = await finishAt(first.callbackUrl, first.loginCookie);
@@ -840,8 +1025,8 @@ describe("the callback", () => {
 	});
 
 	test("someone presenting a state without the browser's cookie can't use it up", async () => {
-		const person = await passwordUser("burn");
-		const login = await begin(verified(unique("sub"), person.email));
+		const person = await linkedUser("burn");
+		const login = await begin(verified(person.sub, person.email));
 
 		const stranger = await finishAt(
 			login.callbackUrl,
@@ -864,14 +1049,13 @@ describe("the callback", () => {
 	});
 
 	test("a callback from a different browser than the one that started is refused", async () => {
-		const person = await passwordUser("binding");
-		const scenario = verified(unique("sub"), person.email);
+		const person = await linkedUser("binding");
+		const scenario = verified(person.sub, person.email);
 		for (const cookie of ["drop", "someone-elses-binding"] as const) {
 			const result = await signInWith(scenario, { cookie });
 			expect(result.error).toBe("failed");
 			expect(result.sessionToken).toBeUndefined();
 		}
-		expect(await identitiesOf(person.id)).toHaveLength(0);
 	});
 
 	test("a provider that reports an error fails cleanly and keeps the invite", async () => {
@@ -893,8 +1077,8 @@ describe("the callback", () => {
 	});
 
 	test("the session cookie is set the way password sign-in sets it", async () => {
-		const person = await passwordUser("cookie");
-		const result = await signInWith(verified(unique("sub"), person.email));
+		const person = await linkedUser("cookie");
+		const result = await signInWith(verified(person.sub, person.email));
 		const cookie = result.sessionCookie ?? "";
 		expect(cookie).toContain("HttpOnly");
 		expect(cookie).toContain("SameSite=Lax");
@@ -920,8 +1104,8 @@ describe("the callback", () => {
 
 		process.env.SECURE_COOKIES = "true";
 		try {
-			const other = await passwordUser("cookie-secure");
-			const secure = await signInWith(verified(unique("sub"), other.email));
+			const other = await linkedUser("cookie-secure");
+			const secure = await signInWith(verified(other.sub, other.email));
 			expect(secure.sessionCookie).toContain("Secure");
 		} finally {
 			process.env.SECURE_COOKIES = "false";
@@ -931,9 +1115,8 @@ describe("the callback", () => {
 
 describe("where people are sent afterwards", () => {
 	test("only paths on this site are followed", async () => {
-		const person = await passwordUser("redirect");
-		const sub = unique("sub");
-		await signInWith(verified(sub, person.email));
+		const person = await linkedUser("redirect");
+		const sub = person.sub;
 		const cases: [string, string][] = [
 			["/projects/abc?tab=1", "/projects/abc?tab=1"],
 			["https://evil.example.test/", "/"],
@@ -966,24 +1149,20 @@ describe("where people are sent afterwards", () => {
 
 describe("account settings", () => {
 	test("shows the linked provider and lets a person with a password unlink it", async () => {
-		const person = await passwordUser("unlink");
-		const result = await signInWith(verified(unique("sub"), person.email));
-		const client = clientFor(result.sessionToken);
-
-		// The link removed the old password, so unlinking waits for a new one.
-		expect((await client.auth.linkedAccounts()).hasPassword).toBe(false);
-		await expect(client.auth.unlinkOidc()).rejects.toMatchObject({
-			code: "BAD_REQUEST",
-		});
-		await client.auth.setPassword({ newPassword: "unlink-test-password-3" });
+		const person = await linkedUser("unlink");
+		const client = clientFor(person.token);
 
 		expect(await client.auth.linkedAccounts()).toEqual({
 			hasPassword: true,
+			linkable: null,
 			providers: [{ label: "Testprovider" }],
 		});
 
 		await client.auth.unlinkOidc();
-		expect((await client.auth.linkedAccounts()).providers).toEqual([]);
+		const after = await client.auth.linkedAccounts();
+		expect(after.providers).toEqual([]);
+		// And it can be linked again.
+		expect(after.linkable).toEqual({ name: "Testprovider" });
 		await expect(client.auth.unlinkOidc()).rejects.toMatchObject({
 			code: "NOT_FOUND",
 		});
@@ -1077,14 +1256,12 @@ describe("account settings", () => {
 	});
 
 	test("one person can't unlink another's identity", async () => {
-		const a = await passwordUser("own-a");
-		const b = await passwordUser("own-b");
-		await signInWith(verified(unique("sub"), a.email));
-		const bSession = await signInWith(verified(unique("sub"), b.email));
+		const a = await linkedUser("own-a");
+		const b = await linkedUser("own-b");
 
-		const bClient = clientFor(bSession.sessionToken);
-		await bClient.auth.setPassword({ newPassword: "owner-b-password-1" });
-		await bClient.auth.unlinkOidc();
+		await clientFor(b.token).auth.unlinkOidc();
+		expect(await identitiesOf(b.id)).toHaveLength(0);
+		expect(await identitiesOf(a.id)).toHaveLength(1);
 		expect(await identitiesOf(a.id)).toHaveLength(1);
 	});
 });

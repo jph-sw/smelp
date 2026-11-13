@@ -4,7 +4,7 @@ import {
 	useSuspenseQuery,
 } from "@tanstack/react-query";
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
-import { useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import * as v from "valibot";
 import { Avatar, AvatarFallback, AvatarImage } from "#/components/ui/avatar";
 import { Button } from "#/components/ui/button";
@@ -20,7 +20,9 @@ import { instanceStatusQueryOptions } from "#/lib/data/instance";
 import { NewPasswordSchema, PASSWORDS_DIFFER } from "#/lib/data/password";
 import {
 	linkedAccountsQueryOptions,
+	OIDC_LINK_MESSAGES,
 	setPassword,
+	startOidcLink,
 	unlinkOidc,
 } from "#/lib/data/sign-in-options";
 import { toastError } from "#/lib/errors";
@@ -62,6 +64,9 @@ const ProfileSchema = v.object({
 });
 
 export const Route = createFileRoute("/account")({
+	validateSearch: (search: Record<string, unknown>): { oidc?: string } => ({
+		oidc: typeof search.oidc === "string" ? search.oidc : undefined,
+	}),
 	component: RouteComponent,
 	beforeLoad: ({ context }) => {
 		if (context.user == null) throw redirect({ to: "/signin" });
@@ -72,6 +77,18 @@ function RouteComponent() {
 	usePageTitle("Account");
 	const { data: user } = useSuspenseQuery(currentUserQueryOptions);
 	const { data: accounts } = useQuery(linkedAccountsQueryOptions);
+	const { oidc } = Route.useSearch();
+	const navigate = Route.useNavigate();
+
+	// Where linking a provider ends up. Said once, then taken out of the address.
+	useEffect(() => {
+		if (!oidc) return;
+		toast.add({
+			type: oidc === "linked" ? "success" : "error",
+			description: OIDC_LINK_MESSAGES[oidc] ?? OIDC_LINK_MESSAGES.failed,
+		});
+		navigate({ search: {}, replace: true });
+	}, [oidc, navigate]);
 
 	const form = useAppForm({
 		defaultValues: { currentPassword: "", password: "", confirm: "" },
@@ -106,7 +123,7 @@ function RouteComponent() {
 			</p>
 			{user && <ProfileCard user={user} />}
 			{user && <NotificationsCard user={user} />}
-			{accounts && accounts.providers.length > 0 && (
+			{accounts && (accounts.providers.length > 0 || accounts.linkable) && (
 				<SignInMethodsCard accounts={accounts} />
 			)}
 			{accounts?.hasPassword === false && <SetPasswordCard />}
@@ -247,10 +264,27 @@ function SetPasswordCard() {
 function SignInMethodsCard({
 	accounts,
 }: {
-	accounts: { hasPassword: boolean; providers: { label: string }[] };
+	accounts: {
+		hasPassword: boolean;
+		providers: { label: string }[];
+		linkable: { name: string } | null;
+	};
 }) {
 	const queryClient = useQueryClient();
 	const [isUnlinking, setIsUnlinking] = useState(false);
+	const [isLinking, setIsLinking] = useState(false);
+
+	const link = async () => {
+		setIsLinking(true);
+		try {
+			const { url } = await startOidcLink();
+			// Leaves for the provider, which sends the browser back here.
+			window.location.assign(url);
+		} catch (e) {
+			toastError(e);
+			setIsLinking(false);
+		}
+	};
 
 	const unlink = async () => {
 		setIsUnlinking(true);
@@ -293,7 +327,17 @@ function SignInMethodsCard({
 						)}
 					</div>
 				))}
-				{!accounts.hasPassword && (
+				{accounts.linkable && (
+					<Button
+						type="button"
+						variant="outline"
+						disabled={isLinking}
+						onClick={link}
+					>
+						Link {accounts.linkable.name}
+					</Button>
+				)}
+				{!accounts.hasPassword && accounts.providers.length > 0 && (
 					<p className="text-xs text-muted-foreground">
 						This is the only way you can sign in, because your account has no
 						password, so it can't be unlinked.

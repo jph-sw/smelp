@@ -13,6 +13,8 @@ export const linkedAccountsQueryOptions = queryOptions({
 
 export const unlinkOidc = () => orpc.auth.unlinkOidc();
 
+export const startOidcLink = () => orpc.auth.startOidcLink();
+
 export const setPassword = (newPassword: string) =>
 	orpc.auth.setPassword({ newPassword });
 
@@ -22,13 +24,24 @@ export const OIDC_ERROR_MESSAGES: Record<string, string> = {
 	cancelled: "Sign-in was cancelled.",
 	email_unverified:
 		"Your provider hasn't verified your email address, so it can't be used to sign in here.",
-	signup_closed:
-		"There's no account for you here, and sign-ups are closed. Ask a workspace admin for an invite link.",
-	no_match:
-		"We couldn't match this sign-in to one account. Ask an instance admin for help.",
+	// One message for every case where a sign-in has no account, so it doesn't say
+	// whether an account with that email exists.
+	not_linked:
+		"No account is linked to this sign-in. If you already have an account, sign in with your password and link it under Account, Single sign-on. Otherwise, ask a workspace admin for an invite link.",
+	session_ended:
+		"You were signed out before linking finished. Sign in and try again.",
 	rate_limited: "Too many attempts. Try again in a few minutes.",
 	unavailable: "The sign-in provider can't be reached right now.",
 	failed: "Sign-in didn't work. Please try again.",
+};
+
+// What account settings says when linking a provider ends.
+export const OIDC_LINK_MESSAGES: Record<string, string> = {
+	linked: "Provider linked.",
+	identity_taken: "That sign-in is already linked to another account.",
+	already_linked: "Your account is already linked to this provider.",
+	cancelled: "Linking was cancelled.",
+	failed: "Linking didn't work. Please try again.",
 };
 
 export const oidcStartUrl = (invite?: string) =>

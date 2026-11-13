@@ -15,6 +15,7 @@ import {
 	findLinkedAccounts,
 	findSignInOptions,
 	setPassword,
+	startOidcLink,
 	unlinkOidc,
 } from "./routes/auth/oidc";
 import {
@@ -144,6 +145,7 @@ export const router = {
 		signInOptions: findSignInOptions,
 		linkedAccounts: findLinkedAccounts,
 		unlinkOidc,
+		startOidcLink,
 		setPassword,
 		previewPasswordReset,
 		resetPassword,

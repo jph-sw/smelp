@@ -215,8 +215,13 @@ type PendingLogin = {
 	binding: string;
 	invite: string | null;
 	next: string | null;
+	// Set when a signed-in person is adding this provider to their account. It lives
+	// here, on the server, so nothing in the address can change who it applies to.
+	link: LinkTarget | null;
 	expiresAt: number;
 };
+
+export type LinkTarget = { userId: string; sessionId: string };
 
 // In memory, like the rate limits: a restart only abandons logins in progress.
 const pending = new Map<string, PendingLogin>();
@@ -256,7 +261,11 @@ function takePending(state: string, binding: string | undefined) {
 
 export async function beginOidcLogin(
 	config: OidcConfig,
-	options: { invite: string | null; next: string | null },
+	options: {
+		invite: string | null;
+		next: string | null;
+		link?: LinkTarget;
+	},
 ) {
 	const { as } = await providerFor(config);
 
@@ -273,6 +282,7 @@ export async function beginOidcLogin(
 		binding,
 		invite: options.invite,
 		next: options.next,
+		link: options.link ?? null,
 		expiresAt: now + LOGIN_LIFETIME_MS,
 	});
 
@@ -306,8 +316,14 @@ export type OidcOutcome =
 			claims: OidcClaims;
 			invite: string | null;
 			next: string | null;
+			link: LinkTarget | null;
 	  }
-	| { ok: false; invite: string | null; error: "failed" | "cancelled" };
+	| {
+			ok: false;
+			invite: string | null;
+			link: LinkTarget | null;
+			error: "failed" | "cancelled";
+	  };
 
 const asString = (value: unknown) =>
 	typeof value === "string" && value.trim() ? value.trim() : null;
@@ -323,10 +339,11 @@ export async function finishOidcLogin(
 ): Promise<OidcOutcome> {
 	const state = params.get("state");
 	const login = state ? takePending(state, binding) : null;
-	if (!login) return { ok: false, invite: null, error: "failed" };
+	if (!login) return { ok: false, invite: null, link: null, error: "failed" };
 	const fail = (error: "failed" | "cancelled" = "failed"): OidcOutcome => ({
 		ok: false,
 		invite: login.invite,
+		link: login.link,
 		error,
 	});
 
@@ -382,7 +399,13 @@ export async function finishOidcLogin(
 		});
 		const claims = readClaims(payload);
 		if (!claims || payload.nonce !== login.nonce) return fail();
-		return { ok: true, claims, invite: login.invite, next: login.next };
+		return {
+			ok: true,
+			claims,
+			invite: login.invite,
+			next: login.next,
+			link: login.link,
+		};
 	} catch (error) {
 		// The provider's own error code helps whoever set this up, and holds no secret.
 		const code =

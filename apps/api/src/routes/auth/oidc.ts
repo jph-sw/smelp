@@ -8,12 +8,17 @@ import { useSecureCookies } from "../../lib/cookies";
 import {
 	beginOidcLogin,
 	finishOidcLogin,
+	type LinkTarget,
 	oidcConfig,
 	oidcCookieName,
 	oidcProviderId,
 	safeLocalPath,
 } from "../../lib/oidc";
-import { resolveOidcAccount, startOidcSession } from "../../lib/oidc-account";
+import {
+	linkOidcIdentity,
+	resolveOidcAccount,
+	startOidcSession,
+} from "../../lib/oidc-account";
 import { enforceRateLimit, RateLimiter } from "../../lib/rate-limit";
 import { base } from "../../orpc";
 
@@ -25,6 +30,7 @@ const startsByIp = new RateLimiter(120, FIFTEEN_MINUTES);
 const callbacksByIp = new RateLimiter(120, FIFTEEN_MINUTES);
 
 const passwordSetsByUser = new RateLimiter(10, FIFTEEN_MINUTES);
+const linkStartsByUser = new RateLimiter(20, FIFTEEN_MINUTES);
 
 const COOKIE_PATH = "/api/auth/oidc";
 const MAX_INVITE_LENGTH = 200;
@@ -40,6 +46,11 @@ function failure(error: string, invite: string | null, headers?: Headers) {
 	const search = new URLSearchParams({ oidcError: error });
 	if (invite) search.set("invite", invite);
 	return redirect(`/signin?${search}`, headers);
+}
+
+// A person adding a provider to their account lands back in account settings.
+function linkOutcome(code: string, headers: Headers) {
+	return redirect(`/account?${new URLSearchParams({ oidc: code })}`, headers);
 }
 
 const clearLoginCookie = (headers: Headers, state: string | null) => {
@@ -106,6 +117,16 @@ export async function oidcCallback(request: Request, ip: string) {
 		params,
 		state ? getCookie(request.headers, oidcCookieName(state)) : undefined,
 	);
+	if (outcome.link) {
+		if (!outcome.ok) return linkOutcome(outcome.error, headers);
+		return await finishLink(
+			request,
+			headers,
+			outcome.link,
+			outcome.claims.sub,
+			config,
+		);
+	}
 	if (!outcome.ok) return failure(outcome.error, outcome.invite, headers);
 
 	const account = await resolveOidcAccount({
@@ -128,9 +149,30 @@ export async function oidcCallback(request: Request, ip: string) {
 		return redirect(`/invite/${encodeURIComponent(outcome.invite)}`, headers);
 	}
 	if (account.created) return redirect("/create-workspace", headers);
-	// Their old password was removed, and they should know before they need it.
-	if (account.passwordRemoved) return redirect("/account", headers);
 	return redirect(safeLocalPath(outcome.next) ?? "/", headers);
+}
+
+// The link flow ends here. The identity goes to the account of the session that
+// started it, and only if that exact session is still the one making this request.
+async function finishLink(
+	request: Request,
+	headers: Headers,
+	target: LinkTarget,
+	sub: string,
+	config: NonNullable<ReturnType<typeof oidcConfig>>,
+) {
+	const token = getCookie(request.headers, "auth_session");
+	const current = token ? await auth.validateAuthSessionToken(token) : null;
+	if (!current || current.id !== target.sessionId) {
+		return failure("session_ended", null, headers);
+	}
+
+	const result = await linkOidcIdentity({
+		providerId: oidcProviderId(config),
+		sub,
+		target,
+	});
+	return linkOutcome(result.ok ? "linked" : result.error, headers);
 }
 
 // Public: the sign-in and sign-up pages need this before anyone is signed in. It
@@ -138,6 +180,56 @@ export async function oidcCallback(request: Request, ip: string) {
 export const findSignInOptions = base.handler(async () => {
 	const config = oidcConfig();
 	return { oidc: config ? { label: config.label } : null };
+});
+
+// "Sign in with Authentik" names the provider "Authentik".
+const providerName = (label: string) =>
+	label.replace(/^Sign in with\s+/i, "") || "SSO";
+
+// Starts adding the provider to the signed-in person's account. It's an RPC call and
+// not a link to follow, so it can't be triggered from another site: the session
+// cookie isn't sent on cross-site POSTs. Who it applies to, and which session, are
+// taken from the session here and kept on the server with the state.
+export const startOidcLink = base.handler(async ({ context }) => {
+	const config = oidcConfig();
+	if (!config) {
+		throw new ORPCError("BAD_REQUEST", {
+			message: "Single sign-on isn't set up on this server.",
+		});
+	}
+	const session = await requireSession(context.headers);
+	enforceRateLimit(linkStartsByUser, session.userId);
+
+	const existing = await sql`
+		SELECT 1 FROM auth_account
+		WHERE userId = ${session.userId} AND providerId = ${oidcProviderId(config)}
+	`;
+	if (existing.length > 0) {
+		throw new ORPCError("BAD_REQUEST", {
+			message: "Your account is already linked to this provider.",
+		});
+	}
+
+	let login: Awaited<ReturnType<typeof beginOidcLogin>>;
+	try {
+		login = await beginOidcLogin(config, {
+			invite: null,
+			next: null,
+			link: { userId: session.userId, sessionId: session.id },
+		});
+	} catch {
+		throw new ORPCError("SERVICE_UNAVAILABLE", {
+			message: "The sign-in provider can't be reached right now.",
+		});
+	}
+	setCookie(context.resHeaders, oidcCookieName(login.state), login.binding, {
+		httpOnly: true,
+		secure: useSecureCookies(),
+		sameSite: "lax",
+		path: COOKIE_PATH,
+		maxAge: 10 * 60,
+	});
+	return { url: login.url };
 });
 
 // Which sign-in methods the signed-in person has.
@@ -151,6 +243,11 @@ export const findLinkedAccounts = base.handler(async ({ context }) => {
 
 	const current = config ? oidcProviderId(config) : null;
 	return {
+		// Set when this provider is on and the person hasn't linked it yet.
+		linkable:
+			config && !rows.some((row) => row.providerId === current)
+				? { name: providerName(config.label) }
+				: null,
 		hasPassword: rows.some(
 			(row) => row.providerId === "password" && row.password !== null,
 		),
@@ -161,7 +258,7 @@ export const findLinkedAccounts = base.handler(async ({ context }) => {
 				// they can be removed.
 				label:
 					row.providerId === current
-						? (config?.label.replace(/^Sign in with\s+/i, "") ?? "SSO")
+						? providerName(config?.label ?? "")
 						: "A previous single sign-on provider",
 			})),
 	};
