@@ -18,7 +18,7 @@ function RouteComponent() {
 	const params = { id: workspaceId, projectId };
 
 	return (
-		<div className="flex h-full w-full flex-col md:flex-row">
+		<div className="flex h-full w-full flex-col md:flex-row pointer-coarse:max-lg:flex-col">
 			<SettingsNav title="Project Settings">
 				<SettingsNavGroup label="General">
 					<Link

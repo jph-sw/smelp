@@ -236,7 +236,10 @@ function RouteComponent() {
 			<h1 className="text-lg font-medium">States</h1>
 			<ul className="flex flex-col gap-2">
 				{states.map((state, index) => (
-					<li key={state.id} className="flex flex-wrap items-center gap-2">
+					<li
+						key={state.id}
+						className="flex flex-wrap items-center gap-2 max-sm:rounded-lg max-sm:border max-sm:p-2"
+					>
 						<div className="flex">
 							<Button
 								variant="ghost"
@@ -260,7 +263,7 @@ function RouteComponent() {
 						<input
 							type="color"
 							aria-label={`${state.name} color`}
-							className="size-7 shrink-0 cursor-pointer rounded-md border border-input bg-transparent p-0.5"
+							className="size-7 shrink-0 cursor-pointer rounded-md pointer-coarse:size-11 border border-input bg-transparent p-0.5"
 							defaultValue={state.color}
 							onBlur={(event) => {
 								if (event.target.value !== state.color) {
@@ -328,7 +331,7 @@ function RouteComponent() {
 				<input
 					type="color"
 					aria-label="New state color"
-					className="size-7 shrink-0 cursor-pointer rounded-md border border-input bg-transparent p-0.5"
+					className="size-7 shrink-0 cursor-pointer rounded-md pointer-coarse:size-11 border border-input bg-transparent p-0.5"
 					value={newColor}
 					onChange={(event) => setNewColor(event.target.value)}
 				/>

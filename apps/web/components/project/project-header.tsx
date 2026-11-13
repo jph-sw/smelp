@@ -72,7 +72,7 @@ export function ProjectHeader({
 	);
 
 	return (
-		<div className="flex h-12 w-full shrink-0 items-center gap-2 overflow-x-auto border-b px-4">
+		<div className="flex w-full shrink-0 flex-wrap items-center gap-x-2 gap-y-1 border-b px-4 py-1.5 sm:h-12 sm:flex-nowrap sm:overflow-x-auto sm:py-0">
 			<Link
 				className="group flex min-w-0 items-center gap-2"
 				to="/$id/projects/$projectId"
@@ -85,7 +85,7 @@ export function ProjectHeader({
 					{project.name}
 				</h3>
 			</Link>
-			<div className="ms-2 flex shrink-0 items-center gap-2 sm:ms-4">
+			<div className="order-last -m-1 flex w-[calc(100%+0.5rem)] items-center gap-2 overflow-x-auto p-1 sm:order-none sm:my-0 sm:me-0 sm:p-0 sm:ms-4 sm:w-auto sm:shrink-0 sm:overflow-visible">
 				<Button
 					render={
 						<Link
