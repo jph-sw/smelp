@@ -634,7 +634,6 @@ describe("linking from account settings", () => {
 		expect(withB.error).toBe("session_ended");
 		expect(await identitiesOf(a.id)).toHaveLength(0);
 		expect(await identitiesOf(b.id)).toHaveLength(0);
-		expect(await identitiesOf(a.id)).toHaveLength(1);
 	});
 
 	test("starting needs a session and offers nothing without the settings", async () => {
