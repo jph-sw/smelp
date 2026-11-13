@@ -91,6 +91,25 @@ Email turns on when `SMTP_HOST`, `SMTP_FROM` and `APP_URL` are all set. Invites 
 
 To check your settings, use **Send test email** at `/ceo`. Self-signed certificates on mail servers are rejected.
 
+### Sign in with OpenID Connect
+
+One OpenID Connect provider (Google, GitLab, Authentik, Keycloak and so on) can be added next to passwords. It turns on when `OIDC_ISSUER_URL`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET` and `APP_URL` are all set, and the sign-in and sign-up pages then show a button. Without them, nothing changes.
+
+| Setting | What it does |
+| --- | --- |
+| `OIDC_ISSUER_URL` | The provider's issuer address. smelp reads `/.well-known/openid-configuration` from it. It must be `https://`, except on this machine. |
+| `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET` | The client you registered with the provider |
+| `APP_URL` | Public address of this install, shared with email |
+| `OIDC_BUTTON_LABEL` | Text of the button. Defaults to `Sign in with SSO`. |
+
+Register `APP_URL/api/auth/oidc/callback` as the redirect URI with your provider. smelp asks for the `openid email profile` scopes and uses the authorization code flow with PKCE.
+
+- **Existing accounts are linked by the person, never by email.** Someone who already has an account signs in with their password, opens Account, then Single sign-on, and presses "Link" with the provider's name. They go through the provider and come back with it attached to the account they were signed in to. The provider's email doesn't have to match, and nothing is guessed from it. From then on that sign-in finds the account by the provider's own id.
+- **Signing in without a link:** a person with no linked account gets a new one only if public sign-up is open at `/ceo`, or they came through an invite link, or it's the first account on a new install (which becomes the admin). The provider must report a verified email (`email_verified` set to `true`) that no account uses. In every other case, including an email that already belongs to an account, they see the same message telling them to sign in with their password and link the provider, so it never says whether an email has an account.
+- **Unlinking:** the account settings show the linked provider. It can be unlinked only by someone who also has a password. People whose account was made through the provider have none yet, and can set one there or through a password reset.
+- Logins in progress are kept in memory, like the rate limits, so a restart cancels any that are half done.
+- Changing `OIDC_ISSUER_URL` to a different provider starts fresh. Existing links to the old one stop matching, and their owners can sign in with their password and link the new provider.
+
 ## Backup
 
 Your data is a SQLite database, which includes photos, and a folder of attached files (`/data/attachments`), both on the `smelp-data` Docker volume. This is safe while smelp is running:

@@ -15,15 +15,18 @@ import { avatarResponse } from "./lib/avatars";
 import { markServerRunning } from "./lib/backup";
 import { statusResponse } from "./lib/health";
 import { logMailStatus } from "./lib/mail";
+import { logOidcStatus } from "./lib/oidc";
 import { version } from "./lib/version";
 import { createWebAppHandler } from "./lib/web-app";
 import { handler } from "./router";
+import { oidcCallback, oidcStart } from "./routes/auth/oidc";
 
 const migrator = new Migrator();
 const utils = new Utils();
 
 await migrator.up();
 logMailStatus();
+logOidcStatus();
 sweepAttachments()
 	.then((removed) => {
 		if (removed > 0) {
@@ -97,6 +100,9 @@ const server = Bun.serve({
 		"/rpc": rpcRouteHandler,
 		"/rpc/*": rpcRouteHandler,
 		"/api/status": () => statusResponse(),
+		"/api/auth/oidc/start": (request) => oidcStart(request, clientIp(request)),
+		"/api/auth/oidc/callback": (request) =>
+			oidcCallback(request, clientIp(request)),
 		"/api/attachments": (request) => uploadAttachment(request),
 		"/api/attachments/:id": (request) =>
 			attachmentResponse(request.headers, request.params.id, request.method),

@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-router";
 import * as v from "valibot";
 import { InsecureCookieWarning } from "#/components/insecure-cookie-warning";
+import { OidcButton } from "#/components/oidc-button";
 import {
 	Card,
 	CardContent,
@@ -19,6 +20,7 @@ import { FieldGroup } from "#/components/ui/field";
 import { useAppForm } from "#/hooks/form";
 import { usePageTitle } from "#/hooks/use-page-title";
 import { instanceStatusQueryOptions } from "#/lib/data/instance";
+import { signInOptionsQueryOptions } from "#/lib/data/sign-in-options";
 import { toastError } from "#/lib/errors";
 import { signUp, startSession } from "../../lib/auth";
 
@@ -59,8 +61,12 @@ export const Route = createFileRoute("/signup")({
 				: redirect({ to: "/" });
 		}
 	},
-	loader: ({ context: { queryClient } }) =>
-		queryClient.ensureQueryData(instanceStatusQueryOptions),
+	loader: async ({ context: { queryClient } }) => {
+		await Promise.all([
+			queryClient.ensureQueryData(instanceStatusQueryOptions),
+			queryClient.ensureQueryData(signInOptionsQueryOptions),
+		]);
+	},
 	component: SignUp,
 });
 
@@ -199,6 +205,7 @@ function SignUpForm({
 							/>
 						</form.AppForm>
 					</form>
+					<OidcButton invite={invite} />
 				</CardContent>
 				{!needsSetup && (
 					<CardFooter>
