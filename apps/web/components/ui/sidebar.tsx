@@ -183,7 +183,7 @@ function SidebarGroupLabel({
 	return (
 		<div
 			className={cn(
-				"flex h-8 shrink-0 items-center px-2 text-xs text-muted-foreground",
+				"mt-2 flex h-7 shrink-0 items-center px-2 text-xs font-medium text-muted-foreground",
 				className,
 			)}
 			{...props}
@@ -226,7 +226,7 @@ function SidebarMenuButton({
 	const merged = {
 		"data-active": isActive || undefined,
 		className: cn(
-			"flex h-8 w-full items-center gap-2 rounded-md px-2 text-left text-sm hover:bg-sidebar-accent data-active:bg-sidebar-accent data-active:font-medium [&>svg]:size-4 [&>svg]:shrink-0 [&>span:last-child]:truncate group-has-[[data-sidebar=menu-action]]/menu-item:pr-8",
+			"flex h-7 w-full items-center gap-2 rounded-md px-2 text-left text-sm text-sidebar-foreground hover:bg-sidebar-accent data-active:text-sidebar-accent-foreground data-active:bg-sidebar-accent data-active:font-medium [&>svg]:size-4 [&>svg]:shrink-0 [&>span:last-child]:truncate group-has-[[data-sidebar=menu-action]]/menu-item:pr-8",
 			className,
 		),
 		...props,
@@ -250,7 +250,7 @@ function SidebarMenuAction({
 			type="button"
 			data-sidebar="menu-action"
 			className={cn(
-				"absolute top-1 right-1 flex size-6 items-center justify-center rounded-md hover:bg-sidebar-accent [&>svg]:size-4",
+				"absolute top-0.5 right-1 flex size-6 items-center justify-center rounded-md hover:bg-sidebar-accent [&>svg]:size-4",
 				showOnHover &&
 					"group-focus-within/menu-item:opacity-100 group-hover/menu-item:opacity-100 aria-expanded:opacity-100 md:pointer-fine:opacity-0",
 				className,
@@ -267,7 +267,7 @@ function SidebarMenuBadge({
 	return (
 		<div
 			className={cn(
-				"pointer-events-none absolute top-1.5 right-1 flex h-5 min-w-5 items-center justify-center px-1 text-xs font-medium tabular-nums",
+				"pointer-events-none absolute top-1 right-1 flex h-5 min-w-5 items-center justify-center px-1 text-xs font-medium tabular-nums",
 				className,
 			)}
 			{...props}
