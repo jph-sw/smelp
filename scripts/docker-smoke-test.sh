@@ -4,6 +4,8 @@
 set -eu
 
 export COMPOSE_PROJECT_NAME=smelp-smoke-test
+# Its own tag, so the build doesn't replace a pulled image of a real version.
+export SMELP_VERSION=smoke-test
 port="${SMELP_PORT:-3000}"
 base="http://localhost:$port"
 
