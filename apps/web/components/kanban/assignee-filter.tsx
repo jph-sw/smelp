@@ -94,12 +94,11 @@ export function AssigneeFilter({
 		>
 			<ComboboxTrigger
 				ref={setButton}
-				aria-label="Filter by assignee"
 				data-active={selected.length > 0 || undefined}
 				className={cn("justify-between gap-2 px-2.5 font-normal", className)}
 			>
 				{selected.length > 0 && (
-					<span className="flex shrink-0 -space-x-1.5">
+					<span aria-hidden className="flex shrink-0 -space-x-1.5">
 						{selected.slice(0, 3).map((id) => {
 							const member = memberById.get(id);
 							const ring = "size-5 ring-2 ring-background text-[0.625rem]";
@@ -112,6 +111,7 @@ export function AssigneeFilter({
 					</span>
 				)}
 				<span className="min-w-0 flex-1 truncate text-start">
+					<span className="sr-only">Assignee: </span>
 					<ComboboxValue maxLabels={1}>
 						{(state) => state.label || "Anyone"}
 					</ComboboxValue>
