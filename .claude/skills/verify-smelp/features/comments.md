@@ -1,0 +1,40 @@
+# Comments and mentions
+
+A member comments on a work item from its Activity section, mentions people by typing `@` and choosing from a menu, and edits or deletes their own comments. A mentioned person gets an inbox notification.
+
+## Sub-features
+
+- `comment-post`: posting adds a comment to the Activity list.
+- `comment-mention`: typing `@` opens a listbox of workspace members, and choosing one inserts `@<display name>`.
+- `comment-edit`: the author edits their own comment, which then shows as edited next to its time.
+- `comment-delete`: the author deletes their own comment.
+- `comment-inbox`: a mentioned person sees the mention in their Inbox.
+
+## How to get to it (user POV)
+
+- Open any work item, then use `textbox "Add a comment"` in `region "Activity"`.
+- Open the Inbox from the sidebar link `Inbox` (`/<workspace>/inbox`).
+
+## Driving it with smelp-verify
+
+Preconditions:
+
+- The baseline seed, on `VER-1` at `/verify_team/browse/VER-1`.
+- `comment-inbox` needs a second member, since you can't mention yourself into your own inbox. Add one through an invite first (see [invites.md](./invites.md)).
+
+Steps:
+
+- **Type with a mention.** Click `getByRole("textbox", { name: "Add a comment" })`, then `page.keyboard.type("Ping @ve")`. `getByRole("listbox", { name: "Add a comment" })` appears with `option "vera"`.
+- **Choose the person.** `getByRole("option", { name: "vera" }).click()`, then type ` thanks`. The text reads `Ping @vera thanks`.
+- **Post.** `getByRole("button", { name: "Comment" }).click()`. A new `listitem` in Activity shows `vera`, `just now`, the paragraph `Ping @vera thanks`, and the buttons `Edit comment`, `Delete comment`, `Attach files` and `Add reaction`. The comment box empties and `Comment` turns disabled.
+- **Edit.** Press `Edit comment`, change the text, and save. The paragraph changes and an edited marker shows next to the time.
+- **Delete.** Press `Delete comment` and confirm. The listitem is gone.
+- **Inbox.** Sign in as the mentioned second member and open `Inbox`. The mention is listed with the work item's title.
+- **Proof.** `aria("activity", page.getByRole("region", { name: "Activity" }))` before and after, and `smelp-verify sql "select body, editedAt from comment where issueId = 'VER-1'"`. For the inbox, `select type, userId, readAt from notification`.
+
+## Gotchas
+
+- Use `keyboard.type` for `@`. `fill()` doesn't fire the key events that open the mention menu.
+- `Comment` stays disabled while the box is empty, so a click on it does nothing.
+- Only the author can edit or delete, and admins can't edit other people's comments. Test that rule with a second account.
+- Verified so far: post and mention (snapshot names above). The edit and delete confirmation names, and the inbox layout, haven't been driven yet. Snapshot first and update this file.

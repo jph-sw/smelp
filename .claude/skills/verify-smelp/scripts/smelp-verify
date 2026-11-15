@@ -1,0 +1,199 @@
+#!/usr/bin/env bash
+# Drives a disposable smelp instance for verification. Run with no arguments for help.
+# Every instance gets its own port, database, attachments folder and web build, so
+# runs never touch ./database.sqlite or a dev server the user has open.
+set -euo pipefail
+
+SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+REPO="$(cd "$SKILL_DIR/../../.." && pwd)"
+HOME_DIR="${SMELP_VERIFY_HOME:-${XDG_STATE_HOME:-$HOME/.local/state}/verify-smelp}"
+TOOLS="$HOME_DIR/tools"
+PLAYWRIGHT_VERSION="1.60.0" # Matches the Chromium revision (1223) in ~/.cache/ms-playwright.
+
+die() { echo "smelp-verify: $*" >&2; exit 1; }
+
+usage() {
+	cat <<EOF
+Usage: smelp-verify <command> [args]
+
+  launch               Build the web app, start a fresh instance, seed it. Prints SMELP_RUN.
+  doctor               Read-only check that the instance in \$SMELP_RUN is ours and healthy.
+  browse <journey.mjs> [--fresh]
+                       Run a Playwright journey against \$SMELP_RUN, signed in as the seeded
+                       admin (--fresh: signed out). Writes evidence/<journey>/.
+  rpc <procedure> [json]
+                       Call the API as the seeded admin, e.g. rpc issues/find '{"projectId":"VER"}'.
+  sql "<select>"       Read-only SQL against the instance's database.
+  logs                 Print the server log.
+  stop                 Stop the instance and delete its data. Keeps the evidence.
+  list                 List runs and whether their server is up.
+
+State: $HOME_DIR/runs/<run>/   Evidence: $HOME_DIR/evidence/<run>/
+EOF
+}
+
+run_dir() {
+	[[ -n "${SMELP_RUN:-}" ]] || die "set SMELP_RUN to the id that launch printed"
+	local dir="$HOME_DIR/runs/$SMELP_RUN"
+	[[ -d "$dir" ]] || die "no run $SMELP_RUN in $HOME_DIR/runs"
+	echo "$dir"
+}
+
+pid_alive() { [[ -f "$1/server.pid" ]] && kill -0 "$(cat "$1/server.pid")" 2>/dev/null; }
+
+ensure_tools() {
+	if [[ ! -f "$TOOLS/node_modules/playwright-core/package.json" ]] ||
+		! grep -q "\"version\": \"$PLAYWRIGHT_VERSION\"" "$TOOLS/node_modules/playwright-core/package.json"; then
+		mkdir -p "$TOOLS"
+		[[ -f "$TOOLS/package.json" ]] || echo '{"private":true}' >"$TOOLS/package.json"
+		(cd "$TOOLS" && bun add --silent "playwright-core@$PLAYWRIGHT_VERSION") >&2
+	fi
+	# Downloads the headless shell only when the cache doesn't already have it.
+	(cd "$TOOLS" && node node_modules/playwright-core/cli.js install chromium-headless-shell) >&2
+}
+
+cmd_launch() {
+	command -v bun >/dev/null || die "bun is not on PATH"
+	command -v node >/dev/null || die "node is not on PATH (Playwright runs on Node)"
+	local id="${SMELP_RUN:-$(date +%Y%m%d-%H%M%S)-$$}"
+	local dir="$HOME_DIR/runs/$id"
+	[[ ! -e "$dir" ]] || die "run $id already exists"
+	mkdir -p "$dir/data/attachments" "$HOME_DIR/evidence/$id"
+	ensure_tools
+
+	if [[ ! -d "$REPO/node_modules" ]]; then
+		echo "• Installing dependencies" >&2
+		(cd "$REPO" && bun install --frozen-lockfile) >&2
+	fi
+
+	echo "• Building the web app into $dir/web" >&2
+	(cd "$REPO/apps/web" && bun run build --outDir "$dir/web" --emptyOutDir) >"$dir/build.log" 2>&1 ||
+		{ tail -30 "$dir/build.log" >&2; die "web build failed, see $dir/build.log"; }
+
+	local port
+	port="$(bun -e 'const s = Bun.serve({ port: 0, fetch: () => new Response() }); console.log(s.port); s.stop(true)')"
+	local base="http://localhost:$port"
+	cat >"$dir/env" <<EOF
+SMELP_RUN=$id
+BASE=$base
+PORT=$port
+DATABASE_PATH=$dir/data/smelp.sqlite
+ATTACHMENTS_PATH=$dir/data/attachments
+WEB_DIST=$dir/web
+EVIDENCE=$HOME_DIR/evidence/$id
+REVISION=$(git -C "$REPO" rev-parse --short HEAD)$(git -C "$REPO" diff --quiet HEAD -- . 2>/dev/null || echo "-dirty")
+EOF
+
+	echo "• Starting smelp on $base" >&2
+	(
+		cd "$REPO"
+		NODE_ENV=production PORT="$port" DATABASE_PATH="$dir/data/smelp.sqlite" \
+			ATTACHMENTS_PATH="$dir/data/attachments" WEB_DIST="$dir/web" \
+			setsid bun apps/api/src/index.ts >"$dir/server.log" 2>&1 </dev/null &
+		echo $! >"$dir/server.pid"
+	)
+
+	local ready=""
+	for _ in $(seq 1 120); do
+		pid_alive "$dir" || { cat "$dir/server.log" >&2; die "server exited during startup"; }
+		if curl -fsS --max-time 2 "$base/api/status" >/dev/null 2>&1 &&
+			curl -fsS --max-time 2 "$base/signin" | grep -q 'id="root"'; then
+			ready=1
+			break
+		fi
+		sleep 0.5
+	done
+	[[ -n "$ready" ]] || { cat "$dir/server.log" >&2; die "server never became healthy"; }
+
+	echo "• Seeding" >&2
+	(cd "$REPO" && bun "$SKILL_DIR/scripts/seed.ts" "$dir") >&2 || die "seeding failed"
+
+	echo "• Ready" >&2
+	echo "SMELP_RUN=$id"
+}
+
+cmd_doctor() {
+	local dir
+	dir="$(run_dir)"
+	# shellcheck disable=SC1091
+	source "$dir/env"
+	local fail=0
+	check() { if eval "$2"; then echo "  ok   $1"; else echo "  FAIL $1"; fail=1; fi; }
+	local pid
+	pid="$(cat "$dir/server.pid" 2>/dev/null || echo none)"
+	echo "run $SMELP_RUN at $BASE (pid $pid, built from $REVISION)"
+	check "server process $pid is alive" "pid_alive '$dir'"
+	check "port $PORT is owned by pid $pid" "ss -ltnpH 'sport = :$PORT' 2>/dev/null | grep -q 'pid=$pid,'"
+	check "/api/status answers 200" "curl -fsS --max-time 3 '$BASE/api/status' >/dev/null"
+	check "the web app is served" "curl -fsS --max-time 3 '$BASE/signin' | grep -q 'id=\"root\"'"
+	check "database file is this run's" "[[ -f '$DATABASE_PATH' ]] && grep -q '$DATABASE_PATH' /proc/$pid/environ 2>/dev/null"
+	check "seeded admin session is valid" "[[ \$(cd '$REPO' && bun '$SKILL_DIR/scripts/rpc.ts' '$dir' auth/me 2>/dev/null | head -c 200) == *'verify@example.test'* ]]"
+	local version
+	version="$(cd "$REPO" && bun "$SKILL_DIR/scripts/rpc.ts" "$dir" instance/version 2>/dev/null | bun -e 'console.log(JSON.parse(await Bun.stdin.text()).version)' 2>/dev/null || true)"
+	echo "  info instance reports ${version:-unknown}; checkout package.json says $(bun -e "console.log(require('$REPO/package.json').version)")"
+	return "$fail"
+}
+
+cmd_browse() {
+	local dir
+	dir="$(run_dir)"
+	[[ $# -ge 1 ]] || die "usage: smelp-verify browse <journey.mjs> [--fresh]"
+	pid_alive "$dir" || die "run $SMELP_RUN is not running; run doctor"
+	ensure_tools >/dev/null 2>&1
+	SMELP_TOOLS="$TOOLS" node "$SKILL_DIR/scripts/browse.mjs" "$dir" "$@"
+}
+
+cmd_rpc() {
+	local dir
+	dir="$(run_dir)"
+	(cd "$REPO" && bun "$SKILL_DIR/scripts/rpc.ts" "$dir" "$@")
+}
+
+cmd_sql() {
+	local dir
+	dir="$(run_dir)"
+	[[ $# -eq 1 ]] || die 'usage: smelp-verify sql "<select>"'
+	# shellcheck disable=SC1091
+	source "$dir/env"
+	DB="$DATABASE_PATH" Q="$1" bun -e '
+		import { Database } from "bun:sqlite";
+		const db = new Database(process.env.DB, { readonly: true });
+		console.log(JSON.stringify(db.query(process.env.Q).all(), null, 2));'
+}
+
+cmd_logs() { cat "$(run_dir)/server.log"; }
+
+cmd_stop() {
+	local dir
+	dir="$(run_dir)"
+	if pid_alive "$dir"; then
+		local pid
+		pid="$(cat "$dir/server.pid")"
+		kill -TERM "$pid"
+		for _ in $(seq 1 40); do kill -0 "$pid" 2>/dev/null || break; sleep 0.25; done
+		kill -0 "$pid" 2>/dev/null && kill -KILL "$pid"
+	fi
+	# Keep the server log with the evidence; it explains failures after the fact.
+	cp "$dir/server.log" "$HOME_DIR/evidence/$SMELP_RUN/server.log" 2>/dev/null || true
+	rm -rf "$dir"
+	echo "stopped $SMELP_RUN; evidence kept in $HOME_DIR/evidence/$SMELP_RUN"
+}
+
+cmd_list() {
+	shopt -s nullglob
+	for dir in "$HOME_DIR"/runs/*/; do
+		dir="${dir%/}"
+		local state="down"
+		pid_alive "$dir" && state="up"
+		echo "$(basename "$dir")  $state  $(grep ^BASE= "$dir/env" 2>/dev/null | cut -d= -f2)"
+	done
+}
+
+case "${1:-}" in
+launch | doctor | browse | rpc | sql | logs | stop | list)
+	c="$1"
+	shift
+	"cmd_$c" "$@"
+	;;
+*) usage ;;
+esac
