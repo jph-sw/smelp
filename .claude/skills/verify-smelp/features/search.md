@@ -37,6 +37,7 @@ Steps:
 ## Gotchas
 
 - The header bar is a `combobox`. The board's box is a `searchbox` with the same name. Scope to `banner` or `main`.
+- Playwright types with a US layout. To check a German QWERTZ slash (Shift+7), dispatch `keydown` with `key: "/"`, `code: "Digit7"`, `shiftKey: true` on the focused element. It should focus the bar, and US `Shift+Slash` (a `?`) should not.
 - The `kbd` hint's text wraps `/` in bidi isolation marks (U+2066, U+2069). Strip them before comparing.
 - Results update after a debounce. Wait for an option or the empty text, not a fixed sleep.
 - Archived projects are left out of search. To verify archiving, check that their items disappear.

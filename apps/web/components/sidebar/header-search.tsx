@@ -24,9 +24,11 @@ const RESULT_LIMIT = 50;
 export function HeaderSearch({ workspaceId }: { workspaceId: string }) {
 	const [text, setText] = useState("");
 	const inputRef = useRef<HTMLInputElement>(null);
-	useShortcut("/", () => inputRef.current?.focus(), {
-		description: "Search work items",
-	});
+	const focusSearch = () => inputRef.current?.focus();
+	useShortcut("/", focusSearch, { description: "Search work items" });
+	// On layouts like German QWERTZ "/" is Shift+7, and ui-sdk only matches "/"
+	// without Shift. US Shift+/ reports "?", so this doesn't fire there.
+	useShortcut("shift+/", focusSearch);
 	const hint = useShortcutHint("/");
 	const query = useDebounce(text, 250).trim();
 	const tooShort = query.length < 2;
