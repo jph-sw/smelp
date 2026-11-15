@@ -23,13 +23,7 @@ The look is plain for now: the components are built on [ui-sdk](https://ui-sdk.d
 
 ## Install
 
-You need Docker with Compose 2.24 or newer. Each release is published as an image at `ghcr.io/jph-sw/smelp`. The repository is private, so the image is too. Create a GitHub personal access token (classic) with the `read:packages` scope, on an account that can see the repository, and log in with it once:
-
-```sh
-docker login ghcr.io -u your-github-username
-```
-
-Then get the compose file, pick a version and start it. Use the newest version from [CHANGELOG.md](CHANGELOG.md) in place of `v0.6.0`.
+You need Docker with Compose 2.24 or newer. Each release is published as an image at `ghcr.io/jph-sw/smelp`. Get the compose file, pick a version and start it. Use the newest version from [CHANGELOG.md](CHANGELOG.md) in place of `v0.6.0`.
 
 ```sh
 git clone --branch v0.6.0 https://github.com/jph-sw/smelp.git
@@ -39,7 +33,7 @@ docker compose pull
 docker compose up -d
 ```
 
-To build from source instead, skip the login and run `docker compose up -d --build` in the checkout.
+To build from source instead, run `docker compose up -d --build` in the checkout.
 
 Open <http://localhost:3000> and create your account. The first account becomes the instance admin. After that, people join through invite links from a workspace's member settings, unless you open public sign-up at `/ceo`.
 
