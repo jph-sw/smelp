@@ -23,13 +23,23 @@ The look is plain for now: the components are built on [ui-sdk](https://ui-sdk.d
 
 ## Install
 
-You need Docker with Compose 2.24 or newer. There's no published image, so this builds from source. Use the newest version from [CHANGELOG.md](CHANGELOG.md) in place of `v0.6.0`.
+You need Docker with Compose 2.24 or newer. Each release is published as an image at `ghcr.io/jph-sw/smelp`. The repository is private, so the image is too. Create a GitHub personal access token (classic) with the `read:packages` scope, on an account that can see the repository, and log in with it once:
+
+```sh
+docker login ghcr.io -u your-github-username
+```
+
+Then get the compose file, pick a version and start it. Use the newest version from [CHANGELOG.md](CHANGELOG.md) in place of `v0.6.0`.
 
 ```sh
 git clone --branch v0.6.0 https://github.com/jph-sw/smelp.git
 cd smelp
-docker compose up -d --build
+echo SMELP_VERSION=0.6.0 >> .env
+docker compose pull
+docker compose up -d
 ```
+
+To build from source instead, skip the login and run `docker compose up -d --build` in the checkout.
 
 Open <http://localhost:3000> and create your account. The first account becomes the instance admin. After that, people join through invite links from a workspace's member settings, unless you open public sign-up at `/ceo`.
 
@@ -88,6 +98,7 @@ All of these are optional. Put them in `.env`, which `.env.example` has a starti
 
 | Setting | What it does |
 | --- | --- |
+| `SMELP_VERSION` | The image version to run, like `0.6.0`. Defaults to `latest`, the newest release. |
 | `SMELP_PORT` | Port on this machine, optionally with an address. Defaults to `3000`. |
 | `SECURE_COOKIES` | `false` allows signing in over plain HTTP. |
 | `TRUST_PROXY` | `true` when behind a reverse proxy. See above. |
@@ -178,6 +189,18 @@ Your current database is set aside in `/data/backups`, and your current attached
 
 ## Upgrade
 
+Back up, set `SMELP_VERSION` in `.env` to the new version, then pull it and restart:
+
+```sh
+docker compose exec smelp bun run backup
+docker compose pull
+docker compose up -d
+```
+
+Read the new version's entry in [CHANGELOG.md](CHANGELOG.md) first. Each release is tested by upgrading a database from the release before it. You can skip versions. To keep `compose.yaml` in step with the image, update the checkout too, with `git fetch --tags` and `git checkout v0.6.0`.
+
+If you build from source, check out the new version and build it instead of pulling:
+
 ```sh
 docker compose exec smelp bun run backup
 git fetch --tags
@@ -185,9 +208,7 @@ git checkout v0.6.0
 docker compose up -d --build
 ```
 
-Replace `v0.6.0` with the version you're upgrading to, and read its entry in [CHANGELOG.md](CHANGELOG.md) first. Each release is tested by upgrading a database from the release before it. You can skip versions.
-
-Database changes run automatically when smelp starts, and they can't be undone. To go back, check out the older version and restore the backup you just took. `/ceo` shows which version is running.
+Database changes run automatically when smelp starts, and they can't be undone. To go back, set the older version again, or check it out, and restore the backup you just took. `/ceo` shows which version is running.
 
 ## Logs and health
 
@@ -246,6 +267,8 @@ git push origin v0.6.0
 awk '/^## 0.6.0/{found=1; next} /^## /{found=0} found' CHANGELOG.md > notes.md
 gh release create v0.6.0 --title "smelp 0.6.0" --notes-file notes.md
 ```
+
+4. Pushing the tag runs the Release workflow, which publishes the image as `0.6.0`, `0.6` and `latest`. Run `gh run watch` and pick it to follow it until it's done. To publish an existing tag again, run `gh workflow run release.yml -f tag=v0.6.0`. That only moves `latest` when the tag is the newest release.
 
 ## License
 

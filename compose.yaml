@@ -1,5 +1,7 @@
 services:
   smelp:
+    # `docker compose pull` gets the published image, and `--build` builds from source.
+    image: ghcr.io/jph-sw/smelp:${SMELP_VERSION:-latest}
     build: .
     restart: unless-stopped
     ports:
