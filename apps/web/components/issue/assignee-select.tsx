@@ -3,6 +3,7 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { Combobox, ComboboxTrigger } from "@ui-sdk/react/combobox";
 import { useState } from "react";
 import { currentUserQueryOptions } from "#/lib/auth";
+import { cn } from "#/lib/utils";
 import {
 	MemberAvatar,
 	MemberOption,
@@ -18,11 +19,13 @@ export function AssigneeSelect({
 	value,
 	members,
 	disabled,
+	className,
 	onChange,
 }: {
 	value: string | null;
 	members: ProjectMember[];
-	disabled: boolean;
+	disabled?: boolean;
+	className?: string;
 	onChange: (value: string | null) => void;
 }) {
 	const { data: user } = useSuspenseQuery(currentUserQueryOptions);
@@ -49,11 +52,15 @@ export function AssigneeSelect({
 			query={query}
 			onQueryChange={setQuery}
 			onOpenChange={(open) => open && setQuery("")}
-			onOpenChangeComplete={(open) => !open && button?.focus()}
+			// In a dialog, ui-sdk's own restore runs right after this and picks the
+			// dialog's first field, because the input, not this button, is the trigger.
+			onOpenChangeComplete={(open) =>
+				!open && requestAnimationFrame(() => button?.focus())
+			}
 		>
 			<ComboboxTrigger
 				ref={setButton}
-				className="w-full min-w-0 justify-between gap-2 border-transparent bg-transparent px-2 font-normal hover:border-transparent hover:bg-accent"
+				className={cn("min-w-0 justify-between gap-2", className)}
 			>
 				<span aria-hidden className="flex shrink-0">
 					{selected ? (

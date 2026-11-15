@@ -174,6 +174,7 @@ export function IssueProperties({
 					value={issue.assignee}
 					members={members}
 					disabled={!canWrite}
+					className="w-full border-transparent bg-transparent px-2 font-normal hover:border-transparent hover:bg-accent"
 					onChange={(assignee) => onUpdate({ assignee })}
 				/>
 			</div>

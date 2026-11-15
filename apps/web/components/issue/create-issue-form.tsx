@@ -5,8 +5,9 @@ import { projectMembersQueryOptions } from "#/lib/data/project-members";
 import { statesQueryOptions } from "#/lib/data/state";
 import { toastError } from "#/lib/errors";
 import { orpc } from "#/lib/orpc";
-import { FieldGroup } from "../ui/field";
+import { Field, FieldGroup } from "../ui/field";
 import { toast } from "../ui/toast";
+import { AssigneeSelect } from "./assignee-select";
 import type { CreateIssueDialogParams } from "./create-issue-dialog-store";
 
 const CreateIssueSchema = v.object({
@@ -16,10 +17,8 @@ const CreateIssueSchema = v.object({
 		v.maxLength(120, "Use at most 120 characters."),
 	),
 	description: v.string(),
-	assignee: v.string(),
+	assignee: v.nullable(v.string()),
 });
-
-const UNASSIGNED = "unassigned";
 
 export function CreateIssueForm({
 	params,
@@ -41,7 +40,7 @@ export function CreateIssueForm({
 		defaultValues: {
 			title: "",
 			description: "",
-			assignee: UNASSIGNED,
+			assignee: null as string | null,
 		},
 		validators: {
 			onSubmit: CreateIssueSchema,
@@ -61,7 +60,7 @@ export function CreateIssueForm({
 					description: value.description,
 					state: defaultState.id,
 					type: "task",
-					assignee: value.assignee === UNASSIGNED ? undefined : value.assignee,
+					assignee: value.assignee ?? undefined,
 					parentId: params.parentId,
 					workspaceId: params.workspaceId,
 					projectId: params.projectId,
@@ -100,16 +99,18 @@ export function CreateIssueForm({
 				<form.AppField
 					name="assignee"
 					children={(field) => (
-						<field.SelectField
-							label="Assignee"
-							items={[
-								{ label: "Unassigned", value: UNASSIGNED },
-								...(members ?? []).map((member) => ({
-									label: member.displayName,
-									value: member.userId,
-								})),
-							]}
-						/>
+						<Field>
+							{/* A FieldLabel would name the popup's search input "Assignee". */}
+							<div className="text-xs font-medium text-foreground">
+								Assignee
+							</div>
+							<AssigneeSelect
+								value={field.state.value}
+								members={members ?? []}
+								className="w-full"
+								onChange={field.handleChange}
+							/>
+						</Field>
 					)}
 				/>
 			</FieldGroup>
