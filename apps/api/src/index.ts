@@ -16,6 +16,7 @@ import { markServerRunning } from "./lib/backup";
 import { statusResponse } from "./lib/health";
 import { logMailStatus } from "./lib/mail";
 import { logOidcStatus } from "./lib/oidc";
+import { projectBackgroundResponse } from "./lib/project-backgrounds";
 import { version } from "./lib/version";
 import { createWebAppHandler } from "./lib/web-app";
 import { handler } from "./router";
@@ -108,6 +109,8 @@ const server = Bun.serve({
 			attachmentResponse(request.headers, request.params.id, request.method),
 		"/api/avatars/:userId": (request) =>
 			avatarResponse(request.headers, request.params.userId),
+		"/api/project-backgrounds/:projectId": (request) =>
+			projectBackgroundResponse(request.headers, request.params.projectId),
 	},
 });
 

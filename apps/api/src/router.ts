@@ -95,6 +95,8 @@ import {
 	deleteProject,
 	findProject,
 	joinProject,
+	removeBackground,
+	setBackground,
 	unarchiveProject,
 	updateProject,
 } from "./routes/project";
@@ -197,6 +199,8 @@ export const router = {
 		update: updateProject,
 		archive: archiveProject,
 		unarchive: unarchiveProject,
+		setBackground,
+		removeBackground,
 	},
 	projectMembers: {
 		find: findProjectMembers,

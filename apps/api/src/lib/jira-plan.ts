@@ -712,6 +712,7 @@ export function buildPlan(
 				updatedAt: ctx.now,
 				archivedAt: null,
 				archivedBy: null,
+				backgroundImage: null,
 			},
 			counter: {
 				projectId: p.id,
