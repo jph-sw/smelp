@@ -1,24 +1,23 @@
 import { DragDropProvider } from "@dnd-kit/react";
-import type { tables } from "@smelp/db";
 import {
 	useMutation,
 	useQueryClient,
 	useSuspenseQuery,
 } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import {
-	BoardFilterBar,
-	type BoardFilters,
-	NO_CYCLE,
-	NO_MODULE,
-	UNASSIGNED,
-} from "#/components/kanban/board-filters";
+import { BoardFilterBar } from "#/components/kanban/board-filters";
 import { IssueItem } from "#/components/kanban/issue-item";
 import { StateColumn } from "#/components/kanban/state-column";
 import { ArchivedBanner } from "#/components/project/archived-banner";
 import { IssueList } from "#/components/project/issue-list";
 import { ProjectHeader } from "#/components/project/project-header";
 import { usePageTitle } from "#/hooks/use-page-title";
+import {
+	type BoardFilters,
+	isFiltered,
+	matchesFilters,
+	parseBoardFilters,
+} from "#/lib/board-filters";
 import { cyclesQueryOptions, invalidateCycles } from "#/lib/data/cycle";
 import { issuesQueryOptions, updateIssue } from "#/lib/data/issue";
 import { moduleQueryKeys, modulesQueryOptions } from "#/lib/data/module";
@@ -30,22 +29,13 @@ import {
 import { statesQueryOptions } from "#/lib/data/state";
 import { toastError } from "#/lib/errors";
 
-const asString = (value: unknown) =>
-	typeof value === "string" || typeof value === "number"
-		? String(value)
-		: undefined;
-
 // Without "view", the page shows the board, so existing links keep working.
 type ProjectSearch = BoardFilters & { view?: "list" };
 
 export const Route = createFileRoute("/(workspace)/$id/projects/$projectId/")({
 	component: RouteComponent,
 	validateSearch: (search: Record<string, unknown>): ProjectSearch => ({
-		q: asString(search.q),
-		assignee: asString(search.assignee),
-		state: asString(search.state),
-		module: asString(search.module),
-		cycle: asString(search.cycle),
+		...parseBoardFilters(search),
 		view: search.view === "list" ? "list" : undefined,
 	}),
 	loader: async ({ context: { queryClient }, params: { projectId } }) => {
@@ -58,32 +48,6 @@ export const Route = createFileRoute("/(workspace)/$id/projects/$projectId/")({
 		]);
 	},
 });
-
-function matchesFilters(issue: tables["issue"], filters: BoardFilters) {
-	if (filters.q) {
-		const query = filters.q.toLowerCase();
-		const matches =
-			issue.title.toLowerCase().includes(query) ||
-			issue.id.toLowerCase().includes(query);
-		if (!matches) return false;
-	}
-	if (filters.assignee === UNASSIGNED) {
-		if (issue.assignee) return false;
-	} else if (filters.assignee && issue.assignee !== filters.assignee) {
-		return false;
-	}
-	if (filters.cycle === NO_CYCLE) {
-		if (issue.cycleId) return false;
-	} else if (filters.cycle && issue.cycleId !== filters.cycle) {
-		return false;
-	}
-	if (filters.module === NO_MODULE) {
-		if (issue.moduleId) return false;
-	} else if (filters.module && issue.moduleId !== filters.module) {
-		return false;
-	}
-	return true;
-}
 
 function RouteComponent() {
 	const { projectId, id: workspaceId } = Route.useParams();
@@ -155,13 +119,6 @@ function RouteComponent() {
 	const shownCount = visibleIssues.filter((issue) =>
 		visibleStates.some((state) => state.id === issue.state),
 	).length;
-	const isFiltered = Boolean(
-		filters.q ||
-			filters.assignee ||
-			filters.state ||
-			filters.cycle ||
-			filters.module,
-	);
 
 	return (
 		<div className="flex h-full w-full min-h-0 flex-col overflow-hidden">
@@ -181,7 +138,7 @@ function RouteComponent() {
 				modules={modules}
 				cycles={cycles}
 			/>
-			{isFiltered && shownCount === 0 && (
+			{isFiltered(filters) && shownCount === 0 && (
 				<p className="px-4 pt-3 text-sm text-muted-foreground">
 					No work items match these filters.
 				</p>

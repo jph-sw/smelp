@@ -1,6 +1,13 @@
 import type { ProjectMember, tables } from "@smelp/db";
 import { useEffect, useState } from "react";
 import { useDebounce } from "#/hooks/use-debounce";
+import {
+	type BoardFilters,
+	isFiltered,
+	NO_CYCLE,
+	NO_MODULE,
+	UNASSIGNED,
+} from "#/lib/board-filters";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import {
@@ -11,17 +18,6 @@ import {
 	SelectValue,
 } from "../ui/select";
 
-export type BoardFilters = {
-	q?: string;
-	assignee?: string;
-	state?: string;
-	cycle?: string;
-	module?: string;
-};
-
-export const UNASSIGNED = "unassigned";
-export const NO_CYCLE = "none";
-export const NO_MODULE = "none";
 const ALL = "all";
 
 function FilterSelect({
@@ -90,14 +86,6 @@ export function BoardFilterBar({
 		if ((filters.q ?? "") !== search.trim()) setSearch(filters.q ?? "");
 	}, [filters.q]);
 
-	const isFiltered = Boolean(
-		filters.q ||
-			filters.assignee ||
-			filters.state ||
-			filters.cycle ||
-			filters.module,
-	);
-
 	return (
 		<div className="flex shrink-0 flex-wrap items-center gap-2 px-4 pt-3">
 			<div className="-m-1 flex w-[calc(100%+0.5rem)] min-w-0 items-center gap-2 overflow-x-auto p-1 sm:contents">
@@ -111,8 +99,13 @@ export function BoardFilterBar({
 				/>
 				<FilterSelect
 					label="Filter by assignee"
-					value={filters.assignee}
-					onChange={(assignee) => onChange({ ...filters, assignee })}
+					value={filters.assignee?.[0]}
+					onChange={(assignee) =>
+						onChange({
+							...filters,
+							assignee: assignee ? [assignee] : undefined,
+						})
+					}
 					items={[
 						{ label: "Anyone", value: ALL },
 						{ label: "Unassigned", value: UNASSIGNED },
@@ -156,7 +149,7 @@ export function BoardFilterBar({
 						]}
 					/>
 				)}
-				{isFiltered && (
+				{isFiltered(filters) && (
 					<Button
 						variant="ghost"
 						className="shrink-0"
