@@ -1,6 +1,13 @@
 import type { ProjectMember, tables } from "@smelp/db";
 import { useEffect, useState } from "react";
 import { useDebounce } from "#/hooks/use-debounce";
+import {
+	type BoardFilters,
+	isFiltered,
+	NO_CYCLE,
+	NO_MODULE,
+} from "#/lib/board-filters";
+import { cn } from "#/lib/utils";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import {
@@ -10,19 +17,11 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "../ui/select";
+import { AssigneeFilter } from "./assignee-filter";
 
-export type BoardFilters = {
-	q?: string;
-	assignee?: string;
-	state?: string;
-	cycle?: string;
-	module?: string;
-};
-
-export const UNASSIGNED = "unassigned";
-export const NO_CYCLE = "none";
-export const NO_MODULE = "none";
 const ALL = "all";
+const FILTER_CONTROL =
+	"max-w-44 min-w-0 shrink-0 sm:shrink data-active:border-primary data-active:bg-primary/8";
 
 function FilterSelect({
 	label,
@@ -45,7 +44,8 @@ function FilterSelect({
 		>
 			<SelectTrigger
 				aria-label={label}
-				className="max-w-44 min-w-0 shrink-0 sm:shrink"
+				data-active={value !== undefined || undefined}
+				className={FILTER_CONTROL}
 			>
 				<SelectValue />
 			</SelectTrigger>
@@ -67,6 +67,8 @@ export function BoardFilterBar({
 	states,
 	modules,
 	cycles,
+	shownCount,
+	totalCount,
 }: {
 	filters: BoardFilters;
 	onChange: (filters: BoardFilters) => void;
@@ -74,6 +76,8 @@ export function BoardFilterBar({
 	states: tables["state"][];
 	modules: { id: string; name: string }[];
 	cycles: { id: string; name: string }[];
+	shownCount: number;
+	totalCount: number;
 }) {
 	const [search, setSearch] = useState(filters.q ?? "");
 	const debouncedSearch = useDebounce(search, 200);
@@ -90,14 +94,6 @@ export function BoardFilterBar({
 		if ((filters.q ?? "") !== search.trim()) setSearch(filters.q ?? "");
 	}, [filters.q]);
 
-	const isFiltered = Boolean(
-		filters.q ||
-			filters.assignee ||
-			filters.state ||
-			filters.cycle ||
-			filters.module,
-	);
-
 	return (
 		<div className="flex shrink-0 flex-wrap items-center gap-2 px-4 pt-3">
 			<div className="-m-1 flex w-[calc(100%+0.5rem)] min-w-0 items-center gap-2 overflow-x-auto p-1 sm:contents">
@@ -109,18 +105,11 @@ export function BoardFilterBar({
 					value={search}
 					onChange={(event) => setSearch(event.target.value)}
 				/>
-				<FilterSelect
-					label="Filter by assignee"
+				<AssigneeFilter
 					value={filters.assignee}
+					members={members}
 					onChange={(assignee) => onChange({ ...filters, assignee })}
-					items={[
-						{ label: "Anyone", value: ALL },
-						{ label: "Unassigned", value: UNASSIGNED },
-						...members.map((member) => ({
-							label: member.displayName,
-							value: member.userId,
-						})),
-					]}
+					className={cn(FILTER_CONTROL, "max-w-56")}
 				/>
 				<FilterSelect
 					label="Filter by state"
@@ -156,7 +145,14 @@ export function BoardFilterBar({
 						]}
 					/>
 				)}
-				{isFiltered && (
+				<span
+					aria-live="polite"
+					className="shrink-0 text-sm text-muted-foreground tabular-nums"
+				>
+					{isFiltered(filters) &&
+						`${shownCount} of ${totalCount} ${totalCount === 1 ? "work item" : "work items"}`}
+				</span>
+				{isFiltered(filters) && (
 					<Button
 						variant="ghost"
 						className="shrink-0"
