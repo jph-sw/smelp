@@ -6,7 +6,6 @@ import {
 	isFiltered,
 	NO_CYCLE,
 	NO_MODULE,
-	UNASSIGNED,
 } from "#/lib/board-filters";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -17,6 +16,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "../ui/select";
+import { AssigneeFilter } from "./assignee-filter";
 
 const ALL = "all";
 
@@ -97,23 +97,11 @@ export function BoardFilterBar({
 					value={search}
 					onChange={(event) => setSearch(event.target.value)}
 				/>
-				<FilterSelect
-					label="Filter by assignee"
-					value={filters.assignee?.[0]}
-					onChange={(assignee) =>
-						onChange({
-							...filters,
-							assignee: assignee ? [assignee] : undefined,
-						})
-					}
-					items={[
-						{ label: "Anyone", value: ALL },
-						{ label: "Unassigned", value: UNASSIGNED },
-						...members.map((member) => ({
-							label: member.displayName,
-							value: member.userId,
-						})),
-					]}
+				<AssigneeFilter
+					value={filters.assignee}
+					members={members}
+					onChange={(assignee) => onChange({ ...filters, assignee })}
+					className="max-w-44 min-w-0 shrink-0 sm:shrink"
 				/>
 				<FilterSelect
 					label="Filter by state"
