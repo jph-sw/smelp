@@ -27,8 +27,8 @@ import {
 	SelectValue,
 } from "../ui/select";
 import { toast } from "../ui/toast";
+import { AssigneeSelect } from "./assignee-select";
 
-const UNASSIGNED = "unassigned";
 const NO_PARENT = "none";
 const NO_MODULE = "none";
 const NO_CYCLE = "none";
@@ -168,21 +168,15 @@ export function IssueProperties({
 					value: state.id,
 				}))}
 			/>
-			<PropertySelect
-				label="Assignee"
-				value={issue.assignee ?? UNASSIGNED}
-				disabled={!canWrite}
-				onChange={(assignee) =>
-					onUpdate({ assignee: assignee === UNASSIGNED ? null : assignee })
-				}
-				items={[
-					{ label: "Unassigned", value: UNASSIGNED },
-					...members.map((member) => ({
-						label: member.displayName,
-						value: member.userId,
-					})),
-				]}
-			/>
+			<div className="grid grid-cols-[5.5rem_1fr] items-center gap-2">
+				<span className="text-muted-foreground">Assignee</span>
+				<AssigneeSelect
+					value={issue.assignee}
+					members={members}
+					disabled={!canWrite}
+					onChange={(assignee) => onUpdate({ assignee })}
+				/>
+			</div>
 			<PropertySelect
 				label="Cycle"
 				value={issue.cycleId ?? NO_CYCLE}
