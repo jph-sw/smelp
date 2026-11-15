@@ -24,7 +24,6 @@ import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as ResetPasswordTokenRouteImport } from './routes/reset-password.$token'
 import { Route as VerifyEmailTokenRouteImport } from './routes/verify-email.$token'
 import { Route as workspaceIdIndexRouteImport } from './routes/(workspace)/$id/index'
-import { Route as workspaceIdActivityRouteImport } from './routes/(workspace)/$id/activity'
 import { Route as workspaceIdProjectsRouteRouteImport } from './routes/(workspace)/$id/projects/route'
 import { Route as workspaceIdBrowseIssueIdRouteImport } from './routes/(workspace)/$id/browse.$issueId'
 import { Route as workspaceIdProjectsIndexRouteImport } from './routes/(workspace)/$id/projects/index'
@@ -32,6 +31,7 @@ import { Route as workspaceIdSettingsWorkspaceRouteRouteImport } from './routes/
 import { Route as workspaceIdProjectsProjectIdIndexRouteImport } from './routes/(workspace)/$id/projects/$projectId/index'
 import { Route as workspaceIdSettingsProjectsProjectIdRouteRouteImport } from './routes/(workspace)/$id/settings/projects/$projectId.route'
 import { Route as workspaceIdSettingsWorkspaceIndexRouteImport } from './routes/(workspace)/$id/settings/workspace/index'
+import { Route as workspaceIdSettingsWorkspaceActivityRouteImport } from './routes/(workspace)/$id/settings/workspace/activity'
 import { Route as workspaceIdSettingsWorkspaceImportRouteImport } from './routes/(workspace)/$id/settings/workspace/import'
 import { Route as workspaceIdSettingsWorkspaceMembersRouteImport } from './routes/(workspace)/$id/settings/workspace/members'
 import { Route as workspaceIdProjectsProjectIdCyclesIndexRouteImport } from './routes/(workspace)/$id/projects/$projectId/cycles/index'
@@ -117,11 +117,6 @@ const workspaceIdIndexRoute = workspaceIdIndexRouteImport.update({
   path: '/',
   getParentRoute: () => workspaceIdRouteRoute,
 } as any)
-const workspaceIdActivityRoute = workspaceIdActivityRouteImport.update({
-  id: '/activity',
-  path: '/activity',
-  getParentRoute: () => workspaceIdRouteRoute,
-} as any)
 const workspaceIdProjectsRouteRoute =
   workspaceIdProjectsRouteRouteImport.update({
     id: '/projects',
@@ -162,6 +157,12 @@ const workspaceIdSettingsWorkspaceIndexRoute =
   workspaceIdSettingsWorkspaceIndexRouteImport.update({
     id: '/',
     path: '/',
+    getParentRoute: () => workspaceIdSettingsWorkspaceRouteRoute,
+  } as any)
+const workspaceIdSettingsWorkspaceActivityRoute =
+  workspaceIdSettingsWorkspaceActivityRouteImport.update({
+    id: '/activity',
+    path: '/activity',
     getParentRoute: () => workspaceIdSettingsWorkspaceRouteRoute,
   } as any)
 const workspaceIdSettingsWorkspaceImportRoute =
@@ -234,12 +235,12 @@ export interface FileRoutesByFullPath {
   '/verify-email/$token': typeof VerifyEmailTokenRoute
   '/ceo/': typeof CeoIndexRoute
   '/$id/projects': typeof workspaceIdProjectsRouteRouteWithChildren
-  '/$id/activity': typeof workspaceIdActivityRoute
   '/$id/': typeof workspaceIdIndexRoute
   '/$id/settings/workspace': typeof workspaceIdSettingsWorkspaceRouteRouteWithChildren
   '/$id/browse/$issueId': typeof workspaceIdBrowseIssueIdRoute
   '/$id/projects/': typeof workspaceIdProjectsIndexRoute
   '/$id/settings/projects/$projectId': typeof workspaceIdSettingsProjectsProjectIdRouteRouteWithChildren
+  '/$id/settings/workspace/activity': typeof workspaceIdSettingsWorkspaceActivityRoute
   '/$id/settings/workspace/import': typeof workspaceIdSettingsWorkspaceImportRoute
   '/$id/settings/workspace/members': typeof workspaceIdSettingsWorkspaceMembersRoute
   '/$id/projects/$projectId/': typeof workspaceIdProjectsProjectIdIndexRoute
@@ -264,10 +265,10 @@ export interface FileRoutesByTo {
   '/reset-password/$token': typeof ResetPasswordTokenRoute
   '/verify-email/$token': typeof VerifyEmailTokenRoute
   '/ceo': typeof CeoIndexRoute
-  '/$id/activity': typeof workspaceIdActivityRoute
   '/$id': typeof workspaceIdIndexRoute
   '/$id/browse/$issueId': typeof workspaceIdBrowseIssueIdRoute
   '/$id/projects': typeof workspaceIdProjectsIndexRoute
+  '/$id/settings/workspace/activity': typeof workspaceIdSettingsWorkspaceActivityRoute
   '/$id/settings/workspace/import': typeof workspaceIdSettingsWorkspaceImportRoute
   '/$id/settings/workspace/members': typeof workspaceIdSettingsWorkspaceMembersRoute
   '/$id/projects/$projectId': typeof workspaceIdProjectsProjectIdIndexRoute
@@ -297,12 +298,12 @@ export interface FileRoutesById {
   '/verify-email/$token': typeof VerifyEmailTokenRoute
   '/ceo/': typeof CeoIndexRoute
   '/(workspace)/$id/projects': typeof workspaceIdProjectsRouteRouteWithChildren
-  '/(workspace)/$id/activity': typeof workspaceIdActivityRoute
   '/(workspace)/$id/': typeof workspaceIdIndexRoute
   '/(workspace)/$id/settings/workspace': typeof workspaceIdSettingsWorkspaceRouteRouteWithChildren
   '/(workspace)/$id/browse/$issueId': typeof workspaceIdBrowseIssueIdRoute
   '/(workspace)/$id/projects/': typeof workspaceIdProjectsIndexRoute
   '/(workspace)/$id/settings/projects/$projectId': typeof workspaceIdSettingsProjectsProjectIdRouteRouteWithChildren
+  '/(workspace)/$id/settings/workspace/activity': typeof workspaceIdSettingsWorkspaceActivityRoute
   '/(workspace)/$id/settings/workspace/import': typeof workspaceIdSettingsWorkspaceImportRoute
   '/(workspace)/$id/settings/workspace/members': typeof workspaceIdSettingsWorkspaceMembersRoute
   '/(workspace)/$id/projects/$projectId/': typeof workspaceIdProjectsProjectIdIndexRoute
@@ -332,12 +333,12 @@ export interface FileRouteTypes {
     | '/verify-email/$token'
     | '/ceo/'
     | '/$id/projects'
-    | '/$id/activity'
     | '/$id/'
     | '/$id/settings/workspace'
     | '/$id/browse/$issueId'
     | '/$id/projects/'
     | '/$id/settings/projects/$projectId'
+    | '/$id/settings/workspace/activity'
     | '/$id/settings/workspace/import'
     | '/$id/settings/workspace/members'
     | '/$id/projects/$projectId/'
@@ -362,10 +363,10 @@ export interface FileRouteTypes {
     | '/reset-password/$token'
     | '/verify-email/$token'
     | '/ceo'
-    | '/$id/activity'
     | '/$id'
     | '/$id/browse/$issueId'
     | '/$id/projects'
+    | '/$id/settings/workspace/activity'
     | '/$id/settings/workspace/import'
     | '/$id/settings/workspace/members'
     | '/$id/projects/$projectId'
@@ -394,12 +395,12 @@ export interface FileRouteTypes {
     | '/verify-email/$token'
     | '/ceo/'
     | '/(workspace)/$id/projects'
-    | '/(workspace)/$id/activity'
     | '/(workspace)/$id/'
     | '/(workspace)/$id/settings/workspace'
     | '/(workspace)/$id/browse/$issueId'
     | '/(workspace)/$id/projects/'
     | '/(workspace)/$id/settings/projects/$projectId'
+    | '/(workspace)/$id/settings/workspace/activity'
     | '/(workspace)/$id/settings/workspace/import'
     | '/(workspace)/$id/settings/workspace/members'
     | '/(workspace)/$id/projects/$projectId/'
@@ -533,13 +534,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof workspaceIdIndexRouteImport
       parentRoute: typeof workspaceIdRouteRoute
     }
-    '/(workspace)/$id/activity': {
-      id: '/(workspace)/$id/activity'
-      path: '/activity'
-      fullPath: '/$id/activity'
-      preLoaderRoute: typeof workspaceIdActivityRouteImport
-      parentRoute: typeof workspaceIdRouteRoute
-    }
     '/(workspace)/$id/projects': {
       id: '/(workspace)/$id/projects'
       path: '/projects'
@@ -587,6 +581,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/$id/settings/workspace/'
       preLoaderRoute: typeof workspaceIdSettingsWorkspaceIndexRouteImport
+      parentRoute: typeof workspaceIdSettingsWorkspaceRouteRoute
+    }
+    '/(workspace)/$id/settings/workspace/activity': {
+      id: '/(workspace)/$id/settings/workspace/activity'
+      path: '/activity'
+      fullPath: '/$id/settings/workspace/activity'
+      preLoaderRoute: typeof workspaceIdSettingsWorkspaceActivityRouteImport
       parentRoute: typeof workspaceIdSettingsWorkspaceRouteRoute
     }
     '/(workspace)/$id/settings/workspace/import': {
@@ -685,6 +686,7 @@ const workspaceIdProjectsRouteRouteWithChildren =
   )
 
 interface workspaceIdSettingsWorkspaceRouteRouteChildren {
+  workspaceIdSettingsWorkspaceActivityRoute: typeof workspaceIdSettingsWorkspaceActivityRoute
   workspaceIdSettingsWorkspaceImportRoute: typeof workspaceIdSettingsWorkspaceImportRoute
   workspaceIdSettingsWorkspaceMembersRoute: typeof workspaceIdSettingsWorkspaceMembersRoute
   workspaceIdSettingsWorkspaceIndexRoute: typeof workspaceIdSettingsWorkspaceIndexRoute
@@ -692,6 +694,8 @@ interface workspaceIdSettingsWorkspaceRouteRouteChildren {
 
 const workspaceIdSettingsWorkspaceRouteRouteChildren: workspaceIdSettingsWorkspaceRouteRouteChildren =
   {
+    workspaceIdSettingsWorkspaceActivityRoute:
+      workspaceIdSettingsWorkspaceActivityRoute,
     workspaceIdSettingsWorkspaceImportRoute:
       workspaceIdSettingsWorkspaceImportRoute,
     workspaceIdSettingsWorkspaceMembersRoute:
@@ -728,7 +732,6 @@ const workspaceIdSettingsProjectsProjectIdRouteRouteWithChildren =
 
 interface workspaceIdRouteRouteChildren {
   workspaceIdProjectsRouteRoute: typeof workspaceIdProjectsRouteRouteWithChildren
-  workspaceIdActivityRoute: typeof workspaceIdActivityRoute
   workspaceIdIndexRoute: typeof workspaceIdIndexRoute
   workspaceIdSettingsWorkspaceRouteRoute: typeof workspaceIdSettingsWorkspaceRouteRouteWithChildren
   workspaceIdBrowseIssueIdRoute: typeof workspaceIdBrowseIssueIdRoute
@@ -737,7 +740,6 @@ interface workspaceIdRouteRouteChildren {
 
 const workspaceIdRouteRouteChildren: workspaceIdRouteRouteChildren = {
   workspaceIdProjectsRouteRoute: workspaceIdProjectsRouteRouteWithChildren,
-  workspaceIdActivityRoute: workspaceIdActivityRoute,
   workspaceIdIndexRoute: workspaceIdIndexRoute,
   workspaceIdSettingsWorkspaceRouteRoute:
     workspaceIdSettingsWorkspaceRouteRouteWithChildren,
