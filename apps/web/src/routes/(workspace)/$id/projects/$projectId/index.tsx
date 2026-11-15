@@ -177,7 +177,7 @@ function RouteComponent() {
 								src={project.backgroundImage}
 								alt=""
 								aria-hidden
-								className="pointer-events-none absolute inset-0 size-full object-cover opacity-15 select-none dark:opacity-10"
+								className="pointer-events-none absolute inset-0 size-full object-cover opacity-15 select-none mask-t-from-[calc(100%-10rem)] dark:opacity-10"
 							/>
 						)}
 						<div className="relative flex h-full min-h-0 w-full flex-1 gap-3 overflow-x-auto p-4 pointer-coarse:snap-x pointer-coarse:snap-proximity pointer-coarse:scroll-px-4 pointer-coarse:overscroll-x-contain sm:gap-8">
