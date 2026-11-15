@@ -23,17 +23,19 @@ The look is plain for now: the components are built on [ui-sdk](https://ui-sdk.d
 
 ## Install
 
-You need Docker with Compose 2.24 or newer. Each release is published as an image at `ghcr.io/jph-sw/smelp`. Get the compose file, pick a version and start it. Use the newest version from [CHANGELOG.md](CHANGELOG.md) in place of `v0.6.0`.
+You need Docker with Compose 2.24 or newer. Each release is published as an image at `ghcr.io/jph-sw/smelp`. You only need its compose file. Make a folder for it, download the file, pick a version and start it. Use the newest version from [CHANGELOG.md](CHANGELOG.md) in place of `v0.6.0`.
 
 ```sh
-git clone --branch v0.6.0 https://github.com/jph-sw/smelp.git
-cd smelp
+mkdir smelp && cd smelp
+curl -fsSLO https://raw.githubusercontent.com/jph-sw/smelp/v0.6.0/compose.yaml
 echo SMELP_VERSION=0.6.0 >> .env
 docker compose pull
 docker compose up -d
 ```
 
-To build from source instead, run `docker compose up -d --build` in the checkout.
+Run the other `docker compose` commands in this README from that folder. Your data isn't in it, it's in the `smelp-data` Docker volume.
+
+To build from source instead, clone the repository at the release tag with `git clone --branch v0.6.0 https://github.com/jph-sw/smelp.git`, and run `docker compose up -d --build` in the checkout.
 
 Open <http://localhost:3000> and create your account. The first account becomes the instance admin. After that, people join through invite links from a workspace's member settings, unless you open public sign-up at `/ceo`.
 
@@ -42,10 +44,11 @@ Open <http://localhost:3000> and create your account. The first account becomes 
 Browsers refuse the login cookie over plain HTTP, except on localhost, so signing in fails and the sign-in page tells you so. To try smelp on a local network before setting up HTTPS:
 
 ```sh
-cp .env.example .env
+echo SECURE_COOKIES=false >> .env
+docker compose up -d
 ```
 
-Then set `SECURE_COOKIES=false` in `.env`, and run `docker compose up -d`. Remove it again once you have HTTPS.
+Take it out of `.env` again once you have HTTPS.
 
 ## HTTPS with a reverse proxy
 
@@ -88,7 +91,7 @@ Only use `TRUST_PROXY` behind a proxy that adds to `X-Forwarded-For`, as the ngi
 
 ## Settings
 
-All of these are optional. Put them in `.env`, which `.env.example` has a starting point for, and run `docker compose up -d` to apply them.
+All of these are optional. Put them in `.env`, which [`.env.example`](.env.example) has a starting point for, and run `docker compose up -d` to apply them.
 
 | Setting | What it does |
 | --- | --- |
@@ -183,15 +186,16 @@ Your current database is set aside in `/data/backups`, and your current attached
 
 ## Upgrade
 
-Back up, set `SMELP_VERSION` in `.env` to the new version, then pull it and restart:
+Back up, set `SMELP_VERSION` in `.env` to the new version, download that version's compose file, then pull it and restart:
 
 ```sh
 docker compose exec smelp bun run backup
+curl -fsSLO https://raw.githubusercontent.com/jph-sw/smelp/v0.6.0/compose.yaml
 docker compose pull
 docker compose up -d
 ```
 
-Read the new version's entry in [CHANGELOG.md](CHANGELOG.md) first. Each release is tested by upgrading a database from the release before it. You can skip versions. To keep `compose.yaml` in step with the image, update the checkout too, with `git fetch --tags` and `git checkout v0.6.0`.
+Replace `v0.6.0` with the version you're upgrading to, and read its entry in [CHANGELOG.md](CHANGELOG.md) first. Each release is tested by upgrading a database from the release before it. You can skip versions.
 
 If you build from source, check out the new version and build it instead of pulling:
 
