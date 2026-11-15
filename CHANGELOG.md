@@ -2,6 +2,18 @@
 
 Each release is a git tag. To upgrade, follow [Upgrade](README.md#upgrade) in the README.
 
+## 0.7.0 (2026-11-15)
+
+Board backgrounds, and a published image, so installing smelp needs only its compose file.
+
+- **Board backgrounds:** project admins can set an image behind a project's board, under Board background in the project settings. It shows faintly behind the columns, below the filter bar. PNG, JPEG and WebP work. The browser shrinks a large photo to fit 1920 by 1080 and the 1 MB limit. Anyone who can see the project sees its background.
+- **Published image:** each release is now published at `ghcr.io/jph-sw/smelp`, tagged with its version, like `0.7.0`, and `latest`. Installing needs only `compose.yaml` and a `.env` with `SMELP_VERSION`, with no clone. `SMELP_VERSION` picks the version to run. Building from source with `docker compose up -d --build` still works.
+- **nginx guide:** the README's reverse proxy guide uses nginx instead of Caddy.
+
+Upgrading runs one database change automatically, which adds board backgrounds. Back up first, as the README describes.
+
+To upgrade from 0.6.0, keep using your checkout this once: `git fetch --tags`, `git checkout v0.7.0`, then `docker compose up -d --build`. To switch to the published image instead, add `SMELP_VERSION=0.7.0` to `.env` after the checkout, and run `docker compose pull` and `docker compose up -d`. Your data stays in the same `smelp-data` volume either way. From 0.7.0 on, upgrade as the README describes, by downloading the new version's `compose.yaml`.
+
 ## 0.6.0 (2026-11-15)
 
 A first design round, search and the inbox in the top bar, and assignee pickers you can search.
