@@ -11,7 +11,8 @@ import {
 	AutocompleteList,
 	AutocompleteStatus,
 } from "@ui-sdk/react/autocomplete";
-import { useState } from "react";
+import { useShortcut, useShortcutHint } from "@ui-sdk/react/shortcuts";
+import { useRef, useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "#/components/ui/avatar";
 import { useDebounce } from "#/hooks/use-debounce";
 import { searchIssuesQueryOptions } from "#/lib/data/issue";
@@ -22,6 +23,11 @@ const RESULT_LIMIT = 50;
 
 export function HeaderSearch({ workspaceId }: { workspaceId: string }) {
 	const [text, setText] = useState("");
+	const inputRef = useRef<HTMLInputElement>(null);
+	useShortcut("/", () => inputRef.current?.focus(), {
+		description: "Search work items",
+	});
+	const hint = useShortcutHint("/");
 	const query = useDebounce(text, 250).trim();
 	const tooShort = query.length < 2;
 	const { data, isFetching, isError } = useQuery({
@@ -46,11 +52,21 @@ export function HeaderSearch({ workspaceId }: { workspaceId: string }) {
 					className="pointer-events-none absolute start-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
 				/>
 				<AutocompleteInput
+					ref={inputRef}
 					type="search"
 					aria-label="Search work items"
+					aria-keyshortcuts={hint.ariaKeyshortcuts}
 					placeholder="Search work items"
-					className="h-8 w-full ps-8 text-sm"
+					className="peer h-8 w-full ps-8 text-sm md:pe-8"
 				/>
+				{text === "" && (
+					<kbd
+						aria-hidden
+						className="pointer-events-none absolute end-2 top-1/2 -translate-y-1/2 peer-focus:hidden max-md:hidden"
+					>
+						{hint.text}
+					</kbd>
+				)}
 				<AutocompleteContent className="w-(--anchor-width) min-w-80">
 					<AutocompleteStatus>
 						{(state) =>
