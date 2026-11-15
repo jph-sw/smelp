@@ -171,29 +171,39 @@ function RouteComponent() {
 						});
 					}}
 				>
-					<div className="flex h-full min-h-0 w-full flex-1 gap-3 overflow-x-auto p-4 pointer-coarse:snap-x pointer-coarse:snap-proximity pointer-coarse:scroll-px-4 pointer-coarse:overscroll-x-contain sm:gap-8">
-						{visibleStates.map((state) => (
-							<StateColumn key={state.id} state={state}>
-								{visibleIssues
-									.filter((issue) => issue.state === state.id)
-									.sort((a, b) => b.updatedAt - a.updatedAt)
-									.map((issue) => (
-										<IssueItem
-											issue={issue}
-											key={issue.id}
-											workspaceId={workspaceId}
-											draggable={canWrite}
-											states={states}
-											onMove={(stateId) =>
-												moveIssue({ id: issue.id, state: stateId })
-											}
-											assignee={members.find(
-												(member) => member.userId === issue.assignee,
-											)}
-										/>
-									))}
-							</StateColumn>
-						))}
+					<div className="relative flex min-h-0 w-full flex-1">
+						{project.backgroundImage && (
+							<img
+								src={project.backgroundImage}
+								alt=""
+								aria-hidden
+								className="pointer-events-none absolute inset-0 size-full object-cover opacity-15 select-none dark:opacity-10"
+							/>
+						)}
+						<div className="relative flex h-full min-h-0 w-full flex-1 gap-3 overflow-x-auto p-4 pointer-coarse:snap-x pointer-coarse:snap-proximity pointer-coarse:scroll-px-4 pointer-coarse:overscroll-x-contain sm:gap-8">
+							{visibleStates.map((state) => (
+								<StateColumn key={state.id} state={state}>
+									{visibleIssues
+										.filter((issue) => issue.state === state.id)
+										.sort((a, b) => b.updatedAt - a.updatedAt)
+										.map((issue) => (
+											<IssueItem
+												issue={issue}
+												key={issue.id}
+												workspaceId={workspaceId}
+												draggable={canWrite}
+												states={states}
+												onMove={(stateId) =>
+													moveIssue({ id: issue.id, state: stateId })
+												}
+												assignee={members.find(
+													(member) => member.userId === issue.assignee,
+												)}
+											/>
+										))}
+								</StateColumn>
+							))}
+						</div>
 					</div>
 				</DragDropProvider>
 			)}
