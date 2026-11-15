@@ -137,6 +137,8 @@ function RouteComponent() {
 				states={states}
 				modules={modules}
 				cycles={cycles}
+				shownCount={shownCount}
+				totalCount={issues.length}
 			/>
 			{isFiltered(filters) && shownCount === 0 && (
 				<p className="px-4 pt-3 text-sm text-muted-foreground">
