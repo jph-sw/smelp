@@ -1,8 +1,4 @@
-import {
-	HomeIcon,
-	PlusSignIcon,
-	Search01Icon,
-} from "@hugeicons/core-free-icons";
+import { HomeIcon, PlusSignIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { tables } from "@smelp/db";
 import { Link, useMatchRoute, useParams } from "@tanstack/react-router";
@@ -86,22 +82,6 @@ export function AppSidebar({
 								>
 									<HugeiconsIcon icon={HomeIcon} />
 									Home
-								</SidebarMenuButton>
-							</SidebarMenuItem>
-							<SidebarMenuItem>
-								<SidebarMenuButton
-									render={
-										<Link to="/$id/search" params={{ id: workspace.id }} />
-									}
-									isActive={
-										!!matchRoute({
-											to: "/$id/search",
-											params: { id: workspace.id },
-										})
-									}
-								>
-									<HugeiconsIcon icon={Search01Icon} />
-									Search
 								</SidebarMenuButton>
 							</SidebarMenuItem>
 						</SidebarMenu>

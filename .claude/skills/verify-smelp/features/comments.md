@@ -13,7 +13,7 @@ A member comments on a work item from its Activity section, mentions people by t
 ## How to get to it (user POV)
 
 - Open any work item, then use `textbox "Add a comment"` in `region "Activity"`.
-- Open the Inbox from the sidebar link `Inbox` (`/<workspace>/inbox`).
+- Open the Inbox from the bell button `Inbox` in the header, next to `Account menu`. It opens a popover, not a page.
 
 ## Driving it with smelp-verify
 
@@ -29,7 +29,7 @@ Steps:
 - **Post.** `getByRole("button", { name: "Comment" }).click()`. A new `listitem` in Activity shows `vera`, `just now`, the paragraph `Ping @vera thanks`, and the buttons `Edit comment`, `Delete comment`, `Attach files` and `Add reaction`. The comment box empties and `Comment` turns disabled.
 - **Edit.** Press `Edit comment`, change the text, and save. The paragraph changes and an edited marker shows next to the time.
 - **Delete.** Press `Delete comment` and confirm. The listitem is gone.
-- **Inbox.** Sign in as the mentioned second member and open `Inbox`. The mention is listed with the work item's title.
+- **Inbox.** Sign in as the mentioned second member and press the header button `Inbox` (named `Inbox, N unread` while there are unread items). The popover lists the mention with the work item's title.
 - **Proof.** `aria("activity", page.getByRole("region", { name: "Activity" }))` before and after, and `smelp-verify sql "select body, editedAt from comment where issueId = 'VER-1'"`. For the inbox, `select type, userId, readAt from notification`.
 
 ## Gotchas
