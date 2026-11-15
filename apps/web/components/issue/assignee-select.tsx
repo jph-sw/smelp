@@ -1,0 +1,85 @@
+import type { ProjectMember } from "@smelp/db";
+import { useSuspenseQuery } from "@tanstack/react-query";
+import { Combobox, ComboboxTrigger } from "@ui-sdk/react/combobox";
+import { useState } from "react";
+import { currentUserQueryOptions } from "#/lib/auth";
+import {
+	MemberAvatar,
+	MemberOption,
+	NobodyAvatar,
+	PeopleContent,
+	sortMembers,
+	UnassignedOption,
+} from "../people/people-picker";
+
+const UNASSIGNED = "unassigned";
+
+export function AssigneeSelect({
+	value,
+	members,
+	disabled,
+	onChange,
+}: {
+	value: string | null;
+	members: ProjectMember[];
+	disabled: boolean;
+	onChange: (value: string | null) => void;
+}) {
+	const { data: user } = useSuspenseQuery(currentUserQueryOptions);
+	const [button, setButton] = useState<HTMLButtonElement | null>(null);
+	const [query, setQuery] = useState("");
+
+	const people = sortMembers(members, user?.id);
+	const memberById = new Map(members.map((member) => [member.userId, member]));
+	const labelOf = (id: string) =>
+		id === UNASSIGNED
+			? "Unassigned"
+			: (memberById.get(id)?.displayName ?? "Former member");
+	const selected = value === null ? undefined : memberById.get(value);
+
+	return (
+		<Combobox
+			presentation="auto"
+			disabled={disabled}
+			value={value ?? UNASSIGNED}
+			onValueChange={(next) =>
+				next != null && onChange(next === UNASSIGNED ? null : next)
+			}
+			itemToLabel={labelOf}
+			query={query}
+			onQueryChange={setQuery}
+			onOpenChange={(open) => open && setQuery("")}
+			onOpenChangeComplete={(open) => !open && button?.focus()}
+		>
+			<ComboboxTrigger
+				ref={setButton}
+				className="w-full min-w-0 justify-between gap-2 border-transparent bg-transparent px-2 font-normal hover:border-transparent hover:bg-accent"
+			>
+				<span aria-hidden className="flex shrink-0">
+					{selected ? (
+						<MemberAvatar
+							member={selected}
+							className="size-5 text-[0.625rem]"
+						/>
+					) : (
+						<NobodyAvatar className="size-5" />
+					)}
+				</span>
+				<span className="min-w-0 flex-1 truncate text-start">
+					<span className="sr-only">Assignee: </span>
+					{labelOf(value ?? UNASSIGNED)}
+				</span>
+			</ComboboxTrigger>
+			<PeopleContent anchor={button}>
+				<UnassignedOption value={UNASSIGNED} />
+				{people.map((member) => (
+					<MemberOption
+						key={member.userId}
+						member={member}
+						isCurrentUser={member.userId === user?.id}
+					/>
+				))}
+			</PeopleContent>
+		</Combobox>
+	);
+}
