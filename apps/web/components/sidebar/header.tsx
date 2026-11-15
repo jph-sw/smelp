@@ -21,6 +21,7 @@ import {
 	DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
+import { HeaderSearch } from "./header-search";
 import { NotificationsMenu } from "./notifications-menu";
 
 export function SiteHeader({
@@ -48,8 +49,8 @@ export function SiteHeader({
 
 	return (
 		<header className="sticky top-0 z-50 flex w-full items-center bg-sidebar pt-[env(safe-area-inset-top)] pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)]">
-			<div className="flex h-(--header-height) w-full items-center gap-2 px-4">
-				<div className="flex min-w-0 flex-1 items-center gap-1">
+			<div className="flex h-(--header-height) w-full items-center gap-2 px-4 md:grid md:grid-cols-[minmax(0,1fr)_minmax(0,28rem)_minmax(0,1fr)] md:gap-4">
+				<div className="flex min-w-0 max-w-[45%] shrink-0 items-center gap-1 md:max-w-none">
 					<SidebarTrigger className="md:hidden" />
 					<Popover open={isSwitcherOpen} onOpenChange={setIsSwitcherOpen}>
 						<PopoverTrigger
@@ -153,6 +154,7 @@ export function SiteHeader({
 						</PopoverContent>
 					</Popover>
 				</div>
+				<HeaderSearch workspaceId={workspace.id} />
 				<div className="flex shrink-0 items-center justify-end gap-1">
 					<NotificationsMenu workspaceId={workspace.id} />
 					<DropdownMenu>

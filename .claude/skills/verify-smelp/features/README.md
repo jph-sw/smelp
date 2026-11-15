@@ -37,7 +37,7 @@ Each feature file starts with an H1 title and one paragraph describing the user-
 
 - [Work items](./work-items.md): create from the dialog, open, edit, change state, and find on the board. Proven journey: `journeys/create-work-item.mjs`.
 - [Comments and mentions](./comments.md): post, @mention with the trigger menu, edit, delete, and the mentioned person's inbox.
-- [Search](./search.md): the workspace Search page and the board's own search box.
+- [Search](./search.md): the header search bar and the board's own search box.
 - [Sign in and out](./auth.md): the sign-in form, the redirect when signed out, and Sign Out from the account menu.
 - [Workspace invites](./invites.md): create an invite link, accept it as a new person, and revoke one.
 
