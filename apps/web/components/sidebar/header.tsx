@@ -21,6 +21,7 @@ import {
 	DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
+import { NotificationsMenu } from "./notifications-menu";
 
 export function SiteHeader({
 	workspace,
@@ -152,7 +153,8 @@ export function SiteHeader({
 						</PopoverContent>
 					</Popover>
 				</div>
-				<div className="flex shrink-0 items-center justify-end">
+				<div className="flex shrink-0 items-center justify-end gap-1">
+					<NotificationsMenu workspaceId={workspace.id} />
 					<DropdownMenu>
 						<DropdownMenuTrigger
 							aria-label="Account menu"
