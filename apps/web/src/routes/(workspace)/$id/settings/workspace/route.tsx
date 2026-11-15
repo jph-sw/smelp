@@ -1,4 +1,5 @@
 import {
+	Activity01Icon,
 	FileImportIcon,
 	People,
 	Setting07Icon,
@@ -10,6 +11,7 @@ import {
 	SettingsNavGroup,
 	settingsNavLinkClassName,
 } from "#/components/settings/nav";
+import { useWorkspaceAccess } from "#/lib/data/workspace-members";
 
 export const Route = createFileRoute("/(workspace)/$id/settings/workspace")({
 	component: RouteComponent,
@@ -17,6 +19,8 @@ export const Route = createFileRoute("/(workspace)/$id/settings/workspace")({
 
 function RouteComponent() {
 	const { id: workspaceId } = Route.useParams();
+	// Guests can't load the activity feed, so they don't get a link to it.
+	const { canWrite } = useWorkspaceAccess(workspaceId);
 
 	return (
 		<div className="flex h-full w-full flex-col md:flex-row pointer-coarse:max-lg:flex-col">
@@ -40,6 +44,17 @@ function RouteComponent() {
 						<HugeiconsIcon icon={People} className="size-3.5" />
 						Members
 					</Link>
+					{canWrite && (
+						<Link
+							to="/$id/settings/workspace/activity"
+							params={{ id: workspaceId }}
+							activeOptions={{ exact: true }}
+							className={settingsNavLinkClassName}
+						>
+							<HugeiconsIcon icon={Activity01Icon} className="size-3.5" />
+							Activity
+						</Link>
+					)}
 				</SettingsNavGroup>
 				<SettingsNavGroup label="Data">
 					<Link

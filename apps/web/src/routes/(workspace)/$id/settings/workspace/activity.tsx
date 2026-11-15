@@ -11,7 +11,9 @@ import {
 import { toastError } from "#/lib/errors";
 import { formatRelativeTime, initials } from "#/lib/utils";
 
-export const Route = createFileRoute("/(workspace)/$id/activity")({
+export const Route = createFileRoute(
+	"/(workspace)/$id/settings/workspace/activity",
+)({
 	component: RouteComponent,
 	loader: ({ context: { queryClient }, params: { id } }) =>
 		queryClient.ensureInfiniteQueryData(
@@ -65,8 +67,7 @@ function RouteComponent() {
 	const days = groupByDay(events);
 
 	return (
-		<div className="mx-auto w-full max-w-3xl space-y-6 p-4 sm:p-8">
-			<h1 className="text-xl font-medium">Activity</h1>
+		<div className="flex flex-col gap-8">
 			{events.length === 0 ? (
 				<p className="text-sm text-muted-foreground">
 					Nothing has happened here yet that you can see.
