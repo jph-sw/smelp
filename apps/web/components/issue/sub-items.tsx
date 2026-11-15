@@ -43,7 +43,7 @@ export function SubItems({
 	return (
 		<section className="space-y-3" aria-label="Sub-items">
 			<div className="flex items-center justify-between gap-3">
-				<h2 className="text-lg font-semibold">Sub-items</h2>
+				<h2 className="text-sm font-semibold">Sub-items</h2>
 				{canWrite && (
 					<Button
 						variant="outline"

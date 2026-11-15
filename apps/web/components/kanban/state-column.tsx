@@ -29,7 +29,7 @@ export function StateColumn({
 	return (
 		<div className="group relative flex h-full min-h-0 w-[min(18rem,calc(100vw-3.5rem))] shrink-0 flex-col pointer-coarse:snap-start sm:w-87.5">
 			<div className="sticky top-0 z-2 w-full shrink-0 py-1">
-				<div className="relative flex w-full shrink-0 items-center gap-1 py-1.5">
+				<div className="relative flex w-full shrink-0 items-center gap-1 py-1.5 text-sm">
 					<div className="flex size-5 shrink-0 items-center justify-center overflow-hidden rounded-xs">
 						<div
 							className="size-3 rounded-full ring-1 ring-foreground/20"

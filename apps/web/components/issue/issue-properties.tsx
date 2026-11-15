@@ -52,15 +52,18 @@ function PropertySelect({
 	onChange: (value: string) => void;
 }) {
 	return (
-		<div className="flex flex-col gap-1">
-			<span className="text-xs text-muted-foreground">{label}</span>
+		<div className="grid grid-cols-[5.5rem_1fr] items-center gap-2">
+			<span className="text-muted-foreground">{label}</span>
 			<Select
 				items={items}
 				value={value}
 				disabled={disabled}
 				onValueChange={(next) => next != null && onChange(next)}
 			>
-				<SelectTrigger aria-label={label} className="w-full">
+				<SelectTrigger
+					aria-label={label}
+					className="w-full min-w-0 border-transparent bg-transparent px-2 hover:border-transparent hover:bg-accent"
+				>
 					<SelectValue />
 				</SelectTrigger>
 				<SelectContent>
@@ -85,9 +88,9 @@ function PersonAndTime({
 	time: number;
 }) {
 	return (
-		<div className="flex flex-col gap-1">
-			<span className="text-xs text-muted-foreground">{label}</span>
-			<span className="text-xs" title={formatDate(time)}>
+		<div className="grid grid-cols-[5.5rem_1fr] items-center gap-2">
+			<span className="text-muted-foreground">{label}</span>
+			<span className="px-2" title={formatDate(time)}>
 				{name ? `${name}, ` : ""}
 				{formatRelativeTime(time)}
 			</span>
@@ -154,7 +157,7 @@ export function IssueProperties({
 	});
 
 	return (
-		<div className="flex flex-col gap-4 py-4 lg:p-4">
+		<div className="flex flex-col gap-1 py-4 lg:p-4">
 			<PropertySelect
 				label="State"
 				value={issue.state}
@@ -232,7 +235,13 @@ export function IssueProperties({
 			{canWrite && (
 				<AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
 					<AlertDialogTrigger
-						render={<Button variant="destructive" className="self-start" />}
+						render={
+							<Button
+								variant="ghost"
+								size="sm"
+								className="mt-3 self-start text-destructive hover:text-destructive"
+							/>
+						}
 					>
 						Delete work item
 					</AlertDialogTrigger>

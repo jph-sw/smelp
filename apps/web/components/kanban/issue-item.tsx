@@ -45,10 +45,10 @@ export function IssueItem({
 				params={{ id: workspaceId, issueId: issue.id }}
 				id={issue.id}
 				ref={ref}
-				className="block w-full rounded-lg bg-secondary p-3 outline-none transition-colors duration-150 hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)] focus-visible:ring-2 focus-visible:ring-ring pointer-coarse:select-none pointer-coarse:[-webkit-touch-callout:none]"
+				className="block w-full rounded-md border bg-background p-2.5 shadow-xs outline-none transition-colors duration-150 hover:border-input focus-visible:ring-2 focus-visible:ring-ring pointer-coarse:select-none pointer-coarse:[-webkit-touch-callout:none]"
 			>
 				<div className="mb-1 flex items-center justify-between gap-2">
-					<span className="text-xs font-semibold text-foreground/70">
+					<span className="text-xs font-medium text-muted-foreground">
 						{issue.id}
 					</span>
 					{assignee && (

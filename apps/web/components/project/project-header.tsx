@@ -27,12 +27,13 @@ function ViewToggle({
 	view: ProjectView;
 }) {
 	return (
-		<div className="ms-auto flex shrink-0 items-center gap-0.5 rounded-md bg-secondary p-0.5">
+		<div className="ms-auto flex shrink-0 items-center gap-0.5">
 			{VIEWS.map((option) => (
 				<Button
 					key={option.value}
 					size="sm"
-					variant={view === option.value ? "outline" : "ghost"}
+					variant="ghost"
+					className="text-muted-foreground aria-[current=page]:bg-accent aria-[current=page]:text-foreground"
 					aria-current={view === option.value ? "page" : undefined}
 					render={
 						<Link
@@ -72,7 +73,7 @@ export function ProjectHeader({
 	);
 
 	return (
-		<div className="flex w-full shrink-0 flex-wrap items-center gap-x-2 gap-y-1 border-b px-4 py-1.5 sm:h-12 sm:flex-nowrap sm:overflow-x-auto sm:py-0">
+		<div className="flex w-full shrink-0 flex-wrap items-center gap-x-2 gap-y-1 border-b px-4 py-1.5 sm:h-11 sm:flex-nowrap sm:overflow-x-auto sm:py-0">
 			<Link
 				className="group flex min-w-0 items-center gap-2"
 				to="/$id/projects/$projectId"
@@ -85,7 +86,7 @@ export function ProjectHeader({
 					{project.name}
 				</h3>
 			</Link>
-			<div className="order-last -m-1 flex w-[calc(100%+0.5rem)] items-center gap-2 overflow-x-auto p-1 sm:order-none sm:my-0 sm:me-0 sm:p-0 sm:ms-4 sm:w-auto sm:shrink-0 sm:overflow-visible">
+			<div className="order-last -m-1 flex w-[calc(100%+0.5rem)] items-center gap-2 overflow-x-auto p-1 sm:order-none sm:my-0 sm:me-0 sm:p-0 sm:ms-3 sm:w-auto sm:shrink-0 sm:overflow-visible">
 				<Button
 					render={
 						<Link
@@ -93,8 +94,9 @@ export function ProjectHeader({
 							params={{ id: workspaceId, projectId }}
 						/>
 					}
-					size={"lg"}
-					variant={section === "items" ? "default" : "ghost"}
+					size="sm"
+					variant="ghost"
+					className="text-muted-foreground aria-[current=page]:bg-accent aria-[current=page]:text-foreground"
 					aria-current={section === "items" ? "page" : undefined}
 				>
 					Work items
@@ -106,8 +108,9 @@ export function ProjectHeader({
 							params={{ id: workspaceId, projectId }}
 						/>
 					}
-					size={"lg"}
-					variant={section === "cycles" ? "default" : "ghost"}
+					size="sm"
+					variant="ghost"
+					className="text-muted-foreground aria-[current=page]:bg-accent aria-[current=page]:text-foreground"
 					aria-current={section === "cycles" ? "page" : undefined}
 				>
 					Cycles
@@ -119,8 +122,9 @@ export function ProjectHeader({
 							params={{ id: workspaceId, projectId }}
 						/>
 					}
-					size={"lg"}
-					variant={section === "modules" ? "default" : "ghost"}
+					size="sm"
+					variant="ghost"
+					className="text-muted-foreground aria-[current=page]:bg-accent aria-[current=page]:text-foreground"
 					aria-current={section === "modules" ? "page" : undefined}
 				>
 					Modules

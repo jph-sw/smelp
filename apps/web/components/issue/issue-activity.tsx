@@ -505,7 +505,7 @@ export function IssueActivity({
 
 	return (
 		<section className="space-y-4" aria-label="Activity">
-			<h2 className="text-lg font-semibold">Activity</h2>
+			<h2 className="text-sm font-semibold">Activity</h2>
 			<ol className="space-y-3">
 				{timeline.map((entry) =>
 					entry.kind === "activity" ? (

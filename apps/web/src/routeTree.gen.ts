@@ -19,6 +19,7 @@ import { Route as SignupRouteImport } from './routes/signup'
 import { Route as workspaceIdRouteRouteImport } from './routes/(workspace)/$id/route'
 import { Route as workspaceCreateWorkspaceRouteImport } from './routes/(workspace)/create-workspace'
 import { Route as CeoIndexRouteImport } from './routes/ceo/index'
+import { Route as CeoUiRouteImport } from './routes/ceo/ui'
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as ResetPasswordTokenRouteImport } from './routes/reset-password.$token'
 import { Route as VerifyEmailTokenRouteImport } from './routes/verify-email.$token'
@@ -91,6 +92,11 @@ const workspaceCreateWorkspaceRoute =
 const CeoIndexRoute = CeoIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => CeoRouteRoute,
+} as any)
+const CeoUiRoute = CeoUiRouteImport.update({
+  id: '/ui',
+  path: '/ui',
   getParentRoute: () => CeoRouteRoute,
 } as any)
 const InviteTokenRoute = InviteTokenRouteImport.update({
@@ -234,6 +240,7 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/$id': typeof workspaceIdRouteRouteWithChildren
   '/create-workspace': typeof workspaceCreateWorkspaceRoute
+  '/ceo/ui': typeof CeoUiRoute
   '/invite/$token': typeof InviteTokenRoute
   '/reset-password/$token': typeof ResetPasswordTokenRoute
   '/verify-email/$token': typeof VerifyEmailTokenRoute
@@ -266,6 +273,7 @@ export interface FileRoutesByTo {
   '/signin': typeof SigninRoute
   '/signup': typeof SignupRoute
   '/create-workspace': typeof workspaceCreateWorkspaceRoute
+  '/ceo/ui': typeof CeoUiRoute
   '/invite/$token': typeof InviteTokenRoute
   '/reset-password/$token': typeof ResetPasswordTokenRoute
   '/verify-email/$token': typeof VerifyEmailTokenRoute
@@ -299,6 +307,7 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/(workspace)/$id': typeof workspaceIdRouteRouteWithChildren
   '/(workspace)/create-workspace': typeof workspaceCreateWorkspaceRoute
+  '/ceo/ui': typeof CeoUiRoute
   '/invite/$token': typeof InviteTokenRoute
   '/reset-password/$token': typeof ResetPasswordTokenRoute
   '/verify-email/$token': typeof VerifyEmailTokenRoute
@@ -335,6 +344,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/$id'
     | '/create-workspace'
+    | '/ceo/ui'
     | '/invite/$token'
     | '/reset-password/$token'
     | '/verify-email/$token'
@@ -367,6 +377,7 @@ export interface FileRouteTypes {
     | '/signin'
     | '/signup'
     | '/create-workspace'
+    | '/ceo/ui'
     | '/invite/$token'
     | '/reset-password/$token'
     | '/verify-email/$token'
@@ -399,6 +410,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/(workspace)/$id'
     | '/(workspace)/create-workspace'
+    | '/ceo/ui'
     | '/invite/$token'
     | '/reset-password/$token'
     | '/verify-email/$token'
@@ -508,6 +520,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/ceo/'
       preLoaderRoute: typeof CeoIndexRouteImport
+      parentRoute: typeof CeoRouteRoute
+    }
+    '/ceo/ui': {
+      id: '/ceo/ui'
+      path: '/ui'
+      fullPath: '/ceo/ui'
+      preLoaderRoute: typeof CeoUiRouteImport
       parentRoute: typeof CeoRouteRoute
     }
     '/invite/$token': {
@@ -787,10 +806,12 @@ const workspaceRouteRouteWithChildren = workspaceRouteRoute._addFileChildren(
 )
 
 interface CeoRouteRouteChildren {
+  CeoUiRoute: typeof CeoUiRoute
   CeoIndexRoute: typeof CeoIndexRoute
 }
 
 const CeoRouteRouteChildren: CeoRouteRouteChildren = {
+  CeoUiRoute: CeoUiRoute,
   CeoIndexRoute: CeoIndexRoute,
 }
 

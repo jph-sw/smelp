@@ -170,7 +170,7 @@ export function IssueRelations({
 
 	return (
 		<section className="space-y-3" aria-label="Relations">
-			<h2 className="text-lg font-semibold">Relations</h2>
+			<h2 className="text-sm font-semibold">Relations</h2>
 			{relations.length > 0 && (
 				<ul className="space-y-1">
 					{relations.map((relation) => (

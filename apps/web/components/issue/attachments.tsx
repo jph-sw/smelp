@@ -239,7 +239,7 @@ export function IssueAttachments({
 	return (
 		<section className="space-y-2" aria-label="Attachments">
 			<div className="flex items-center justify-between gap-2">
-				<h2 className="text-lg font-semibold">Attachments</h2>
+				<h2 className="text-sm font-semibold">Attachments</h2>
 				{canWrite && <AttachButton issueId={issueId} onUploaded={refresh} />}
 			</div>
 			<AttachmentList
