@@ -2,6 +2,19 @@
 
 Each release is a git tag. To upgrade, follow [Upgrade](README.md#upgrade) in the README.
 
+## 0.6.0 (2026-11-15)
+
+A first design round, search and the inbox in the top bar, and assignee pickers you can search.
+
+- **Design:** a dense, quiet look with a neutral palette, 28 px controls and 13 px text, in light and dark mode. The work item page's side panel is compact rows, and board cards are white with a hairline border. Admins can see every component in its states at `/ceo/ui`.
+- **Search in the top bar:** a search bar in the middle of the top bar finds work items across the workspace from every page. Press `/` to jump to it, on keyboard layouts where `/` needs Shift too. The separate Search page is gone.
+- **Inbox in the top bar:** the inbox moved from the sidebar into a menu next to your profile button, with the unread count on it.
+- **Activity in settings:** the workspace activity feed moved from the sidebar into Workspace Settings, next to Members.
+- **Assignee pickers you can search:** picking an assignee on a work item, in the New work item dialog and in the board and list filter now lets you search by name, full name or email, and shows profile pictures. You're listed first. On phones the list opens as a sheet.
+- **Better filters on the board and list:** the assignee filter takes several people at once, with Unassigned as one of the choices, like "me and Unassigned". Filters that narrow the view are highlighted, and a count shows how many work items match, like "5 of 27 work items". Links with a single assignee from earlier versions still work.
+
+There are no database changes in this release. Back up before upgrading anyway, as the README describes.
+
 ## 0.5.0 (2026-11-13)
 
 Sign in with your own identity provider, confirm email addresses, use smelp on a phone, and a new set of components underneath.
