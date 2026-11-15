@@ -45,12 +45,30 @@ Then set `SECURE_COOKIES=false` in `.env`, and run `docker compose up -d`. Remov
 
 ## HTTPS with a reverse proxy
 
-Anything reachable from the internet should be behind HTTPS. With [Caddy](https://caddyserver.com) on the same server, this is the whole config, and it gets the certificate for you:
+Anything reachable from the internet should be behind HTTPS. With [nginx](https://nginx.org) on the same server, put this in `/etc/nginx/conf.d/smelp.conf`:
 
-```
-smelp.example.com {
-	reverse_proxy localhost:3000
+```nginx
+server {
+	listen 80;
+	server_name smelp.example.com;
+
+	# Attached files can be 25 MB, and Jira imports 10 MB.
+	# Raise this if you raise MAX_ATTACHMENT_MB.
+	client_max_body_size 30m;
+
+	location / {
+		proxy_pass http://127.0.0.1:3000;
+		proxy_set_header Host $host;
+		proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+		proxy_set_header X-Forwarded-Proto $scheme;
+	}
 }
+```
+
+Then get a certificate with [Certbot](https://certbot.eff.org). It adds HTTPS to this config and renews the certificate for you:
+
+```sh
+sudo certbot --nginx -d smelp.example.com
 ```
 
 Then set these in `.env` and run `docker compose up -d`:
@@ -62,7 +80,7 @@ SMELP_PORT=127.0.0.1:3000
 TRUST_PROXY=true
 ```
 
-Only use `TRUST_PROXY` behind a proxy that adds to `X-Forwarded-For`, as Caddy and nginx can, and only when smelp can't be reached directly. Otherwise anyone can fake their address to get around sign-in rate limits.
+Only use `TRUST_PROXY` behind a proxy that adds to `X-Forwarded-For`, as the nginx config above does, and only when smelp can't be reached directly. Otherwise anyone can fake their address to get around sign-in rate limits.
 
 ## Settings
 
