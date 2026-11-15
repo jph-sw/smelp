@@ -14,6 +14,8 @@ import {
 	attachmentKeysOfProject,
 	removeAttachmentFiles,
 } from "../lib/attachments";
+import { detectImageType } from "../lib/avatars";
+import { MAX_BACKGROUND_BYTES } from "../lib/project-backgrounds";
 import { base } from "../orpc";
 
 const sql = new DB().sqlite;
@@ -71,6 +73,7 @@ export const createProject = base
 			updatedAt: now,
 			archivedAt: null,
 			archivedBy: null,
+			backgroundImage: null,
 		};
 
 		const project_counter: tables["project_counter"] = {
@@ -397,3 +400,74 @@ function setArchived(archived: boolean) {
 
 export const archiveProject = setArchived(true);
 export const unarchiveProject = setArchived(false);
+
+export const setBackground = base
+	.input(
+		v.object({
+			projectId: v.string(),
+			// Base64 is 4 characters for every 3 bytes.
+			image: v.pipe(
+				v.string(),
+				v.maxLength(Math.ceil(MAX_BACKGROUND_BYTES / 3) * 4),
+			),
+		}),
+	)
+	.handler(async ({ input, context }) => {
+		const { project } = await requireProjectPermission(
+			context.headers,
+			input.projectId,
+			"space:update",
+		);
+
+		const data = new Uint8Array(Buffer.from(input.image, "base64"));
+		const contentType = detectImageType(data);
+		if (!contentType) {
+			throw new ORPCError("BAD_REQUEST", {
+				message: "Use a PNG, JPEG or WebP image.",
+			});
+		}
+
+		const updatedAt = Date.now();
+		const background: tables["project_background"] = {
+			projectId: project.id,
+			contentType,
+			data,
+			updatedAt,
+		};
+		const backgroundImage = `/api/project-backgrounds/${project.id}?v=${updatedAt}`;
+
+		await sql.begin(async (tx) => {
+			await tx`DELETE FROM project_background WHERE projectId = ${project.id}`;
+			await tx`INSERT INTO project_background ${tx(background)}`;
+			await tx`
+				UPDATE project SET backgroundImage = ${backgroundImage}, updatedAt = ${updatedAt}
+				WHERE id = ${project.id}
+			`;
+		});
+
+		return (
+			await sql`SELECT * FROM project WHERE id = ${project.id}`
+		)[0] as tables["project"];
+	});
+
+export const removeBackground = base
+	.input(v.object({ projectId: v.string() }))
+	.handler(async ({ input, context }) => {
+		const { project } = await requireProjectPermission(
+			context.headers,
+			input.projectId,
+			"space:update",
+		);
+
+		await sql.begin(async (tx) => {
+			await tx`DELETE FROM project_background WHERE projectId = ${project.id}`;
+			await tx`
+				UPDATE project SET backgroundImage = NULL, updatedAt = ${Date.now()}
+				WHERE id = ${project.id}
+			`;
+		});
+
+		return (
+			await sql`SELECT * FROM project WHERE id = ${project.id}`
+		)[0] as tables["project"];
+	});

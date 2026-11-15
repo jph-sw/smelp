@@ -15,7 +15,7 @@ import { toast } from "#/components/ui/toast";
 import { useAppForm } from "#/hooks/form";
 import { usePageTitle } from "#/hooks/use-page-title";
 import { type AuthUser, currentUserQueryOptions } from "#/lib/auth";
-import { AvatarFileError, avatarAsBase64 } from "#/lib/data/avatar";
+import { avatarAsBase64, ImageFileError } from "#/lib/data/image-upload";
 import { instanceStatusQueryOptions } from "#/lib/data/instance";
 import { NewPasswordSchema, PASSWORDS_DIFFER } from "#/lib/data/password";
 import {
@@ -381,7 +381,7 @@ function ProfileCard({ user }: { user: AuthUser }) {
 			await action();
 			await refresh();
 		} catch (e) {
-			if (e instanceof AvatarFileError) {
+			if (e instanceof ImageFileError) {
 				toast({ type: "error", description: e.message });
 			} else {
 				toastError(e);

@@ -28,7 +28,7 @@ import type { issue_relation } from "../types/tables/issue_relation";
 import type { schema_migrations } from "../types/tables/migration";
 import type { module } from "../types/tables/module";
 import type { notification } from "../types/tables/notification";
-import type { project } from "../types/tables/project";
+import type { project, project_background } from "../types/tables/project";
 import type { project_counter } from "../types/tables/project_counter";
 import { STATE_GROUPS, type state } from "../types/tables/state";
 import type { workspace } from "../types/tables/workspace";
@@ -169,6 +169,7 @@ export type tables = {
 	activity_logs: activity_logs;
 	workspace: workspace;
 	project: project;
+	project_background: project_background;
 	project_counter: project_counter;
 	issue: issue;
 	issue_relation: issue_relation;

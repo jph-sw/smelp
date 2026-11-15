@@ -1,7 +1,7 @@
 import type { tables } from "@smelp/db";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import * as v from "valibot";
 import { DynamicIcon } from "#/components/dynamic-icon";
 import { ArchivedBanner } from "#/components/project/archived-banner";
@@ -28,10 +28,13 @@ import {
 import { toast } from "#/components/ui/toast";
 import { useAppForm } from "#/hooks/form";
 import { usePageTitle } from "#/hooks/use-page-title";
+import { backgroundAsBase64, ImageFileError } from "#/lib/data/image-upload";
 import {
 	archiveProject,
 	deleteProject,
 	projectQueryOptions,
+	removeProjectBackground,
+	setProjectBackground,
 	unarchiveProject,
 	updateProject,
 } from "#/lib/data/project";
@@ -146,6 +149,112 @@ function ProjectDetailsForm({
 	);
 }
 
+function BoardBackgroundCard({
+	project,
+	disabled,
+}: {
+	project: tables["project"];
+	disabled: boolean;
+}) {
+	const queryClient = useQueryClient();
+	const fileInput = useRef<HTMLInputElement>(null);
+	const [isSaving, setIsSaving] = useState(false);
+
+	const change = async (action: () => Promise<unknown>, done: string) => {
+		setIsSaving(true);
+		try {
+			await action();
+			await Promise.all([
+				queryClient.invalidateQueries({ queryKey: ["project", project.id] }),
+				queryClient.invalidateQueries({
+					queryKey: ["projects", project.workspaceId],
+				}),
+			]);
+			toast({ type: "success", description: done });
+		} catch (e) {
+			if (e instanceof ImageFileError) {
+				toast({ type: "error", description: e.message });
+			} else {
+				toastError(e);
+			}
+		} finally {
+			setIsSaving(false);
+		}
+	};
+
+	return (
+		<Card>
+			<CardContent>
+				<div className="flex w-full flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+					<div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+						{project.backgroundImage ? (
+							<img
+								src={project.backgroundImage}
+								alt="Current board background"
+								className="aspect-video w-48 shrink-0 rounded-md object-cover"
+							/>
+						) : (
+							<div className="aspect-video w-48 shrink-0 rounded-md bg-muted" />
+						)}
+						<div>
+							<h3 className="text-sm font-semibold">Board background</h3>
+							<p className="text-card-foreground/70">
+								A faint image behind this project's board.
+							</p>
+						</div>
+					</div>
+					<div className="flex shrink-0 gap-2">
+						<input
+							ref={fileInput}
+							type="file"
+							accept="image/png,image/jpeg,image/webp"
+							className="hidden"
+							aria-label="Choose a background image"
+							onChange={(e) => {
+								const file = e.target.files?.[0];
+								// Lets the same file be chosen again after an error.
+								e.target.value = "";
+								if (!file) return;
+								change(
+									async () =>
+										setProjectBackground({
+											projectId: project.id,
+											image: await backgroundAsBase64(file),
+										}),
+									"Board background updated.",
+								);
+							}}
+						/>
+						<Button
+							type="button"
+							variant="outline"
+							disabled={disabled || isSaving}
+							onClick={() => fileInput.current?.click()}
+						>
+							{project.backgroundImage ? "Change image" : "Upload image"}
+						</Button>
+						{project.backgroundImage && (
+							<Button
+								type="button"
+								variant="ghost"
+								disabled={disabled || isSaving}
+								onClick={() =>
+									change(
+										() => removeProjectBackground({ projectId: project.id }),
+										"Board background removed.",
+									)
+								}
+							>
+								Remove
+							</Button>
+						)}
+					</div>
+				</div>
+			</CardContent>
+		</Card>
+	);
+}
+
 export const Route = createFileRoute(
 	"/(workspace)/$id/settings/projects/$projectId/",
 )({
@@ -227,6 +336,7 @@ function RouteComponent() {
 				project={project}
 				disabled={isArchived}
 			/>
+			<BoardBackgroundCard project={project} disabled={isArchived} />
 			<Card>
 				<CardContent>
 					<div className="flex w-full flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

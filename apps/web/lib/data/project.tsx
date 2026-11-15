@@ -42,3 +42,11 @@ export const archiveProject = ({ projectId }: { projectId: string }) =>
 
 export const unarchiveProject = ({ projectId }: { projectId: string }) =>
 	orpc.project.unarchive({ projectId });
+
+export const setProjectBackground = (input: {
+	projectId: string;
+	image: string;
+}) => orpc.project.setBackground(input);
+
+export const removeProjectBackground = ({ projectId }: { projectId: string }) =>
+	orpc.project.removeBackground({ projectId });
