@@ -7,15 +7,18 @@ import {
 	NO_CYCLE,
 	NO_MODULE,
 } from "#/lib/board-filters";
+import { isIssueType } from "#/lib/issue-types";
 import { cn } from "#/lib/utils";
+import { ISSUE_TYPE_ITEMS } from "../issue/issue-type-icon";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import {
 	Select,
 	SelectContent,
 	SelectItem,
+	SelectItemIcon,
 	SelectTrigger,
-	SelectValue,
+	SelectValueWithIcon,
 } from "../ui/select";
 import { AssigneeFilter } from "./assignee-filter";
 
@@ -31,7 +34,7 @@ function FilterSelect({
 }: {
 	label: string;
 	value: string | undefined;
-	items: { label: string; value: string }[];
+	items: { label: string; value: string; icon?: React.ReactNode }[];
 	onChange: (value: string | undefined) => void;
 }) {
 	return (
@@ -47,11 +50,14 @@ function FilterSelect({
 				data-active={value !== undefined || undefined}
 				className={FILTER_CONTROL}
 			>
-				<SelectValue />
+				<SelectValueWithIcon
+					icon={items.find((item) => item.value === value)?.icon}
+				/>
 			</SelectTrigger>
 			<SelectContent>
 				{items.map((item) => (
 					<SelectItem key={item.value} value={item.value}>
+						{item.icon && <SelectItemIcon>{item.icon}</SelectItemIcon>}
 						{item.label}
 					</SelectItem>
 				))}
@@ -119,6 +125,17 @@ export function BoardFilterBar({
 						{ label: "All states", value: ALL },
 						...states.map((state) => ({ label: state.name, value: state.id })),
 					]}
+				/>
+				<FilterSelect
+					label="Filter by type"
+					value={filters.type}
+					onChange={(type) =>
+						onChange({
+							...filters,
+							type: isIssueType(type) ? type : undefined,
+						})
+					}
+					items={[{ label: "All types", value: ALL }, ...ISSUE_TYPE_ITEMS]}
 				/>
 				<FilterSelect
 					label="Filter by module"

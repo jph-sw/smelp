@@ -4,8 +4,9 @@ import {
 	Select,
 	SelectContent,
 	SelectItem,
+	SelectItemIcon,
 	SelectTrigger,
-	SelectValue,
+	SelectValueWithIcon,
 } from "../ui/select";
 
 export default function SelectField({
@@ -14,7 +15,7 @@ export default function SelectField({
 	className,
 }: {
 	label: string;
-	items: { label: string; value: string }[];
+	items: { label: string; value: string; icon?: React.ReactNode }[];
 	className?: React.ComponentProps<"select">["className"];
 }) {
 	const field = useFieldContext();
@@ -29,11 +30,14 @@ export default function SelectField({
 				onValueChange={field.handleChange}
 			>
 				<SelectTrigger className="w-full">
-					<SelectValue />
+					<SelectValueWithIcon
+						icon={items.find((item) => item.value === field.state.value)?.icon}
+					/>
 				</SelectTrigger>
 				<SelectContent>
 					{items.map((item) => (
 						<SelectItem key={item.value} value={item.value}>
+							{item.icon && <SelectItemIcon>{item.icon}</SelectItemIcon>}
 							{item.label}
 						</SelectItem>
 					))}

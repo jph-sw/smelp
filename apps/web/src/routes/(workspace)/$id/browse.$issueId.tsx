@@ -13,6 +13,7 @@ import { IssueDescription } from "#/components/issue/issue-description";
 import { IssueLinks } from "#/components/issue/issue-links";
 import { IssueProperties } from "#/components/issue/issue-properties";
 import { IssueRelations } from "#/components/issue/issue-relations";
+import { IssueTypeIcon } from "#/components/issue/issue-type-icon";
 import { SubItems } from "#/components/issue/sub-items";
 import { ArchivedBanner } from "#/components/project/archived-banner";
 import { ProjectHeader } from "#/components/project/project-header";
@@ -180,15 +181,8 @@ function RouteComponent() {
 	}, [issueId, isPublic, queryClient]);
 
 	const { mutate: update } = useMutation({
-		mutationFn: (changes: {
-			title?: string;
-			description?: string;
-			state?: string;
-			assignee?: string | null;
-			parentId?: string | null;
-			moduleId?: string | null;
-			cycleId?: string | null;
-		}) => updateIssue({ id: issue.id, ...changes }),
+		mutationFn: (changes: Omit<Parameters<typeof updateIssue>[0], "id">) =>
+			updateIssue({ id: issue.id, ...changes }),
 		// Shown at once, so a saved description doesn't flash its old text before
 		// the refetch below.
 		onMutate: (changes) =>
@@ -281,7 +275,8 @@ function RouteComponent() {
 			<div className="flex min-h-0 flex-1 flex-col overflow-y-auto lg:flex-row lg:overflow-hidden">
 				<div className="min-w-0 flex-1 space-y-6 px-4 py-5 sm:px-9 lg:overflow-y-auto">
 					<div className="space-y-3">
-						<div className="text-sm font-medium text-foreground/60">
+						<div className="flex items-center gap-1.5 text-sm font-medium text-foreground/60">
+							<IssueTypeIcon type={issue.type} />
 							{issue.id}
 						</div>
 						{canWrite ? (

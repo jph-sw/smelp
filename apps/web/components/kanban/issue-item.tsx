@@ -4,6 +4,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import type { ProjectMember, tables } from "@smelp/db";
 import { Link } from "@tanstack/react-router";
 import { cn, initials } from "#/lib/utils";
+import { IssueTypeIcon } from "../issue/issue-type-icon";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Button } from "../ui/button";
 import {
@@ -48,7 +49,8 @@ export function IssueItem({
 				className="block w-full rounded-md border bg-background p-2.5 shadow-xs outline-none transition-colors duration-150 hover:border-input focus-visible:ring-2 focus-visible:ring-ring pointer-coarse:select-none pointer-coarse:[-webkit-touch-callout:none]"
 			>
 				<div className="mb-1 flex items-center justify-between gap-2">
-					<span className="text-xs font-medium text-muted-foreground">
+					<span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+						<IssueTypeIcon type={issue.type} />
 						{issue.id}
 					</span>
 					{assignee && (

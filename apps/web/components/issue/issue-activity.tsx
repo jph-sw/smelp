@@ -21,6 +21,7 @@ import {
 	updateComment,
 } from "#/lib/data/issue";
 import { toastError } from "#/lib/errors";
+import { issueTypeLabel } from "#/lib/issue-types";
 import { REACTION_EMOJIS, type ReactionEmoji } from "#/lib/reactions";
 import { RELATION_PHRASES } from "#/lib/relations";
 import { cn, formatDate, formatRelativeTime, initials } from "#/lib/utils";
@@ -82,6 +83,9 @@ function describeActivity(
 				return entry.newValue
 					? `added this to the module ${entry.newValue}`
 					: `removed this from the module ${entry.oldValue ?? "a deleted module"}`;
+			}
+			if (entry.field === "type") {
+				return `changed the type to ${issueTypeLabel(entry.newValue)}`;
 			}
 			if (entry.field === "cycle") {
 				if (entry.newValue) return `added this to the cycle ${entry.newValue}`;

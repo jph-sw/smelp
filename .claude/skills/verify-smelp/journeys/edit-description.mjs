@@ -70,7 +70,7 @@ export default async ({ page, seed, step, shot, aria, expect, evidenceDir }) => 
 	await shot("create-filled");
 	await dialog.getByRole("button", { name: "Create work item" }).click();
 	await dialog.waitFor({ state: "hidden" });
-	const card = page.getByRole("button", { name: new RegExp(`^VER-\\d+ ${title}$`) });
+	const card = page.getByRole("button", { name: new RegExp(`^Task VER-\\d+ ${title}$`) });
 	await card.waitFor();
 	const key = (await card.innerText()).match(/VER-\d+/)[0];
 	const created = await stored(key);

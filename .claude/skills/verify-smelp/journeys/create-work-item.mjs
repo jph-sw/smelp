@@ -26,7 +26,7 @@ export default async ({ page, seed, step, shot, aria, expect }) => {
 	await dialog.waitFor({ state: "hidden" });
 
 	step("Find the new card on the board");
-	const card = page.getByRole("button", { name: new RegExp(`^${seed.projectId}-\\d+ ${title}$`) });
+	const card = page.getByRole("button", { name: new RegExp(`^Task ${seed.projectId}-\\d+ ${title}$`) });
 	await card.waitFor();
 	const key = (await card.innerText()).match(new RegExp(`${seed.projectId}-\\d+`))?.[0];
 	await shot("board-after");

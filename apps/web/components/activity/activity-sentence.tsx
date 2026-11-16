@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import type { FeedEvent } from "#/lib/data/activity";
+import { issueTypeLabel } from "#/lib/issue-types";
 import { RELATION_PHRASES } from "#/lib/relations";
 
 const linkClass =
@@ -145,6 +146,14 @@ export function ActivitySentence({
 					</>
 				) : (
 					<>removed {issue} from its cycle</>
+				);
+			}
+			if (d.field === "type") {
+				return (
+					<>
+						changed the type of {issue} to{" "}
+						<Strong>{issueTypeLabel(d.to)}</Strong>
+					</>
 				);
 			}
 			return d.field === "title" ? (

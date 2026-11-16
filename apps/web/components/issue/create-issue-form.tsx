@@ -5,12 +5,14 @@ import { useAppForm } from "#/hooks/form";
 import { projectMembersQueryOptions } from "#/lib/data/project-members";
 import { statesQueryOptions } from "#/lib/data/state";
 import { toastError } from "#/lib/errors";
+import { ISSUE_TYPES, type IssueType } from "#/lib/issue-types";
 import { orpc } from "#/lib/orpc";
 import { RichTextEditor } from "../rich-text/rich-text-editor";
 import { Field, FieldGroup } from "../ui/field";
 import { toast } from "../ui/toast";
 import { AssigneeSelect } from "./assignee-select";
 import type { CreateIssueDialogParams } from "./create-issue-dialog-store";
+import { ISSUE_TYPE_ITEMS } from "./issue-type-icon";
 
 const CreateIssueSchema = v.object({
 	title: v.pipe(
@@ -19,6 +21,7 @@ const CreateIssueSchema = v.object({
 		v.maxLength(120, "Use at most 120 characters."),
 	),
 	description: v.string(),
+	type: v.picklist(ISSUE_TYPES),
 	assignee: v.nullable(v.string()),
 });
 
@@ -44,6 +47,7 @@ export function CreateIssueForm({
 		defaultValues: {
 			title: "",
 			description: "",
+			type: "task" as IssueType,
 			assignee: null as string | null,
 		},
 		validators: {
@@ -63,7 +67,7 @@ export function CreateIssueForm({
 					title: value.title,
 					description: value.description,
 					state: defaultState.id,
-					type: "task",
+					type: value.type,
 					assignee: value.assignee ?? undefined,
 					parentId: params.parentId,
 					workspaceId: params.workspaceId,
@@ -114,6 +118,12 @@ export function CreateIssueForm({
 								Type / for commands
 							</p>
 						</Field>
+					)}
+				/>
+				<form.AppField
+					name="type"
+					children={(field) => (
+						<field.SelectField label="Type" items={ISSUE_TYPE_ITEMS} />
 					)}
 				/>
 				<form.AppField

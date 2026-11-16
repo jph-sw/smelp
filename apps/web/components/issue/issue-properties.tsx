@@ -1,11 +1,12 @@
 import type { ProjectMember, tables } from "@smelp/db";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { invalidateCycles } from "#/lib/data/cycle";
 import { deleteIssue } from "#/lib/data/issue";
 import { moduleQueryKeys } from "#/lib/data/module";
 import { toastError } from "#/lib/errors";
+import { type IssueType, isIssueType } from "#/lib/issue-types";
 import { formatDate, formatRelativeTime } from "#/lib/utils";
 import {
 	AlertDialog,
@@ -23,11 +24,13 @@ import {
 	Select,
 	SelectContent,
 	SelectItem,
+	SelectItemIcon,
 	SelectTrigger,
-	SelectValue,
+	SelectValueWithIcon,
 } from "../ui/select";
 import { toast } from "../ui/toast";
 import { AssigneeSelect } from "./assignee-select";
+import { ISSUE_TYPE_ITEMS } from "./issue-type-icon";
 
 const NO_PARENT = "none";
 const NO_MODULE = "none";
@@ -47,7 +50,7 @@ function PropertySelect({
 }: {
 	label: string;
 	value: string;
-	items: { label: string; value: string }[];
+	items: { label: string; value: string; icon?: ReactNode }[];
 	disabled: boolean;
 	onChange: (value: string) => void;
 }) {
@@ -64,11 +67,14 @@ function PropertySelect({
 					aria-label={label}
 					className="w-full min-w-0 border-transparent bg-transparent px-2 hover:border-transparent hover:bg-accent disabled:after:hidden"
 				>
-					<SelectValue />
+					<SelectValueWithIcon
+						icon={items.find((item) => item.value === value)?.icon}
+					/>
 				</SelectTrigger>
 				<SelectContent>
 					{items.map((item) => (
 						<SelectItem key={item.value} value={item.value}>
+							{item.icon && <SelectItemIcon>{item.icon}</SelectItemIcon>}
 							{item.label}
 						</SelectItem>
 					))}
@@ -120,6 +126,7 @@ export function IssueProperties({
 	/** The project's cycles, for the Cycle selector. */
 	cycles: { id: string; name: string }[];
 	onUpdate: (changes: {
+		type?: IssueType;
 		state?: string;
 		assignee?: string | null;
 		parentId?: string | null;
@@ -158,6 +165,13 @@ export function IssueProperties({
 
 	return (
 		<div className="flex flex-col gap-1 py-4 lg:p-4">
+			<PropertySelect
+				label="Type"
+				value={issue.type}
+				disabled={!canWrite}
+				onChange={(type) => isIssueType(type) && onUpdate({ type })}
+				items={ISSUE_TYPE_ITEMS}
+			/>
 			<PropertySelect
 				label="State"
 				value={issue.state}

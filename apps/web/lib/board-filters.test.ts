@@ -5,6 +5,7 @@ import {
 	parseBoardFilters,
 	UNASSIGNED,
 } from "./board-filters";
+import type { IssueType } from "./issue-types";
 
 const issue = (
 	id: string,
@@ -12,6 +13,7 @@ const issue = (
 		title: string;
 		assignee: string | null;
 		state: string;
+		type: IssueType;
 		cycleId: string | null;
 		moduleId: string | null;
 	}> = {},
@@ -20,6 +22,7 @@ const issue = (
 	title: `Work item ${id}`,
 	assignee: null,
 	state: "todo",
+	type: "task" as IssueType,
 	cycleId: null,
 	moduleId: null,
 	...fields,
@@ -28,8 +31,8 @@ const issue = (
 const issues = [
 	issue("WEB-1", { assignee: "ana", title: "Fix login" }),
 	issue("WEB-2", { assignee: "ben", state: "done" }),
-	issue("WEB-3", { assignee: "cleo" }),
-	issue("WEB-4"),
+	issue("WEB-3", { assignee: "cleo", type: "bug" }),
+	issue("WEB-4", { type: "bug" }),
 	issue("WEB-5", { assignee: "ana", moduleId: "mod-1" }),
 ];
 
@@ -93,6 +96,18 @@ describe("matchesFilters", () => {
 		]);
 		expect(shown({ assignee: ["ana"], module: "none" })).toEqual(["WEB-1"]);
 		expect(shown({ assignee: ["ana"], q: "login" })).toEqual(["WEB-1"]);
+	});
+
+	test("shows only items of the chosen type", () => {
+		expect(shown({ type: "bug" })).toEqual(["WEB-3", "WEB-4"]);
+		expect(shown({ type: "bug", assignee: ["cleo"] })).toEqual(["WEB-3"]);
+		expect(isFiltered(parseBoardFilters({ type: "bug" }))).toBe(true);
+	});
+
+	test("ignores a type that isn't one of the known ones", () => {
+		expect(parseBoardFilters({ type: "Bug" }).type).toBeUndefined();
+		expect(parseBoardFilters({ type: ["bug"] }).type).toBeUndefined();
+		expect(shown({ type: "incident" })).toHaveLength(issues.length);
 	});
 
 	test("searches title and id without regard to case", () => {
