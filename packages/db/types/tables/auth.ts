@@ -93,3 +93,15 @@ export type auth_user_avatar = {
 	data: Uint8Array;
 	updatedAt: number;
 };
+
+export type api_token = {
+	id: string;
+	userId: string;
+	name: string;
+	secretHash: string;
+	createdAt: number;
+	/** null until the token is first used. */
+	lastUsedAt: number | null;
+	/** null for a token that never expires. */
+	expiresAt: number | null;
+};
