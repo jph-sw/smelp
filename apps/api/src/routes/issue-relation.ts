@@ -1,10 +1,11 @@
 import { ORPCError } from "@orpc/server";
-import { Auth } from "@smelp/auth";
 import { DB, type tables } from "@smelp/db";
 import { eventBus } from "@smelp/events";
 import { SQL } from "bun";
 import * as v from "valibot";
 import {
+	canReadProject,
+	requireIssueRead,
 	requireNotArchived,
 	requireProjectPermission,
 	requireUser,
@@ -12,7 +13,6 @@ import {
 import { base } from "../orpc";
 
 const sql = new DB().sqlite;
-const auth = new Auth();
 
 // How a relation reads from one of its two items. A relation is stored once, from
 // its source ("blocks", "duplicates", "relates"); the target sees the inverse.
@@ -77,7 +77,6 @@ type RelationRow = tables["issue_relation"] & {
 	title: string;
 	projectId: string;
 	projectName: string;
-	projectSpaceId: string;
 	projectArchived: number;
 	stateName: string;
 	stateColor: string;
@@ -87,12 +86,9 @@ type RelationRow = tables["issue_relation"] & {
 export const findIssueRelations = base
 	.input(v.object({ issueId: v.string() }))
 	.handler(async ({ input, context }): Promise<IssueRelation[]> => {
-		await requireUser(context.headers);
-		const issue = await findIssueOrThrow(input.issueId);
-		const { caller } = await requireProjectPermission(
+		const { issue, viewer } = await requireIssueRead(
 			context.headers,
-			issue.projectId,
-			"space:read",
+			input.issueId,
 		);
 
 		const rows = (await sql`
@@ -102,7 +98,6 @@ export const findIssueRelations = base
 				other.title,
 				other.projectId,
 				project.name AS projectName,
-				project.spaceId AS projectSpaceId,
 				project.archivedAt IS NOT NULL AS projectArchived,
 				state.name AS stateName,
 				state.color AS stateColor,
@@ -116,17 +111,13 @@ export const findIssueRelations = base
 			ORDER BY r.createdAt ASC, r.id ASC
 		`) as RelationRow[];
 
-		// Items in projects the caller can't read are left out, as if not there.
+		// Items in projects the viewer can't read are left out, as if not there.
 		const readable = new Map<string, boolean>();
 		const relations: IssueRelation[] = [];
 		for (const row of rows) {
 			let allowed = readable.get(row.projectId);
 			if (allowed === undefined) {
-				allowed = await auth.userHasPermission(
-					caller.userId,
-					row.projectSpaceId,
-					"space:read",
-				);
+				allowed = await canReadProject(viewer, row.projectId);
 				readable.set(row.projectId, allowed);
 			}
 			if (!allowed) continue;

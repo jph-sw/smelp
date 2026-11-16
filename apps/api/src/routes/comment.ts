@@ -3,7 +3,11 @@ import { Auth } from "@smelp/auth";
 import { DB, DEFAULTS, type tables } from "@smelp/db";
 import { eventBus } from "@smelp/events";
 import * as v from "valibot";
-import { requireProjectPermission, requireUser } from "../lib/access";
+import {
+	requireIssueRead,
+	requireProjectPermission,
+	requireUser,
+} from "../lib/access";
 import {
 	attachmentKeysOfComment,
 	removeAttachmentFiles,
@@ -33,12 +37,9 @@ export type CommentReaction = {
 export const findComments = base
 	.input(v.object({ issueId: v.string() }))
 	.handler(async ({ input, context }) => {
-		const caller = await requireUser(context.headers);
-		const issue = await findIssueOrThrow(input.issueId);
-		await requireProjectPermission(
+		const { issue, viewer } = await requireIssueRead(
 			context.headers,
-			issue.projectId,
-			"space:read",
+			input.issueId,
 		);
 
 		const comments = (await sql`
@@ -83,7 +84,8 @@ export const findComments = base
 				users: [],
 			};
 			reaction.count += 1;
-			reaction.reacted ||= row.userId === caller.userId;
+			reaction.reacted ||=
+				viewer.kind === "user" && row.userId === viewer.userId;
 			reaction.users.push(row.userName);
 			reactions.set(row.emoji, reaction);
 			byComment.set(row.commentId, reactions);

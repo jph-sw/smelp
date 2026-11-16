@@ -12,6 +12,9 @@ export const findStates = base
 			context.headers,
 			input.projectId,
 			"space:read",
+			{
+				public: true,
+			},
 		);
 
 		const states =

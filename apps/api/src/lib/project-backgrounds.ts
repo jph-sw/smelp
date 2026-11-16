@@ -11,7 +11,9 @@ export async function projectBackgroundResponse(
 	projectId: string,
 ) {
 	try {
-		await requireProjectPermission(headers, projectId, "space:read");
+		await requireProjectPermission(headers, projectId, "space:read", {
+			public: true,
+		});
 	} catch (error) {
 		if (error instanceof ORPCError) {
 			return new Response(error.message, { status: error.status });

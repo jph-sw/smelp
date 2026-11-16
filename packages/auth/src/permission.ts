@@ -40,3 +40,9 @@ export function matchesPermission(
 	}
 	return false;
 }
+
+export function roleHasPermission(role: SpaceRole, permission: Permission) {
+	return permissionsForRole(role).some((granted) =>
+		matchesPermission(granted, permission),
+	);
+}

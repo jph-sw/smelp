@@ -104,8 +104,8 @@ function stateNamed(states: State[], name: string, project: string) {
 
 function memberNamed(members: Member[], name: string, project: string) {
 	const matches = members.filter((member) =>
-		[member.displayName, member.fullName, member.email].some((value) =>
-			same(value, name),
+		[member.displayName, member.fullName, member.email].some(
+			(value) => value !== undefined && same(value, name),
 		),
 	);
 	if (matches.length === 1) return matches[0] as Member;

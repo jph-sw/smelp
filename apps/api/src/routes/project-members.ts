@@ -13,25 +13,13 @@ const auth = new Auth();
 
 export const findProjectMembers = base
 	.input(v.object({ projectId: v.string() }))
-	.handler(async ({ input, context }) => {
-		const caller = await requireUser(context.headers);
-
-		const project = (
-			await sql`SELECT * FROM project WHERE id = ${input.projectId}`
-		)[0] as tables["project"];
-
-		if (!project) {
-			throw new ORPCError("NOT_FOUND");
-		}
-
-		const allowed = await auth.userHasPermission(
-			caller.userId,
-			project.spaceId,
+	.handler(async ({ input, context }): Promise<ProjectMember[]> => {
+		const { project, access } = await requireProjectPermission(
+			context.headers,
+			input.projectId,
 			"space:read",
+			{ public: true },
 		);
-		if (!allowed) {
-			throw new ORPCError("FORBIDDEN");
-		}
 
 		const members = (await sql`
 			SELECT
@@ -45,7 +33,10 @@ export const findProjectMembers = base
 			WHERE auth_space_member.spaceId = ${project.spaceId}
 		`) as ProjectMember[];
 
-		return members;
+		// Someone reading from outside the project gets names and pictures for the
+		// board, never an address.
+		if (access.kind !== "public") return members;
+		return members.map(({ email: _email, ...visible }) => visible);
 	});
 
 /* workspace members who have access to the project's parent workspace,

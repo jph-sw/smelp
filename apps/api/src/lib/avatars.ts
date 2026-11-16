@@ -1,6 +1,7 @@
 import { getCookie } from "@orpc/server/helpers";
 import { Auth } from "@smelp/auth";
 import { DB, type tables } from "@smelp/db";
+import { isOnPublicBoard } from "./access";
 
 const sql = new DB().sqlite;
 const auth = new Auth();
@@ -29,7 +30,9 @@ export function detectImageType(bytes: Uint8Array) {
 export async function avatarResponse(headers: Headers, userId: string) {
 	const token = getCookie(headers, "auth_session");
 	const session = token ? await auth.validateAuthSessionToken(token) : null;
-	if (!session) return new Response("Unauthorized", { status: 401 });
+	if (!session && !(await isOnPublicBoard(userId))) {
+		return new Response("Unauthorized", { status: 401 });
+	}
 
 	const avatar = (
 		await sql`SELECT contentType, data FROM auth_user_avatar WHERE userId = ${userId}`

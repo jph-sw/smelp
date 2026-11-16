@@ -15,7 +15,7 @@ import {
 	findApiTokens,
 	revokeApiToken,
 } from "./routes/auth/api-tokens";
-import { me } from "./routes/auth/me";
+import { me, session } from "./routes/auth/me";
 import {
 	findLinkedAccounts,
 	findSignInOptions,
@@ -62,6 +62,7 @@ import {
 	findInstanceStatus,
 	findInstanceUsers,
 	findInstanceVersion,
+	findPublicWorkspaces,
 	markEmailVerifiedByAdmin,
 	sendTestEmail,
 	updateInstance,
@@ -146,6 +147,7 @@ export const router = {
 		update: updateInstance,
 		users: findInstanceUsers,
 		version: findInstanceVersion,
+		publicWorkspaces: findPublicWorkspaces,
 		createPasswordReset,
 		sendTestEmail,
 		markEmailVerified: markEmailVerifiedByAdmin,
@@ -155,6 +157,7 @@ export const router = {
 		signUp,
 		signOut,
 		me,
+		session,
 		signInOptions: findSignInOptions,
 		linkedAccounts: findLinkedAccounts,
 		unlinkOidc,

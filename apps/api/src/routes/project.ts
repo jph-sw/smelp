@@ -157,25 +157,12 @@ export const createProject = base
 export const findProject = base
 	.input(v.object({ projectId: v.string() }))
 	.handler(async ({ input, context }) => {
-		const caller = await requireUser(context.headers);
-
-		const project = (
-			await sql`SELECT * FROM project WHERE id = ${input.projectId}`
-		)[0] as tables["project"];
-
-		if (!project) {
-			throw new ORPCError("NOT_FOUND");
-		}
-
-		const allowed = await auth.userHasPermission(
-			caller.userId,
-			project.spaceId,
+		const { project } = await requireProjectPermission(
+			context.headers,
+			input.projectId,
 			"space:read",
+			{ public: true },
 		);
-		if (!allowed) {
-			throw new ORPCError("FORBIDDEN");
-		}
-
 		return project;
 	});
 

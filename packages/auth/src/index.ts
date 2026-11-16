@@ -5,11 +5,9 @@
 import { DB, type tables } from "@smelp/db";
 import { eventBus } from "@smelp/events";
 import type { SQL } from "bun";
-import {
-	matchesPermission,
-	type Permission,
-	permissionsForRole,
-} from "./permission";
+import { type Permission, roleHasPermission } from "./permission";
+
+export { type Permission, roleHasPermission };
 
 const DUMMY_PASSWORD_HASH = Bun.password.hashSync(crypto.randomUUID(), {
 	algorithm: "argon2id",
@@ -62,9 +60,7 @@ export class Auth {
 			return false;
 		}
 
-		return permissionsForRole(member.role).some((p) =>
-			matchesPermission(p, permission),
-		);
+		return roleHasPermission(member.role, permission);
 	}
 
 	async signIn(email: string, password: string) {

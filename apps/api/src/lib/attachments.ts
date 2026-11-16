@@ -4,7 +4,11 @@ import path from "node:path";
 import { ORPCError } from "@orpc/server";
 import { DB, databasePath, type tables, Utils } from "@smelp/db";
 import { eventBus } from "@smelp/events";
-import { requireProjectPermission, requireUser } from "./access";
+import {
+	requireIssueRead,
+	requireProjectPermission,
+	requireUser,
+} from "./access";
 import { detectImageType } from "./avatars";
 import { STORAGE_KEY } from "./backup";
 
@@ -200,6 +204,8 @@ export async function uploadAttachment(request: Request) {
 		const url = new URL(request.url);
 		const issueId = url.searchParams.get("issueId");
 		if (!issueId) return fail(400, "Missing work item");
+		// Before the lookup, so a visitor can't tell which work items exist.
+		await requireUser(request.headers);
 		const issue = (await sql`SELECT * FROM issue WHERE id = ${issueId}`)[0] as
 			| tables["issue"]
 			| undefined;
@@ -303,18 +309,15 @@ export async function attachmentResponse(
 		if (method !== "GET" && method !== "HEAD") {
 			return fail(405, "Method not allowed");
 		}
-		// Signed-out visitors learn nothing about what exists.
-		await requireUser(headers);
 		const attachment = (
 			await sql`SELECT * FROM attachment WHERE id = ${id}`
 		)[0] as tables["attachment"] | undefined;
-		if (!attachment) return fail(404, "Not found");
-
-		const issue = (
-			await sql`SELECT projectId FROM issue WHERE id = ${attachment.issueId}`
-		)[0] as Pick<tables["issue"], "projectId"> | undefined;
-		if (!issue) return fail(404, "Not found");
-		await requireProjectPermission(headers, issue.projectId, "space:read");
+		if (!attachment) {
+			// Signed-out visitors learn nothing about what exists.
+			await requireUser(headers);
+			return fail(404, "Not found");
+		}
+		await requireIssueRead(headers, attachment.issueId);
 
 		const file = Bun.file(fileFor(attachment.storageKey));
 		if (!(await file.exists())) return fail(404, "The file is missing");

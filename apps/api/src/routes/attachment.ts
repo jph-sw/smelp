@@ -3,7 +3,11 @@ import { Auth } from "@smelp/auth";
 import { DB, type tables } from "@smelp/db";
 import { eventBus } from "@smelp/events";
 import * as v from "valibot";
-import { requireProjectPermission, requireUser } from "../lib/access";
+import {
+	requireIssueRead,
+	requireProjectPermission,
+	requireUser,
+} from "../lib/access";
 import { maxAttachmentBytes, removeAttachmentFiles } from "../lib/attachments";
 import { base } from "../orpc";
 
@@ -19,16 +23,7 @@ export const findAttachmentLimits = base.handler(async ({ context }) => {
 export const findAttachments = base
 	.input(v.object({ issueId: v.string() }))
 	.handler(async ({ input, context }) => {
-		await requireUser(context.headers);
-		const issue = (
-			await sql`SELECT projectId FROM issue WHERE id = ${input.issueId}`
-		)[0] as Pick<tables["issue"], "projectId"> | undefined;
-		if (!issue) throw new ORPCError("NOT_FOUND");
-		await requireProjectPermission(
-			context.headers,
-			issue.projectId,
-			"space:read",
-		);
+		await requireIssueRead(context.headers, input.issueId);
 
 		// The storage key stays on the server: files are only reached by id.
 		return (await sql`

@@ -77,6 +77,7 @@ describe("first run", () => {
 		expect(await clientFor().instance.status()).toEqual({
 			needsSetup: true,
 			signupOpen: false,
+			publicAccess: false,
 			emailEnabled: false,
 			secureCookies: false,
 		});

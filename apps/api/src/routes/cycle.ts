@@ -34,7 +34,7 @@ const Day = v.pipe(
 	}, "That date doesn't exist"),
 );
 
-type Permission = "space:read" | "space:update" | "content:write";
+type WritePermission = "space:update" | "content:write";
 
 export type CycleStatus = "upcoming" | "current" | "completed";
 
@@ -63,29 +63,22 @@ function cycleStatus(
 	return "current";
 }
 
-// Asking about a project the caller can't read must look like it doesn't exist,
+// Asking about a project the viewer can't read must look like it doesn't exist,
 // so a private project's ids can't be probed.
-async function requireProject(
-	headers: Headers,
-	projectId: string,
-	permission: Permission,
-) {
+async function requireReadableProject(headers: Headers, projectId: string) {
 	try {
-		await requireProjectPermission(headers, projectId, "space:read");
+		await requireProjectPermission(headers, projectId, "space:read", {
+			public: true,
+		});
 	} catch (error) {
 		if (error instanceof ORPCError && error.code === "FORBIDDEN") {
 			throw new ORPCError("NOT_FOUND");
 		}
 		throw error;
 	}
-	return requireProjectPermission(headers, projectId, permission);
 }
 
-async function requireCycle(
-	headers: Headers,
-	cycleId: string,
-	permission: Permission,
-) {
+async function requireReadableCycle(headers: Headers, cycleId: string) {
 	const cycle = (await sql`SELECT * FROM cycle WHERE id = ${cycleId}`)[0] as
 		| tables["cycle"]
 		| undefined;
@@ -93,7 +86,30 @@ async function requireCycle(
 		await requireUser(headers);
 		throw new ORPCError("NOT_FOUND");
 	}
-	const access = await requireProject(headers, cycle.projectId, permission);
+	await requireReadableProject(headers, cycle.projectId);
+	return cycle;
+}
+
+async function requireProject(
+	headers: Headers,
+	projectId: string,
+	permission: WritePermission,
+) {
+	await requireReadableProject(headers, projectId);
+	return requireProjectPermission(headers, projectId, permission);
+}
+
+async function requireCycle(
+	headers: Headers,
+	cycleId: string,
+	permission: WritePermission,
+) {
+	const cycle = await requireReadableCycle(headers, cycleId);
+	const access = await requireProjectPermission(
+		headers,
+		cycle.projectId,
+		permission,
+	);
 	return { cycle, ...access };
 }
 
@@ -154,7 +170,7 @@ const BACKWARDS_MESSAGE = "The cycle can't end before it starts";
 export const findCycles = base
 	.input(v.object({ projectId: v.string() }))
 	.handler(async ({ input, context }) => {
-		await requireProject(context.headers, input.projectId, "space:read");
+		await requireReadableProject(context.headers, input.projectId);
 
 		const cycles = (await sql`
 			SELECT * FROM cycle WHERE projectId = ${input.projectId}
@@ -166,11 +182,7 @@ export const findCycles = base
 export const findCycle = base
 	.input(v.object({ id: v.string() }))
 	.handler(async ({ input, context }) => {
-		const { cycle } = await requireCycle(
-			context.headers,
-			input.id,
-			"space:read",
-		);
+		const cycle = await requireReadableCycle(context.headers, input.id);
 		const [summary] = await summarize([cycle]);
 		return summary as CycleSummary;
 	});
