@@ -66,7 +66,12 @@ export const updateWorkspace = base
 	.input(
 		v.object({
 			workspaceId: v.string(),
-			name: v.pipe(v.string(), v.trim(), v.minLength(2), v.maxLength(32)),
+			name: v.optional(
+				v.pipe(v.string(), v.trim(), v.minLength(2), v.maxLength(32)),
+			),
+			// Can be set while the instance keeps public access off. It only starts
+			// to matter once an instance admin turns that on.
+			public: v.optional(v.boolean()),
 		}),
 	)
 	.handler(async ({ input, context }) => {
@@ -89,7 +94,13 @@ export const updateWorkspace = base
 			throw new ORPCError("FORBIDDEN");
 		}
 
-		await sql`UPDATE workspace SET name = ${input.name} WHERE id = ${input.workspaceId}`;
+		const name = input.name ?? workspace.name;
+		const isPublic =
+			input.public === undefined ? workspace.public : Number(input.public);
+		await sql`
+			UPDATE workspace SET name = ${name}, public = ${isPublic}
+			WHERE id = ${input.workspaceId}
+		`;
 
 		return (
 			await sql`SELECT * FROM workspace WHERE id = ${input.workspaceId}`
@@ -194,6 +205,7 @@ export const createWorkspace = base
 			ownerId: caller.userId,
 			spaceId: auth_space.id,
 			image: null,
+			public: 0,
 		};
 
 		try {

@@ -4,7 +4,13 @@ import * as v from "valibot";
 import { requireInstanceAdmin } from "../lib/access";
 import { useSecureCookies } from "../lib/cookies";
 import { markEmailVerified } from "../lib/email-verification";
-import { isFirstRun, isSignupOpen, setSignupOpen } from "../lib/instance";
+import {
+	isFirstRun,
+	isInstancePublic,
+	isSignupOpen,
+	setInstancePublic,
+	setSignupOpen,
+} from "../lib/instance";
 import {
 	isMailEnabled,
 	sendMailOrThrow,
@@ -20,6 +26,7 @@ const sql = new DB().sqlite;
 export const findInstanceStatus = base.handler(async () => ({
 	needsSetup: await isFirstRun(),
 	signupOpen: await isSignupOpen(),
+	publicAccess: await isInstancePublic(),
 	emailEnabled: isMailEnabled(),
 	secureCookies: useSecureCookies(),
 }));
@@ -31,12 +38,32 @@ export const findInstanceVersion = base.handler(async ({ context }) => {
 });
 
 export const updateInstance = base
-	.input(v.object({ signupOpen: v.boolean() }))
+	.input(
+		v.object({
+			signupOpen: v.optional(v.boolean()),
+			publicAccess: v.optional(v.boolean()),
+		}),
+	)
 	.handler(async ({ input, context }) => {
 		await requireInstanceAdmin(context.headers);
-		await setSignupOpen(input.signupOpen);
-		return { signupOpen: input.signupOpen };
+		if (input.signupOpen !== undefined) await setSignupOpen(input.signupOpen);
+		if (input.publicAccess !== undefined) {
+			await setInstancePublic(input.publicAccess);
+		}
+		return {
+			signupOpen: await isSignupOpen(),
+			publicAccess: await isInstancePublic(),
+		};
 	});
+
+// Public: where a visitor without an account can start. Empty while the instance
+// keeps public access off, whatever the workspaces have chosen.
+export const findPublicWorkspaces = base.handler(async () => {
+	if (!(await isInstancePublic())) return [];
+	return (await sql`
+		SELECT id, name, image FROM workspace WHERE public = 1 ORDER BY name, id
+	`) as Pick<tables["workspace"], "id" | "name" | "image">[];
+});
 
 export const findInstanceUsers = base.handler(async ({ context }) => {
 	await requireInstanceAdmin(context.headers);
