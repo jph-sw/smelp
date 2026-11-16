@@ -604,6 +604,12 @@ function ApiTokensCard() {
 					</code>
 					.
 				</p>
+				<CopyLink
+					title="MCP endpoint"
+					hint="AI agents like Claude Code and Cursor connect to it as an MCP server, with a token."
+					link={`${window.location.origin}/mcp`}
+					copiedMessage="Address copied."
+				/>
 				<form
 					onSubmit={(e) => {
 						e.preventDefault();

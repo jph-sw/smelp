@@ -2,7 +2,6 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { toast } from "./ui/toast";
 
-// Shows a one-time link or secret that can't be retrieved later.
 export function CopyLink({
 	title,
 	hint,
