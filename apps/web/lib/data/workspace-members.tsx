@@ -1,5 +1,4 @@
-import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
-import { currentUserQueryOptions } from "../auth";
+import { queryOptions } from "@tanstack/react-query";
 import { orpc } from "../orpc";
 
 export const workspaceMembersQueryOptions = ({
@@ -28,22 +27,3 @@ export const updateWorkspaceMemberRole = (input: {
 
 export const leaveWorkspace = (input: { workspaceId: string }) =>
 	orpc.workspaceMembers.leave(input);
-
-// What the signed-in user can do in a workspace. The API enforces these rules too;
-// this only decides which controls to show.
-export function useWorkspaceAccess(workspaceId: string) {
-	const { data: user } = useSuspenseQuery(currentUserQueryOptions);
-	const { data: members } = useSuspenseQuery(
-		workspaceMembersQueryOptions({ workspaceId }),
-	);
-
-	const me = members.find((member) => member.userId === user?.id);
-	const isInstanceAdmin = user?.role === "admin";
-
-	return {
-		me,
-		members,
-		canWrite: isInstanceAdmin || me?.role === "member" || me?.role === "admin",
-		canManage: isInstanceAdmin || me?.role === "admin",
-	};
-}

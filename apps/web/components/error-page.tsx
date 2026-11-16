@@ -1,5 +1,5 @@
 import { ORPCError } from "@orpc/client";
-import type { ErrorComponentProps } from "@tanstack/react-router";
+import { type ErrorComponentProps, Link } from "@tanstack/react-router";
 import { Button } from "#/components/ui/button";
 import { usePageTitle } from "#/hooks/use-page-title";
 
@@ -11,15 +11,34 @@ export function ErrorPage({ error, reset }: ErrorComponentProps) {
 		error instanceof ORPCError
 			? orpcErrorDescription(error)
 			: "An unexpected error occurred. Please try again.";
+	// The API answers anyone without a session this way, whether or not the page exists.
+	const needsSignIn =
+		error instanceof ORPCError && error.code === "UNAUTHORIZED";
 
 	return (
 		<div className="flex min-h-screen flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
 			<h1 className="text-sm font-medium">{title}</h1>
 			<p className="max-w-sm text-xs text-muted-foreground">{description}</p>
 			<div className="flex gap-2">
-				<Button variant="outline" onClick={reset}>
-					Try again
-				</Button>
+				{needsSignIn ? (
+					<Button
+						variant="outline"
+						render={
+							<Link
+								to="/signin"
+								search={{
+									redirect: window.location.pathname + window.location.search,
+								}}
+							/>
+						}
+					>
+						Sign in
+					</Button>
+				) : (
+					<Button variant="outline" onClick={reset}>
+						Try again
+					</Button>
+				)}
 				<Button onClick={() => window.location.assign("/")}>Go home</Button>
 			</div>
 		</div>
@@ -31,6 +50,7 @@ function orpcErrorTitle(error: ORPCError<string, unknown>) {
 		case "NOT_FOUND":
 			return "Not found";
 		case "UNAUTHORIZED":
+			return "Sign in to see this";
 		case "FORBIDDEN":
 			return "Access denied";
 		default:
@@ -43,6 +63,7 @@ function orpcErrorDescription(error: ORPCError<string, unknown>) {
 		case "NOT_FOUND":
 			return "The resource you're looking for doesn't exist or was removed.";
 		case "UNAUTHORIZED":
+			return "This page is only for members of its workspace.";
 		case "FORBIDDEN":
 			return "You don't have permission to view this.";
 		default:

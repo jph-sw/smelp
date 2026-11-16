@@ -62,7 +62,7 @@ function PropertySelect({
 			>
 				<SelectTrigger
 					aria-label={label}
-					className="w-full min-w-0 border-transparent bg-transparent px-2 hover:border-transparent hover:bg-accent"
+					className="w-full min-w-0 border-transparent bg-transparent px-2 hover:border-transparent hover:bg-accent disabled:after:hidden"
 				>
 					<SelectValue />
 				</SelectTrigger>
@@ -174,7 +174,7 @@ export function IssueProperties({
 					value={issue.assignee}
 					members={members}
 					disabled={!canWrite}
-					className="w-full border-transparent bg-transparent px-2 font-normal hover:border-transparent hover:bg-accent"
+					className="w-full border-transparent bg-transparent px-2 font-normal hover:border-transparent hover:bg-accent disabled:after:hidden"
 					onChange={(assignee) => onUpdate({ assignee })}
 				/>
 			</div>

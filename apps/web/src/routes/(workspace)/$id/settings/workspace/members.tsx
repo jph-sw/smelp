@@ -3,7 +3,7 @@ import {
 	useQueryClient,
 	useSuspenseQuery,
 } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 import * as v from "valibot";
 import { ConfirmButton } from "#/components/confirm-button";
@@ -30,11 +30,11 @@ import {
 	leaveWorkspace,
 	removeWorkspaceMember,
 	updateWorkspaceMemberRole,
-	useWorkspaceAccess,
 	workspaceMembersQueryOptions,
 } from "#/lib/data/workspace-members";
 import { toastError } from "#/lib/errors";
 import { formatDate, initials } from "#/lib/utils";
+import { useWorkspaceAccess } from "#/lib/workspace-viewer";
 
 const InviteMemberSchema = v.object({
 	email: v.union(
@@ -249,10 +249,15 @@ function RouteComponent() {
 	const { id: workspaceId } = Route.useParams();
 	const navigate = Route.useNavigate();
 	const queryClient = useQueryClient();
-	const { me, members, canManage } = useWorkspaceAccess(workspaceId);
+	const router = useRouter();
+	const { viewer, canManage } = useWorkspaceAccess();
+	const { data: members } = useSuspenseQuery(
+		workspaceMembersQueryOptions({ workspaceId }),
+	);
+	const me = members.find((member) => member.userId === viewer.user?.id);
 
-	const refresh = () =>
-		Promise.all([
+	const refresh = async () => {
+		await Promise.all([
 			queryClient.invalidateQueries({
 				queryKey: ["workspace-members", workspaceId],
 			}),
@@ -264,6 +269,9 @@ function RouteComponent() {
 			queryClient.invalidateQueries({ queryKey: ["modules"] }),
 			queryClient.invalidateQueries({ queryKey: ["module"] }),
 		]);
+		// Controls everywhere follow the viewer's own role, which may have changed.
+		await router.invalidate();
+	};
 
 	const { mutate: changeRole } = useMutation({
 		mutationFn: updateWorkspaceMemberRole,

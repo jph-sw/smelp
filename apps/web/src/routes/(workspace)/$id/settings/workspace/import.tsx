@@ -33,8 +33,8 @@ import {
 	previewJiraImport,
 	type StateTarget,
 } from "#/lib/data/jira-import";
-import { useWorkspaceAccess } from "#/lib/data/workspace-members";
 import { toastError } from "#/lib/errors";
+import { useWorkspaceAccess } from "#/lib/workspace-viewer";
 
 export const Route = createFileRoute(
 	"/(workspace)/$id/settings/workspace/import",
@@ -109,7 +109,7 @@ function RouteComponent() {
 	usePageTitle("Import from Jira");
 	const { id: workspaceId } = Route.useParams();
 	const queryClient = useQueryClient();
-	const { canManage } = useWorkspaceAccess(workspaceId);
+	const { canManage } = useWorkspaceAccess();
 	const fileInput = useRef<HTMLInputElement>(null);
 
 	const [csv, setCsv] = useState<string | null>(null);

@@ -18,7 +18,10 @@ import {
 import { FieldGroup } from "#/components/ui/field";
 import { useAppForm } from "#/hooks/form";
 import { usePageTitle } from "#/hooks/use-page-title";
-import { instanceStatusQueryOptions } from "#/lib/data/instance";
+import {
+	instanceStatusQueryOptions,
+	publicWorkspacesQueryOptions,
+} from "#/lib/data/instance";
 import {
 	OIDC_ERROR_MESSAGES,
 	signInOptionsQueryOptions,
@@ -31,25 +34,35 @@ const SignInSchema = v.object({
 	password: v.pipe(v.string(), v.minLength(1, "Enter your password.")),
 });
 
+// Only a path on this site, so a crafted link can't send someone elsewhere after
+// they sign in.
+function localPath(value: unknown) {
+	return typeof value === "string" && /^\/(?![/\\])/.test(value)
+		? value
+		: undefined;
+}
+
 export const Route = createFileRoute("/signin")({
 	validateSearch: (
 		search: Record<string, unknown>,
-	): { invite?: string; oidcError?: string } => ({
+	): { invite?: string; oidcError?: string; redirect?: string } => ({
 		invite: typeof search.invite === "string" ? search.invite : undefined,
 		oidcError:
 			typeof search.oidcError === "string" ? search.oidcError : undefined,
+		redirect: localPath(search.redirect),
 	}),
 	beforeLoad: ({ context, search }) => {
 		if (context.user != null) {
 			throw search.invite
 				? redirect({ to: "/invite/$token", params: { token: search.invite } })
-				: redirect({ to: "/" });
+				: redirect({ href: search.redirect ?? "/" });
 		}
 	},
 	loader: async ({ context: { queryClient } }) => {
 		const [status] = await Promise.all([
 			queryClient.ensureQueryData(instanceStatusQueryOptions),
 			queryClient.ensureQueryData(signInOptionsQueryOptions),
+			queryClient.ensureQueryData(publicWorkspacesQueryOptions),
 		]);
 		if (status.needsSetup) throw redirect({ to: "/signup" });
 	},
@@ -60,8 +73,12 @@ function SignIn() {
 	usePageTitle("Sign in");
 	const navigate = useNavigate();
 	const queryClient = useQueryClient();
-	const { invite, oidcError } = Route.useSearch();
+	const { invite, oidcError, redirect: returnTo } = Route.useSearch();
 	const { data: status } = useSuspenseQuery(instanceStatusQueryOptions);
+	const { data: publicWorkspaces } = useSuspenseQuery(
+		publicWorkspacesQueryOptions,
+	);
+	const canBrowse = publicWorkspaces.length > 0;
 	const form = useAppForm({
 		defaultValues: {
 			email: "",
@@ -77,7 +94,7 @@ function SignIn() {
 				if (invite) {
 					navigate({ to: "/invite/$token", params: { token: invite } });
 				} else {
-					navigate({ to: "/" });
+					navigate({ href: returnTo ?? "/" });
 				}
 			} catch (error) {
 				toastError(error);
@@ -134,7 +151,7 @@ function SignIn() {
 					</form>
 					<OidcButton invite={invite} />
 				</CardContent>
-				{(status.signupOpen || invite || status.emailEnabled) && (
+				{(status.signupOpen || invite || status.emailEnabled || canBrowse) && (
 					<CardFooter className="flex-col items-start gap-2">
 						{status.emailEnabled && (
 							<Link
@@ -155,6 +172,11 @@ function SignIn() {
 									Sign up
 								</Link>
 							</p>
+						)}
+						{canBrowse && (
+							<Link to="/" className="underline underline-offset-3">
+								Browse public workspaces
+							</Link>
 						)}
 					</CardFooter>
 				)}

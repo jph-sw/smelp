@@ -11,16 +11,21 @@ import {
 	SettingsNavGroup,
 	settingsNavLinkClassName,
 } from "#/components/settings/nav";
-import { useWorkspaceAccess } from "#/lib/data/workspace-members";
+import {
+	requireMemberViewer,
+	useWorkspaceAccess,
+} from "#/lib/workspace-viewer";
 
 export const Route = createFileRoute("/(workspace)/$id/settings/workspace")({
 	component: RouteComponent,
+	beforeLoad: ({ context: { viewer }, params: { id }, location }) =>
+		requireMemberViewer(viewer, id, location.href),
 });
 
 function RouteComponent() {
 	const { id: workspaceId } = Route.useParams();
 	// Guests can't load the activity feed, so they don't get a link to it.
-	const { canWrite } = useWorkspaceAccess(workspaceId);
+	const { canWrite } = useWorkspaceAccess();
 
 	return (
 		<div className="flex h-full w-full flex-col md:flex-row pointer-coarse:max-lg:flex-col">

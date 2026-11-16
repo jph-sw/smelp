@@ -123,6 +123,25 @@ function RouteComponent() {
 				</CardContent>
 			</Card>
 			<Card>
+				<CardContent className="flex items-center justify-between gap-4">
+					<div>
+						<h2 id="public-access-label" className="text-sm font-semibold">
+							Public instance
+						</h2>
+						<p className="text-card-foreground/70">
+							Visitors can read the public projects of workspaces marked public,
+							without an account. They can't change anything.
+						</p>
+					</div>
+					<Switch
+						aria-labelledby="public-access-label"
+						checked={status.publicAccess}
+						disabled={isPending}
+						onCheckedChange={(publicAccess) => update({ publicAccess })}
+					/>
+				</CardContent>
+			</Card>
+			<Card>
 				<CardContent className="flex flex-wrap items-center justify-between gap-4">
 					<div className="min-w-0 flex-1 basis-64">
 						<h2 className="text-sm font-semibold">

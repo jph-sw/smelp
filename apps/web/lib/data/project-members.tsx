@@ -1,6 +1,6 @@
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
-import { currentUserQueryOptions } from "../auth";
 import { orpc } from "../orpc";
+import { useWorkspaceViewer } from "../workspace-viewer";
 import { projectQueryOptions } from "./project";
 
 export const projectMembersQueryOptions = ({
@@ -47,25 +47,27 @@ export const removeProjectMember = ({
 	memberId: string;
 }) => orpc.projectMembers.remove({ projectId, memberId });
 
-// What the signed-in user can do in a project. The API enforces these rules too;
-// this only decides which controls to show.
+// What the person on the page can do in a project. The API enforces these rules
+// too; this only decides which controls to show.
 export function useProjectAccess(projectId: string) {
-	const { data: user } = useSuspenseQuery(currentUserQueryOptions);
+	const viewer = useWorkspaceViewer();
 	const { data: members } = useSuspenseQuery(
 		projectMembersQueryOptions({ projectId }),
 	);
-
 	const { data: project } = useSuspenseQuery(
 		projectQueryOptions({ projectId }),
 	);
 
-	const role = members.find((member) => member.userId === user?.id)?.role;
-	const isInstanceAdmin = user?.role === "admin";
+	const role =
+		viewer.mode === "public"
+			? undefined
+			: members.find((member) => member.userId === viewer.user.id)?.role;
+	const isInstanceAdmin = viewer.mode === "instanceAdmin";
 	const isArchived = project.archivedAt !== null;
 	const canManage = isInstanceAdmin || role === "admin";
 
 	return {
-		user,
+		user: viewer.user,
 		members,
 		isArchived,
 		// An archived project is read-only for everyone, admins included.
@@ -73,5 +75,7 @@ export function useProjectAccess(projectId: string) {
 			!isArchived && (isInstanceAdmin || role === "member" || role === "admin"),
 		// Includes archive, unarchive and delete, which still work while archived.
 		canManage,
+		// Guests may comment too. Someone reading from outside may not.
+		canComment: !isArchived && viewer.mode !== "public",
 	};
 }

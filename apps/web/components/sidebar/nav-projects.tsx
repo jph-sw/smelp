@@ -16,7 +16,7 @@ import {
 	SidebarMenuButton,
 	SidebarMenuItem,
 } from "#/components/ui/sidebar";
-import { useWorkspaceAccess } from "#/lib/data/workspace-members";
+import { useWorkspaceAccess } from "#/lib/workspace-viewer";
 import { DynamicIcon } from "../dynamic-icon";
 import { CreateProjectDialog } from "../project/create-project-dialog";
 import { Button } from "../ui/button";
@@ -37,7 +37,7 @@ export function NavProjects({
 }) {
 	const [isOpen, setIsOpen] = useState(true);
 	const matchRoute = useMatchRoute();
-	const { canWrite } = useWorkspaceAccess(workspace.id);
+	const { viewer, canWrite } = useWorkspaceAccess();
 
 	return (
 		<Collapsible open={isOpen} defaultOpen className="group/collapsible">
@@ -86,26 +86,31 @@ export function NavProjects({
 											{project.name}
 										</span>
 									</SidebarMenuButton>
-									<DropdownMenu>
-										<DropdownMenuTrigger
-											render={<SidebarMenuAction showOnHover />}
-										>
-											<HugeiconsIcon icon={MoreHorizontal} />
-											<span className="sr-only">More</span>
-										</DropdownMenuTrigger>
-										<DropdownMenuContent>
-											<DropdownMenuItem
-												render={
-													<Link
-														to="/$id/settings/projects/$projectId"
-														params={{ id: workspace.id, projectId: project.id }}
-													/>
-												}
+									{viewer.mode !== "public" && (
+										<DropdownMenu>
+											<DropdownMenuTrigger
+												render={<SidebarMenuAction showOnHover />}
 											>
-												<HugeiconsIcon icon={Setting07Icon} /> Settings
-											</DropdownMenuItem>
-										</DropdownMenuContent>
-									</DropdownMenu>
+												<HugeiconsIcon icon={MoreHorizontal} />
+												<span className="sr-only">More</span>
+											</DropdownMenuTrigger>
+											<DropdownMenuContent>
+												<DropdownMenuItem
+													render={
+														<Link
+															to="/$id/settings/projects/$projectId"
+															params={{
+																id: workspace.id,
+																projectId: project.id,
+															}}
+														/>
+													}
+												>
+													<HugeiconsIcon icon={Setting07Icon} /> Settings
+												</DropdownMenuItem>
+											</DropdownMenuContent>
+										</DropdownMenu>
+									)}
 								</SidebarMenuItem>
 							))}
 						</SidebarMenu>
