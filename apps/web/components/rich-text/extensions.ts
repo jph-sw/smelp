@@ -27,9 +27,8 @@ export function isSafeHref(href: string | null | undefined) {
 }
 
 // Raw HTML in a description is shown as the text it is, never parsed into
-// nodes, the same as when descriptions were rendered with react-markdown. The
-// one exception is <br>, which is how a line break inside a table cell is
-// written.
+// nodes. The one exception is <br>, which is how a line break inside a table
+// cell is written.
 function htmlAsTextMarked() {
 	const instance = new Marked({ gfm: true, breaks: true });
 	instance.use({
