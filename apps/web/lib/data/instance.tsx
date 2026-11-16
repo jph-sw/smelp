@@ -17,6 +17,11 @@ export const instanceUsersQueryOptions = queryOptions({
 	queryFn: () => orpc.instance.users(),
 });
 
+export const publicWorkspacesQueryOptions = queryOptions({
+	queryKey: ["public-workspaces"],
+	queryFn: () => orpc.instance.publicWorkspaces(),
+});
+
 export const updateInstance = (input: {
 	signupOpen?: boolean;
 	publicAccess?: boolean;

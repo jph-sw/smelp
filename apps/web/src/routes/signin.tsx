@@ -18,7 +18,10 @@ import {
 import { FieldGroup } from "#/components/ui/field";
 import { useAppForm } from "#/hooks/form";
 import { usePageTitle } from "#/hooks/use-page-title";
-import { instanceStatusQueryOptions } from "#/lib/data/instance";
+import {
+	instanceStatusQueryOptions,
+	publicWorkspacesQueryOptions,
+} from "#/lib/data/instance";
 import {
 	OIDC_ERROR_MESSAGES,
 	signInOptionsQueryOptions,
@@ -59,6 +62,7 @@ export const Route = createFileRoute("/signin")({
 		const [status] = await Promise.all([
 			queryClient.ensureQueryData(instanceStatusQueryOptions),
 			queryClient.ensureQueryData(signInOptionsQueryOptions),
+			queryClient.ensureQueryData(publicWorkspacesQueryOptions),
 		]);
 		if (status.needsSetup) throw redirect({ to: "/signup" });
 	},
@@ -71,6 +75,10 @@ function SignIn() {
 	const queryClient = useQueryClient();
 	const { invite, oidcError, redirect: returnTo } = Route.useSearch();
 	const { data: status } = useSuspenseQuery(instanceStatusQueryOptions);
+	const { data: publicWorkspaces } = useSuspenseQuery(
+		publicWorkspacesQueryOptions,
+	);
+	const canBrowse = publicWorkspaces.length > 0;
 	const form = useAppForm({
 		defaultValues: {
 			email: "",
@@ -143,7 +151,7 @@ function SignIn() {
 					</form>
 					<OidcButton invite={invite} />
 				</CardContent>
-				{(status.signupOpen || invite || status.emailEnabled) && (
+				{(status.signupOpen || invite || status.emailEnabled || canBrowse) && (
 					<CardFooter className="flex-col items-start gap-2">
 						{status.emailEnabled && (
 							<Link
@@ -164,6 +172,11 @@ function SignIn() {
 									Sign up
 								</Link>
 							</p>
+						)}
+						{canBrowse && (
+							<Link to="/" className="underline underline-offset-3">
+								Browse public workspaces
+							</Link>
 						)}
 					</CardFooter>
 				)}
