@@ -6,11 +6,14 @@ import {
 	SettingsNavGroup,
 	settingsNavLinkClassName,
 } from "#/components/settings/nav";
+import { requireMemberViewer } from "#/lib/workspace-viewer";
 
 export const Route = createFileRoute(
 	"/(workspace)/$id/settings/projects/$projectId",
 )({
 	component: RouteComponent,
+	beforeLoad: ({ context: { viewer }, params: { id }, location }) =>
+		requireMemberViewer(viewer, id, location.href),
 });
 
 function RouteComponent() {

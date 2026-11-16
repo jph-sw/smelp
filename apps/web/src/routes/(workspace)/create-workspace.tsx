@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import * as v from "valibot";
 import libraryUrl from "#/assets/library.png";
 import {
@@ -29,6 +29,9 @@ const CreateWorkspaceSchema = v.object({
 
 export const Route = createFileRoute("/(workspace)/create-workspace")({
 	component: RouteComponent,
+	beforeLoad: ({ context }) => {
+		if (context.user == null) throw redirect({ to: "/signin" });
+	},
 });
 
 function RouteComponent() {

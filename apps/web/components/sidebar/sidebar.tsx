@@ -11,6 +11,7 @@ import {
 	SidebarMenuButton,
 	SidebarMenuItem,
 } from "#/components/ui/sidebar";
+import { useWorkspaceViewer } from "#/lib/workspace-viewer";
 import { openCreateIssueDialog } from "../issue/create-issue-dialog-store";
 import { Button } from "../ui/button";
 import { NavProjects } from "./nav-projects";
@@ -25,13 +26,15 @@ export function AppSidebar({
 }) {
 	const matchRoute = useMatchRoute();
 	const params = useParams({ strict: false });
+	const isPublic = useWorkspaceViewer().mode === "public";
 
 	// New work items go into the project on screen. Issue ids are "<projectId>-<n>".
 	const currentProjectId =
 		params.projectId ?? params.issueId?.replace(/-\d+$/, "");
 	// Archived projects are read-only, so they leave the sidebar and can't take new work items.
+	// Someone reading from outside is a member of nothing, and sees every project listed.
 	const myProjects = projects.filter(
-		(project) => project.isMember && !project.isArchived,
+		(project) => (isPublic || project.isMember) && !project.isArchived,
 	);
 	const isOnArchivedProject = projects.some(
 		(project) => project.id === currentProjectId && project.isArchived,
@@ -50,25 +53,27 @@ export function AppSidebar({
 				<SidebarGroup>
 					<SidebarGroupContent>
 						<SidebarMenu>
-							<SidebarMenuItem>
-								<Button
-									variant="outline"
-									size="lg"
-									className="mb-2 w-full"
-									disabled={!targetProject}
-									onClick={() =>
-										targetProject &&
-										openCreateIssueDialog({
-											workspaceId: workspace.id,
-											projectId: targetProject.id,
-											projectName: targetProject.name,
-										})
-									}
-								>
-									<HugeiconsIcon icon={PlusSignIcon} />
-									New work item
-								</Button>
-							</SidebarMenuItem>
+							{!isPublic && (
+								<SidebarMenuItem>
+									<Button
+										variant="outline"
+										size="lg"
+										className="mb-2 w-full"
+										disabled={!targetProject}
+										onClick={() =>
+											targetProject &&
+											openCreateIssueDialog({
+												workspaceId: workspace.id,
+												projectId: targetProject.id,
+												projectName: targetProject.name,
+											})
+										}
+									>
+										<HugeiconsIcon icon={PlusSignIcon} />
+										New work item
+									</Button>
+								</SidebarMenuItem>
+							)}
 							<SidebarMenuItem>
 								<SidebarMenuButton
 									render={<Link to="/$id" params={{ id: workspace.id }} />}

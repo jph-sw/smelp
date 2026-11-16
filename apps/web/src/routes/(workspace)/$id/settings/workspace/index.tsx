@@ -23,8 +23,8 @@ import {
 	updateWorkspace,
 	workspaceQueryOptions,
 } from "#/lib/data/workspace";
-import { useWorkspaceAccess } from "#/lib/data/workspace-members";
 import { toastError } from "#/lib/errors";
+import { useWorkspaceAccess } from "#/lib/workspace-viewer";
 
 const UpdateWorkspaceSchema = v.object({
 	name: v.pipe(
@@ -46,7 +46,7 @@ function RouteComponent() {
 	const queryClient = useQueryClient();
 	const workspaceQuery = workspaceQueryOptions({ workspaceId });
 	const { data: workspace } = useSuspenseQuery(workspaceQuery);
-	const { canManage } = useWorkspaceAccess(workspaceId);
+	const { canManage } = useWorkspaceAccess();
 	const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 	const [isDeleting, setIsDeleting] = useState(false);
 

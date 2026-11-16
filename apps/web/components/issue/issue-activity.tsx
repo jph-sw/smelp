@@ -7,6 +7,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import type { ProjectMember, tables } from "@smelp/db";
 import {
 	useMutation,
+	useQuery,
 	useQueryClient,
 	useSuspenseQuery,
 } from "@tanstack/react-query";
@@ -409,6 +410,7 @@ export function IssueActivity({
 	canManage,
 	canWrite = false,
 	readOnly = false,
+	showHistory = true,
 }: {
 	issueId: string;
 	userId: string | undefined;
@@ -419,13 +421,16 @@ export function IssueActivity({
 	canWrite?: boolean;
 	/** Archived project: show the discussion, but no way to add to or remove from it. */
 	readOnly?: boolean;
+	/** The changes made to the item. Only members may read them. */
+	showHistory?: boolean;
 }) {
 	const queryClient = useQueryClient();
 	const commentsOptions = commentsQueryOptions({ issueId });
 	const { data: comments } = useSuspenseQuery(commentsOptions);
-	const { data: activity } = useSuspenseQuery(
-		issueActivityQueryOptions({ issueId }),
-	);
+	const { data: activity = [] } = useQuery({
+		...issueActivityQueryOptions({ issueId }),
+		enabled: showHistory,
+	});
 	const [draft, setDraft] = useState("");
 
 	const refreshComments = () =>
@@ -506,6 +511,9 @@ export function IssueActivity({
 	return (
 		<section className="space-y-4" aria-label="Activity">
 			<h2 className="text-sm font-semibold">Activity</h2>
+			{timeline.length === 0 && readOnly && (
+				<p className="text-sm text-muted-foreground">No comments yet.</p>
+			)}
 			<ol className="space-y-3">
 				{timeline.map((entry) =>
 					entry.kind === "activity" ? (

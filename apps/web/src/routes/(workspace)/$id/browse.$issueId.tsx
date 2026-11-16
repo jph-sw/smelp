@@ -5,7 +5,7 @@ import {
 	useQueryClient,
 	useSuspenseQuery,
 } from "@tanstack/react-query";
-import { createFileRoute, Link, redirect } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
 import { IssueAttachments } from "#/components/issue/attachments";
 import { IssueActivity } from "#/components/issue/issue-activity";
@@ -26,7 +26,6 @@ import {
 } from "#/components/ui/breadcrumb";
 import { Textarea } from "#/components/ui/textarea";
 import { usePageTitle } from "#/hooks/use-page-title";
-import { currentUserQueryOptions } from "#/lib/auth";
 import { cyclesQueryOptions, invalidateCycles } from "#/lib/data/cycle";
 import {
 	attachmentsQueryOptions,
@@ -47,20 +46,19 @@ import {
 import { statesQueryOptions } from "#/lib/data/state";
 import { toastError } from "#/lib/errors";
 import { cn } from "#/lib/utils";
+import { useWorkspaceViewer } from "#/lib/workspace-viewer";
 
 export const Route = createFileRoute("/(workspace)/$id/browse/$issueId")({
 	component: RouteComponent,
-	loader: async ({ context: { queryClient, user }, params: { issueId } }) => {
-		if (user == null) throw redirect({ to: "/signin" });
-
+	loader: async ({ context: { queryClient, viewer }, params: { issueId } }) => {
 		const [issue] = await Promise.all([
 			queryClient.ensureQueryData(issueQueryOptions({ issueId })),
 			queryClient.ensureQueryData(commentsQueryOptions({ issueId })),
 			queryClient.ensureQueryData(linksQueryOptions({ issueId })),
-			queryClient.ensureQueryData(issueActivityQueryOptions({ issueId })),
+			viewer.mode !== "public" &&
+				queryClient.ensureQueryData(issueActivityQueryOptions({ issueId })),
 			queryClient.ensureQueryData(attachmentsQueryOptions({ issueId })),
 			queryClient.ensureQueryData(issueRelationsQueryOptions({ issueId })),
-			queryClient.ensureQueryData(currentUserQueryOptions),
 		]);
 		await Promise.all([
 			queryClient.ensureQueryData(
@@ -164,12 +162,13 @@ function RouteComponent() {
 	const { data: cycles } = useSuspenseQuery(
 		cyclesQueryOptions({ projectId: issue.projectId }),
 	);
-	const { user, members, canWrite, canManage, isArchived } = useProjectAccess(
-		issue.projectId,
-	);
+	const { user, members, canWrite, canManage, canComment, isArchived } =
+		useProjectAccess(issue.projectId);
+	const isPublic = useWorkspaceViewer().mode === "public";
 
 	// Opening an item reads its notification.
 	useEffect(() => {
+		if (isPublic) return;
 		markIssueNotificationRead(issueId)
 			.then(() =>
 				Promise.all([
@@ -178,7 +177,7 @@ function RouteComponent() {
 				]),
 			)
 			.catch(() => {});
-	}, [issueId, queryClient]);
+	}, [issueId, isPublic, queryClient]);
 
 	const { mutate: update } = useMutation({
 		mutationFn: (changes: {
@@ -347,7 +346,8 @@ function RouteComponent() {
 						members={members}
 						canManage={canManage}
 						canWrite={canWrite}
-						readOnly={isArchived}
+						readOnly={!canComment}
+						showHistory={!isPublic}
 					/>
 				</div>
 				<aside className="hidden w-80 shrink-0 overflow-y-auto border-l lg:block xl:w-96">

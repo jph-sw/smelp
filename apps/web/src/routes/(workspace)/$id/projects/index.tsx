@@ -13,9 +13,9 @@ import { Button } from "#/components/ui/button";
 import { Card } from "#/components/ui/card";
 import { usePageTitle } from "#/hooks/use-page-title";
 import { joinProject, projectsQueryOptions } from "#/lib/data/project";
-import { useWorkspaceAccess } from "#/lib/data/workspace-members";
 import { toastError } from "#/lib/errors";
 import { cn, formatDate } from "#/lib/utils";
+import { useWorkspaceAccess } from "#/lib/workspace-viewer";
 
 export const Route = createFileRoute("/(workspace)/$id/projects/")({
 	component: RouteComponent,
@@ -30,7 +30,8 @@ function RouteComponent() {
 	usePageTitle("Projects");
 	const { id: workspaceId } = Route.useParams();
 	const queryClient = useQueryClient();
-	const { canWrite } = useWorkspaceAccess(workspaceId);
+	const { viewer, canWrite } = useWorkspaceAccess();
+	const isPublic = viewer.mode === "public";
 	const [showArchived, setShowArchived] = useState(false);
 
 	const { data: projects } = useSuspenseQuery(
@@ -52,7 +53,9 @@ function RouteComponent() {
 	if (projects.length === 0) {
 		return (
 			<div className="p-4 text-sm text-muted-foreground sm:p-8">
-				No projects yet. Create one from the sidebar.
+				{isPublic
+					? "Nothing here is public yet."
+					: "No projects yet. Create one from the sidebar."}
 			</div>
 		);
 	}
@@ -64,6 +67,7 @@ function RouteComponent() {
 					key={project.id}
 					project={project}
 					workspaceId={workspaceId}
+					canOpen={isPublic || project.isMember}
 					canJoin={canWrite}
 					isJoining={isJoining}
 					onJoin={() => join({ projectId: project.id })}
@@ -110,12 +114,14 @@ type Project = tables["project"] & { isMember: boolean; isArchived: boolean };
 function ProjectCard({
 	project,
 	workspaceId,
+	canOpen,
 	canJoin,
 	isJoining,
 	onJoin,
 }: {
 	project: Project;
 	workspaceId: string;
+	canOpen: boolean;
 	canJoin: boolean;
 	isJoining: boolean;
 	onJoin: () => void;
@@ -124,7 +130,7 @@ function ProjectCard({
 		<Card
 			className={cn(
 				"relative gap-0 p-0 transition-shadow duration-150",
-				project.isMember &&
+				canOpen &&
 					"hover:ring-1 hover:ring-foreground/20 has-[a:focus-visible]:ring-2 has-[a:focus-visible]:ring-ring",
 			)}
 		>
@@ -143,7 +149,7 @@ function ProjectCard({
 				)}
 			</div>
 			<div className="flex flex-1 flex-col gap-1 p-4">
-				{project.isMember ? (
+				{canOpen ? (
 					<Link
 						to="/$id/projects/$projectId"
 						params={{ id: workspaceId, projectId: project.id }}
