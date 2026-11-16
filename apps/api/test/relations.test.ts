@@ -86,7 +86,6 @@ async function createIssue(
 		title,
 		description: "",
 		state: state.id,
-		type: "task",
 		workspaceId,
 		projectId,
 	});

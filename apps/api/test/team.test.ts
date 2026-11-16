@@ -128,7 +128,6 @@ describe("removing a workspace member", () => {
 			title: "Theirs",
 			description: "",
 			state,
-			type: "task",
 			assignee: member.id,
 			workspaceId,
 			projectId,

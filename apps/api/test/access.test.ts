@@ -106,7 +106,6 @@ beforeAll(async () => {
 		title: "First",
 		description: "",
 		state: stateId,
-		type: "task",
 		workspaceId: WORKSPACE,
 		projectId: PUBLIC_PROJECT,
 	});
@@ -117,7 +116,6 @@ const newIssue = () => ({
 	title: "New",
 	description: "",
 	state: stateId,
-	type: "task",
 	workspaceId: WORKSPACE,
 	projectId: PUBLIC_PROJECT,
 });

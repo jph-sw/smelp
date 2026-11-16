@@ -66,7 +66,6 @@ const newIssue = () => ({
 	title: "Linked item",
 	description: "",
 	state: first(stateIds),
-	type: "task",
 	workspaceId: WORKSPACE,
 	projectId: PROJECT,
 });

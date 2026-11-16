@@ -192,7 +192,6 @@ const writes: Read[] = [
 				title: "From outside",
 				description: "",
 				state: stateId,
-				type: "task",
 				workspaceId,
 				projectId: OPEN_PROJECT,
 			}),
@@ -291,7 +290,6 @@ beforeAll(async () => {
 			title,
 			description: "",
 			state,
-			type: "task",
 			workspaceId,
 			projectId,
 		});

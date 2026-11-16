@@ -82,7 +82,6 @@ const newIssue = (title: string, projectId = PROJECT, assignee?: string) => ({
 	title,
 	description: "",
 	state: stateIds[projectId] ?? "",
-	type: "task",
 	workspaceId: WORKSPACE,
 	projectId,
 	assignee,

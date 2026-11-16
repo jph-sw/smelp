@@ -162,7 +162,6 @@ const issueInput = (title: string, stateId: string) => ({
 	title,
 	description: "",
 	state: stateId,
-	type: "task",
 	workspaceId: WORKSPACE,
 	projectId: PROJECT,
 });

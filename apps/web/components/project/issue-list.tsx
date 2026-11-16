@@ -1,6 +1,7 @@
 import type { ProjectMember, tables } from "@smelp/db";
 import { Link } from "@tanstack/react-router";
 import { initials } from "#/lib/utils";
+import { IssueTypeIcon } from "../issue/issue-type-icon";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 
 // The board's items as rows: grouped by state in the board's column order, the
@@ -29,7 +30,7 @@ export function IssueList({
 
 	return (
 		<div className="min-h-0 flex-1 overflow-y-auto p-4">
-			<div className="hidden grid-cols-[5rem_1fr_9rem_10rem] gap-3 px-2 pb-1 text-xs font-medium text-muted-foreground sm:grid">
+			<div className="hidden grid-cols-[6.5rem_1fr_9rem_10rem] gap-3 px-2 pb-1 text-xs font-medium text-muted-foreground sm:grid">
 				<span>Key</span>
 				<span>Title</span>
 				<span>State</span>
@@ -46,10 +47,13 @@ export function IssueList({
 							<Link
 								to="/$id/browse/$issueId"
 								params={{ id: workspaceId, issueId: issue.id }}
-								className="grid grid-cols-[4.5rem_1fr_auto_1.5rem] items-center gap-3 rounded-md p-2 text-sm outline-none transition-colors duration-150 hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring sm:grid-cols-[5rem_1fr_9rem_10rem]"
+								className="grid grid-cols-[6rem_1fr_auto_1.5rem] items-center gap-3 rounded-md p-2 text-sm outline-none transition-colors duration-150 hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring sm:grid-cols-[6.5rem_1fr_9rem_10rem]"
 							>
-								<span className="truncate text-xs font-semibold text-foreground/70">
-									{issue.id}
+								<span className="flex min-w-0 items-center gap-1.5">
+									<IssueTypeIcon type={issue.type} />
+									<span className="truncate text-xs font-semibold text-foreground/70">
+										{issue.id}
+									</span>
 								</span>
 								<span className="truncate">{issue.title}</span>
 								<span

@@ -2,6 +2,7 @@ import {
 	SelectContent as SelectContentPrimitive,
 	SelectGroup,
 	SelectGroupLabel,
+	SelectItemIcon,
 	SelectItemIndicator,
 	SelectItem as SelectItemPrimitive,
 	Select as SelectPrimitive,
@@ -49,13 +50,27 @@ function SelectItem({
 	);
 }
 
+// ui-sdk copies the chosen item's icon only once the list has rendered, so the
+// trigger takes the icon from the caller and shows it from the first paint.
+function SelectValueWithIcon({ icon }: { icon?: React.ReactNode }) {
+	if (!icon) return <SelectValue />;
+	return (
+		<span className="flex min-w-0 items-center gap-2">
+			{icon}
+			<SelectValue />
+		</span>
+	);
+}
+
 export {
 	Select,
 	SelectContent,
 	SelectGroup,
 	SelectGroupLabel,
 	SelectItem,
+	SelectItemIcon,
 	SelectSeparator,
 	SelectTrigger,
 	SelectValue,
+	SelectValueWithIcon,
 };

@@ -1,5 +1,5 @@
 import { ORPCError } from "@orpc/server";
-import { DB, type tables } from "@smelp/db";
+import { DB, DEFAULTS, type tables } from "@smelp/db";
 import { eventBus } from "@smelp/events";
 import { SQL } from "bun";
 import * as v from "valibot";
@@ -116,6 +116,7 @@ async function moduleName(moduleId: string | null) {
 const NonEmpty = v.pipe(v.string(), v.minLength(1));
 const Title = v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(120));
 const Description = v.pipe(v.string(), v.maxLength(20_000));
+const IssueType = v.picklist(DEFAULTS.ISSUE_TYPES);
 
 async function requireAssigneeInProject(
 	assignee: string,
@@ -165,6 +166,7 @@ export const updateIssue = base
 			state: v.optional(v.string()),
 			title: v.optional(Title),
 			description: v.optional(Description),
+			type: v.optional(IssueType),
 			assignee: v.optional(v.nullable(NonEmpty)),
 			parentId: v.optional(v.nullable(NonEmpty)),
 			moduleId: v.optional(v.nullable(NonEmpty)),
@@ -189,6 +191,7 @@ export const updateIssue = base
 			state: input.state ?? oldIssue.state,
 			title: input.title ?? oldIssue.title,
 			description: input.description ?? oldIssue.description,
+			type: input.type ?? oldIssue.type,
 			assignee:
 				input.assignee === undefined ? oldIssue.assignee : input.assignee,
 			parentId:
@@ -201,6 +204,7 @@ export const updateIssue = base
 		const stateChanged = next.state !== oldIssue.state;
 		const titleChanged = next.title !== oldIssue.title;
 		const descriptionChanged = next.description !== oldIssue.description;
+		const typeChanged = next.type !== oldIssue.type;
 		const assigneeChanged = next.assignee !== oldIssue.assignee;
 		const parentChanged = next.parentId !== oldIssue.parentId;
 		const moduleChanged = next.moduleId !== oldIssue.moduleId;
@@ -210,6 +214,7 @@ export const updateIssue = base
 			!stateChanged &&
 			!titleChanged &&
 			!descriptionChanged &&
+			!typeChanged &&
 			!assigneeChanged &&
 			!parentChanged &&
 			!moduleChanged &&
@@ -256,6 +261,7 @@ export const updateIssue = base
 				state = ${next.state},
 				title = ${next.title},
 				description = ${next.description},
+				type = ${next.type},
 				assignee = ${next.assignee},
 				parentId = CASE WHEN ${setParent} = 1 THEN ${next.parentId} ELSE parentId END,
 				moduleId = CASE WHEN ${setModule} = 1 THEN ${next.moduleId} ELSE moduleId END,
@@ -369,6 +375,18 @@ export const updateIssue = base
 					field: "description",
 					oldValue: null,
 					newValue: null,
+				},
+			});
+		}
+		if (typeChanged) {
+			eventBus.emit({
+				...event,
+				type: "issue.updated",
+				payload: {
+					...ref,
+					field: "type",
+					oldValue: oldIssue.type,
+					newValue: issue.type,
 				},
 			});
 		}
@@ -496,7 +514,7 @@ export const createIssue = base
 			title: Title,
 			description: Description,
 			state: v.string(),
-			type: v.string(),
+			type: v.optional(IssueType, "task"),
 			assignee: v.optional(v.string()),
 			parentId: v.optional(v.string()),
 			workspaceId: v.string(),

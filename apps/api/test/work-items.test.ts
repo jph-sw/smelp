@@ -67,7 +67,6 @@ const newIssue = (title = "A work item") => ({
 	title,
 	description: "",
 	state: first(stateIds),
-	type: "task",
 	workspaceId: WORKSPACE,
 	projectId: PROJECT,
 });
@@ -193,6 +192,57 @@ describe("editing work items", () => {
 		await member.client.issue.delete({ id: deleted.id });
 		const next = await member.client.issue.create(newIssue());
 		expect(next.id).not.toBe(deleted.id);
+	});
+});
+
+describe("work item types", () => {
+	test("a new work item is a task unless it says otherwise", async () => {
+		const task = await member.client.issue.create(newIssue());
+		const bug = await member.client.issue.create({
+			...newIssue(),
+			type: "bug",
+		});
+
+		expect((await member.client.issue.find({ issueId: task.id })).type).toBe(
+			"task",
+		);
+		expect((await member.client.issue.find({ issueId: bug.id })).type).toBe(
+			"bug",
+		);
+	});
+
+	test("rejects a type that isn't one of the known ones", async () => {
+		await expectCode(
+			member.client.issue.create({
+				...newIssue(),
+				type: "Bug" as "bug",
+			}),
+			"BAD_REQUEST",
+		);
+		const { id } = await member.client.issue.create(newIssue());
+		await expectCode(
+			member.client.issue.update({ id, type: "incident" as "bug" }),
+			"BAD_REQUEST",
+		);
+		expect((await member.client.issue.find({ issueId: id })).type).toBe("task");
+	});
+
+	test("changing the type is saved and shows in the timeline", async () => {
+		const { id } = await member.client.issue.create(newIssue());
+		await member.client.issue.update({ id, type: "story" });
+		await Bun.sleep(30);
+
+		expect((await guest.client.issue.find({ issueId: id })).type).toBe("story");
+		const activity = await guest.client.activity.findForIssue({ issueId: id });
+		expect(activity.map((entry) => entry.action)).toEqual([
+			"created",
+			"issue.updated",
+		]);
+		expect(activity[1]).toMatchObject({
+			field: "type",
+			oldValue: "task",
+			newValue: "story",
+		});
 	});
 });
 

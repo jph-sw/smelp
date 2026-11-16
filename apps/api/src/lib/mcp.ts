@@ -2,7 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { createRouterClient, ORPCError } from "@orpc/server";
-import { Utils } from "@smelp/db";
+import { DEFAULTS, Utils } from "@smelp/db";
 import { z } from "zod";
 import { router } from "../router";
 import { requireUser } from "./access";
@@ -130,6 +130,11 @@ const AssigneeName = z
 	.string()
 	.describe("A project member's display name, full name or email");
 const Markdown = z.string().describe("Markdown");
+const IssueType = z
+	.enum(DEFAULTS.ISSUE_TYPES)
+	.describe(
+		"The kind of work item. New items are tasks unless you say otherwise.",
+	);
 
 function createServer(api: Api, appUrl: string) {
 	const server = new McpServer({ name: "smelp", version });
@@ -160,6 +165,7 @@ function createServer(api: Api, appUrl: string) {
 		return {
 			key: issue.id,
 			title: issue.title,
+			type: issue.type,
 			state: states.find((state) => state.id === issue.state)?.name ?? null,
 			assignee: nameOf(issue.assignee),
 			project: issue.projectId,
@@ -350,11 +356,12 @@ function createServer(api: Api, appUrl: string) {
 				project: ProjectKey,
 				title: z.string(),
 				description: Markdown.optional(),
+				type: IssueType.optional(),
 				state: StateName.optional(),
 				assignee: AssigneeName.optional(),
 			},
 		},
-		({ project: projectKey, title, description, state, assignee }) =>
+		({ project: projectKey, title, description, type, state, assignee }) =>
 			respond(async () => {
 				const { project, states, members } = await projectContext(projectKey);
 				const initial = state
@@ -367,7 +374,7 @@ function createServer(api: Api, appUrl: string) {
 					title,
 					description: description ?? "",
 					state: initial.id,
-					type: "task",
+					type,
 					assignee: assignee
 						? memberNamed(members, assignee, project.id).userId
 						: undefined,
@@ -385,6 +392,7 @@ function createServer(api: Api, appUrl: string) {
 				key: Key,
 				title: z.string().optional(),
 				description: Markdown.optional(),
+				type: IssueType.optional(),
 				state: StateName.optional(),
 				assignee: AssigneeName.nullable()
 					.optional()
@@ -393,7 +401,7 @@ function createServer(api: Api, appUrl: string) {
 					),
 			},
 		},
-		({ key, title, description, state, assignee }) =>
+		({ key, title, description, type, state, assignee }) =>
 			respond(async () => {
 				const issue = await api.issue.find({ issueId: key });
 				const { states, members } = await projectContext(issue.projectId);
@@ -401,6 +409,7 @@ function createServer(api: Api, appUrl: string) {
 					id: issue.id,
 					title,
 					description,
+					type,
 					state:
 						state === undefined
 							? undefined

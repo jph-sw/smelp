@@ -492,7 +492,6 @@ describe("notification emails", () => {
 				title,
 				description: "",
 				state: state?.id ?? "",
-				type: "task",
 				workspaceId,
 				projectId,
 				assignee,

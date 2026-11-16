@@ -50,7 +50,7 @@ export type DomainEvent =
 			"issue.updated",
 			IssueRef & {
 				// For "cycle" and "module" the values are names, kept so the log reads well after a rename or delete.
-				field: "title" | "description" | "parent" | "cycle" | "module";
+				field: "title" | "description" | "type" | "parent" | "cycle" | "module";
 				oldValue: string | null;
 				newValue: string | null;
 			}

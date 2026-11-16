@@ -170,7 +170,6 @@ describe("calling the API with a token", () => {
 			title: "Filed by an agent",
 			description: "",
 			state: stateId,
-			type: "task",
 			workspaceId: WORKSPACE,
 			projectId: PROJECT,
 		});
@@ -219,7 +218,6 @@ describe("calling the API with a token", () => {
 			title: "With a file",
 			description: "",
 			state: stateId,
-			type: "task",
 			workspaceId: WORKSPACE,
 			projectId: PROJECT,
 		});
