@@ -98,11 +98,13 @@ async function loadModule(projectId: string, moduleId: string) {
 	return loaded;
 }
 
-// Asking about a project or module the caller can't read looks the same as asking
+// Asking about a project or module the viewer can't read looks the same as asking
 // about one that doesn't exist, so private projects don't give themselves away.
 async function requireReadableProject(headers: Headers, projectId: string) {
 	try {
-		return await requireProjectPermission(headers, projectId, "space:read");
+		await requireProjectPermission(headers, projectId, "space:read", {
+			public: true,
+		});
 	} catch (error) {
 		if (error instanceof ORPCError && error.code === "FORBIDDEN") {
 			throw new ORPCError("NOT_FOUND");
@@ -112,11 +114,13 @@ async function requireReadableProject(headers: Headers, projectId: string) {
 }
 
 async function requireModule(headers: Headers, moduleId: string) {
-	await requireUser(headers);
 	const found = (await sql`SELECT * FROM module WHERE id = ${moduleId}`)[0] as
 		| tables["module"]
 		| undefined;
-	if (!found) throw new ORPCError("NOT_FOUND");
+	if (!found) {
+		await requireUser(headers);
+		throw new ORPCError("NOT_FOUND");
+	}
 	await requireReadableProject(headers, found.projectId);
 	return found;
 }
@@ -155,7 +159,6 @@ const notAMember = () =>
 export const findModules = base
 	.input(v.object({ projectId: v.string() }))
 	.handler(async ({ input, context }) => {
-		await requireUser(context.headers);
 		await requireReadableProject(context.headers, input.projectId);
 		return loadModules(input.projectId, null);
 	});

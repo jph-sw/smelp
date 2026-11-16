@@ -17,6 +17,9 @@ export const findIssues = base
 			context.headers,
 			input.projectId,
 			"space:read",
+			{
+				public: true,
+			},
 		);
 
 		const issues =

@@ -2,7 +2,11 @@ import { ORPCError } from "@orpc/server";
 import { DB, type tables } from "@smelp/db";
 import { eventBus } from "@smelp/events";
 import * as v from "valibot";
-import { requireProjectPermission, requireUser } from "../lib/access";
+import {
+	requireIssueRead,
+	requireProjectPermission,
+	requireUser,
+} from "../lib/access";
 import { base } from "../orpc";
 
 const sql = new DB().sqlite;
@@ -78,13 +82,7 @@ function emit(
 export const findLinks = base
 	.input(v.object({ issueId: v.string() }))
 	.handler(async ({ input, context }) => {
-		await requireUser(context.headers);
-		const issue = await findIssueOrThrow(input.issueId);
-		await requireProjectPermission(
-			context.headers,
-			issue.projectId,
-			"space:read",
-		);
+		const { issue } = await requireIssueRead(context.headers, input.issueId);
 
 		return (await sql`
 			SELECT * FROM issue_link

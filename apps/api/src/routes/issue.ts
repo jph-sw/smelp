@@ -3,7 +3,11 @@ import { DB, type tables } from "@smelp/db";
 import { eventBus } from "@smelp/events";
 import { SQL } from "bun";
 import * as v from "valibot";
-import { requireProjectPermission, requireUser } from "../lib/access";
+import {
+	requireIssueRead,
+	requireProjectPermission,
+	requireUser,
+} from "../lib/access";
 import {
 	attachmentKeysOfIssue,
 	removeAttachmentFiles,
@@ -130,7 +134,7 @@ async function requireAssigneeInProject(
 export const findIssue = base
 	.input(v.object({ issueId: v.string() }))
 	.handler(async ({ input, context }) => {
-		await requireUser(context.headers);
+		await requireIssueRead(context.headers, input.issueId);
 
 		const issue = (
 			await sql`
@@ -150,12 +154,6 @@ export const findIssue = base
 			  })
 			| undefined;
 		if (!issue) throw new ORPCError("NOT_FOUND");
-
-		await requireProjectPermission(
-			context.headers,
-			issue.projectId,
-			"space:read",
-		);
 
 		return issue;
 	});

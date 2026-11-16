@@ -192,4 +192,7 @@ export const DEFAULTS = {
 };
 
 export type ProjectMember = tables["auth_space_member"] &
-	Pick<tables["auth_user"], "fullName" | "displayName" | "email" | "image">;
+	Pick<tables["auth_user"], "fullName" | "displayName" | "image"> & {
+		/** Left out for someone reading a public project from outside it. */
+		email?: string;
+	};

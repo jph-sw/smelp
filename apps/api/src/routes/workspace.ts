@@ -4,7 +4,7 @@ import { DB, type tables, Utils } from "@smelp/db";
 import { eventBus } from "@smelp/events";
 import { SQL } from "bun";
 import * as v from "valibot";
-import { requireUser } from "../lib/access";
+import { requireUser, requireWorkspacePermission } from "../lib/access";
 import {
 	attachmentKeysOfWorkspace,
 	removeAttachmentFiles,
@@ -34,32 +34,15 @@ const RESERVED_WORKSPACE_IDS = new Set([
 export const findWorkspace = base
 	.input(v.object({ workspaceId: v.string() }))
 	.handler(async ({ input, context }) => {
-		const caller = await requireUser(context.headers);
-
-		let workspace: tables["workspace"];
-		try {
-			workspace = (
-				await sql`SELECT * FROM workspace WHERE id = ${input.workspaceId}`
-			)[0] as tables["workspace"];
-		} catch (e) {
-			utils.logger.error(`Couldn't load workspace ${input.workspaceId}`, e);
-			throw new ORPCError("NOT_FOUND");
-		}
-
-		if (!workspace) {
-			throw new ORPCError("NOT_FOUND");
-		}
-
-		const allowed = await auth.userHasPermission(
-			caller.userId,
-			workspace.spaceId,
+		const { workspace, access } = await requireWorkspacePermission(
+			context.headers,
+			input.workspaceId,
 			"space:read",
+			{ public: true },
 		);
-		if (!allowed) {
-			throw new ORPCError("FORBIDDEN");
-		}
 
-		return workspace;
+		// Tells the app whether to offer what only members can use.
+		return { ...workspace, viewerAccess: access.kind };
 	});
 
 export const updateWorkspace = base
@@ -75,24 +58,11 @@ export const updateWorkspace = base
 		}),
 	)
 	.handler(async ({ input, context }) => {
-		const caller = await requireUser(context.headers);
-
-		const workspace = (
-			await sql`SELECT * FROM workspace WHERE id = ${input.workspaceId}`
-		)[0] as tables["workspace"];
-
-		if (!workspace) {
-			throw new ORPCError("NOT_FOUND");
-		}
-
-		const allowed = await auth.userHasPermission(
-			caller.userId,
-			workspace.spaceId,
+		const { workspace } = await requireWorkspacePermission(
+			context.headers,
+			input.workspaceId,
 			"space:update",
 		);
-		if (!allowed) {
-			throw new ORPCError("FORBIDDEN");
-		}
 
 		const name = input.name ?? workspace.name;
 		const isPublic =
