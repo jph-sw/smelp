@@ -1,4 +1,4 @@
-import type { AnyExtension, JSONContent } from "@tiptap/core";
+import { type AnyExtension, type JSONContent, Node } from "@tiptap/core";
 import { HardBreak } from "@tiptap/extension-hard-break";
 import { Image } from "@tiptap/extension-image";
 import { Link } from "@tiptap/extension-link";
@@ -199,10 +199,77 @@ const ReadOnlyAwareTaskItem = TaskItem.extend({
 	},
 });
 
+// A mention is stored as @[Display name](user:<id>). The API reads the id, so
+// renaming someone never breaks a mention. Keep in sync with
+// apps/api/src/lib/mentions.ts.
+const MENTION = /^@\[([^\]\n]{1,80})\]\(user:([a-z0-9]{8,64})\)/;
+
+// The name typed in a mention is never shown, since anyone can write
+// "@[Admin](user:<someone else>)". A mention shows the current name of the
+// project member its id belongs to, and any other id reads as plain text.
+export type MentionLookup = (
+	id: string,
+) => { name: string; self: boolean } | undefined;
+
+const Mention = Node.create<{ lookup: MentionLookup }>({
+	name: "mention",
+	group: "inline",
+	inline: true,
+	atom: true,
+	selectable: false,
+	addOptions: () => ({ lookup: () => undefined }),
+	addAttributes: () => ({
+		id: { default: null },
+		label: { default: "" },
+	}),
+	parseHTML: () => [
+		{
+			tag: "span[data-mention]",
+			getAttrs: (element) => ({
+				id: element.dataset.mention,
+				label: element.dataset.label ?? "",
+			}),
+		},
+	],
+	renderHTML({ node }) {
+		const { id, label } = node.attrs;
+		const member = this.options.lookup(id);
+		if (!member) return ["span", {}, `@${label}`];
+		return [
+			"span",
+			{
+				"data-mention": id,
+				"data-label": label,
+				"data-self": member.self ? "" : undefined,
+			},
+			`@${member.name}`,
+		];
+	},
+	renderText: ({ node }) => `@${node.attrs.label}`,
+	markdownTokenizer: {
+		name: "mention",
+		level: "inline",
+		start: (src) => src.indexOf("@["),
+		tokenize: (src) => {
+			const match = MENTION.exec(src);
+			if (!match) return undefined;
+			return { type: "mention", raw: match[0], label: match[1], id: match[2] };
+		},
+	},
+	parseMarkdown: (token, helpers) =>
+		helpers.createNode("mention", { id: token.id, label: token.label }),
+	renderMarkdown: (node) => {
+		const label = String(node.attrs?.label ?? "").replace(/[[\]\n]/g, "");
+		return `@[${label}](user:${node.attrs?.id})`;
+	},
+});
+
 export function richTextExtensions({
 	placeholder,
+	mentionLookup,
 }: {
 	placeholder?: string;
+	mentionLookup?: MentionLookup;
 } = {}): AnyExtension[] {
 	return [
 		StarterKit.configure({
@@ -229,6 +296,7 @@ export function richTextExtensions({
 		TableHeader,
 		TableCell,
 		AttachmentImage,
+		Mention.configure(mentionLookup ? { lookup: mentionLookup } : {}),
 		Placeholder.configure({ placeholder: placeholder ?? "" }),
 		Markdown.configure({ marked: htmlAsTextMarked() }),
 	];

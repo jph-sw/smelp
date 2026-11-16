@@ -13,7 +13,7 @@ import {
 	Table01Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
-import { type Editor, Extension } from "@tiptap/core";
+import { type Editor, Extension, type Range } from "@tiptap/core";
 import { PluginKey } from "@tiptap/pm/state";
 import { Suggestion } from "@tiptap/suggestion";
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
@@ -130,16 +130,19 @@ const SLASH_COMMANDS: SlashCommand[] = [
 	},
 ];
 
-// The menu lists commands while "/" is being typed, then may ask for a link's
-// address at the same spot.
+// The menu lists commands while "/" is being typed, or people after "@", then
+// may ask for a link's address at the same spot.
+type MenuItem = { value: string; label: string; icon?: IconSvgElement };
+
 type SlashMenuState =
 	| { mode: "closed" }
 	| {
-			mode: "commands";
-			items: SlashCommand[];
+			mode: "list";
+			label: string;
+			items: MenuItem[];
 			active: number;
 			rect: DOMRect | null;
-			choose: (command: SlashCommand) => void;
+			choose: (index: number) => void;
 	  }
 	| { mode: "link"; rect: DOMRect | null; at: number; text: string };
 
@@ -155,6 +158,94 @@ const matches = (command: SlashCommand, query: string) => {
 	);
 };
 
+function listSuggestion<T extends MenuItem>({
+	editor,
+	store,
+	char,
+	label,
+	allowSpaces = false,
+	items,
+	choose,
+}: {
+	editor: Editor;
+	store: SlashMenuStore;
+	char: string;
+	label: string;
+	allowSpaces?: boolean;
+	items: (query: string) => T[];
+	choose: (editor: Editor, range: Range, item: T) => void;
+}) {
+	const move = (by: number) => {
+		const state = store.getState();
+		if (state.mode !== "list" || state.items.length === 0) return false;
+		const count = state.items.length;
+		store.setState({ ...state, active: (state.active + by + count) % count });
+		return true;
+	};
+
+	return Suggestion<T, T>({
+		editor,
+		pluginKey: new PluginKey(label),
+		char,
+		allowSpaces,
+		allow: ({ state, range }) =>
+			!state.doc.resolve(range.from).parent.type.spec.code,
+		items: ({ query }) => items(query),
+		command: ({ editor, range, props }) => choose(editor, range, props),
+		render: () => {
+			const show = (props: {
+				items: T[];
+				clientRect?: (() => DOMRect | null) | null;
+				command: (item: T) => void;
+			}) => {
+				const previous = store.getState();
+				store.setState({
+					mode: "list",
+					label,
+					items: props.items,
+					active:
+						previous.mode === "list" &&
+						previous.items.length === props.items.length
+							? previous.active
+							: 0,
+					rect: props.clientRect?.() ?? null,
+					choose: (index) => {
+						const item = props.items[index];
+						if (item) props.command(item);
+					},
+				});
+			};
+			return {
+				onStart: show,
+				onUpdate: show,
+				onExit: () => {
+					if (store.getState().mode === "list") {
+						store.setState({ mode: "closed" });
+					}
+				},
+				onKeyDown: ({ event }) => {
+					const state = store.getState();
+					if (state.mode !== "list" || state.items.length === 0) return false;
+					if (event.key === "ArrowDown") return move(1);
+					if (event.key === "ArrowUp") return move(-1);
+					if (event.key === "Enter" || event.key === "Tab") {
+						state.choose(state.active);
+						return true;
+					}
+					if (event.key === "Escape") {
+						// Only the menu closes: not the dialog around it, and the
+						// text keeps what was typed.
+						event.stopPropagation();
+						store.setState({ mode: "closed" });
+						return true;
+					}
+					return false;
+				},
+			};
+		},
+	});
+}
+
 export function slashCommands({
 	store,
 	uploads,
@@ -167,78 +258,20 @@ export function slashCommands({
 	const available = SLASH_COMMANDS.filter(
 		(command) => uploads || !command.needsUploads,
 	);
-	const move = (by: number) => {
-		const state = store.getState();
-		if (state.mode !== "commands" || state.items.length === 0) return false;
-		const count = state.items.length;
-		store.setState({ ...state, active: (state.active + by + count) % count });
-		return true;
-	};
-
 	return Extension.create({
 		name: "slashCommands",
 		addProseMirrorPlugins() {
 			return [
-				Suggestion<SlashCommand, SlashCommand>({
+				listSuggestion({
 					editor: this.editor,
-					pluginKey: new PluginKey("slashCommands"),
+					store,
 					char: "/",
-					allow: ({ state, range }) =>
-						!state.doc.resolve(range.from).parent.type.spec.code,
-					items: ({ query }) =>
+					label: "Commands",
+					items: (query) =>
 						available.filter((command) => matches(command, query)),
-					command: ({ editor, range, props: command }) => {
+					choose: (editor, range, command) => {
 						editor.chain().focus().deleteRange(range).run();
 						command.run(editor, actions());
-					},
-					render: () => {
-						const show = (props: {
-							items: SlashCommand[];
-							clientRect?: (() => DOMRect | null) | null;
-							command: (command: SlashCommand) => void;
-						}) => {
-							const previous = store.getState();
-							store.setState({
-								mode: "commands",
-								items: props.items,
-								active:
-									previous.mode === "commands" &&
-									previous.items.length === props.items.length
-										? previous.active
-										: 0,
-								rect: props.clientRect?.() ?? null,
-								choose: props.command,
-							});
-						};
-						return {
-							onStart: show,
-							onUpdate: show,
-							onExit: () => {
-								if (store.getState().mode === "commands") {
-									store.setState({ mode: "closed" });
-								}
-							},
-							onKeyDown: ({ event }) => {
-								const state = store.getState();
-								if (state.mode !== "commands") return false;
-								if (event.key === "ArrowDown") return move(1);
-								if (event.key === "ArrowUp") return move(-1);
-								if (event.key === "Enter" || event.key === "Tab") {
-									const command = state.items[state.active];
-									if (!command) return false;
-									state.choose(command);
-									return true;
-								}
-								if (event.key === "Escape") {
-									// Only the menu closes: not the dialog around it, and the
-									// description keeps what was typed.
-									event.stopPropagation();
-									store.setState({ mode: "closed" });
-									return true;
-								}
-								return false;
-							},
-						};
 					},
 				}),
 			];
@@ -246,8 +279,57 @@ export function slashCommands({
 	});
 }
 
-export const isSlashMenuOpen = (store: SlashMenuStore) =>
-	store.getState().mode !== "closed";
+// Offers project members after "@". Display names can have a space, like
+// "Ada Lovelace", so the query can too.
+export function mentionSuggestions({
+	store,
+	people,
+}: {
+	store: SlashMenuStore;
+	people: () => MenuItem[];
+}) {
+	return Extension.create({
+		name: "mentionSuggestions",
+		addProseMirrorPlugins() {
+			return [
+				listSuggestion({
+					editor: this.editor,
+					store,
+					char: "@",
+					label: "People",
+					allowSpaces: true,
+					items: (query) => {
+						const q = query.toLowerCase();
+						return people().filter((person) =>
+							person.label.toLowerCase().includes(q),
+						);
+					},
+					choose: (editor, range, person) => {
+						editor
+							.chain()
+							.focus()
+							.deleteRange(range)
+							.insertContent([
+								{
+									type: "mention",
+									attrs: { id: person.value, label: person.label },
+								},
+								{ type: "text", text: " " },
+							])
+							.run();
+					},
+				}),
+			];
+		},
+	});
+}
+
+export const isSlashMenuOpen = (store: SlashMenuStore) => {
+	const state = store.getState();
+	return (
+		state.mode === "link" || (state.mode === "list" && state.items.length > 0)
+	);
+};
 
 // Opens the link field where the caret is, with the selected text, if any, as
 // the link's text.
@@ -311,7 +393,7 @@ export function SlashMenu({
 	store: SlashMenuStore;
 }) {
 	const state = useStore(store);
-	if (state.mode === "commands" && state.items.length > 0) {
+	if (state.mode === "list" && state.items.length > 0) {
 		return <CommandList editor={editor} state={state} store={store} />;
 	}
 	if (state.mode === "link") {
@@ -326,12 +408,12 @@ function CommandList({
 	store,
 }: {
 	editor: Editor;
-	state: Extract<SlashMenuState, { mode: "commands" }>;
+	state: Extract<SlashMenuState, { mode: "list" }>;
 	store: SlashMenuStore;
 }) {
 	const id = useId();
 	const { ref, style } = useCaretPosition(state.rect);
-	const optionId = (command: SlashCommand) => `${id}-${command.value}`;
+	const optionId = (item: MenuItem) => `${id}-${item.value}`;
 	const active = state.items[state.active];
 
 	// Focus stays in the editor, so it carries the combobox wiring that points
@@ -361,32 +443,34 @@ function CommandList({
 			popover="manual"
 			data-slot="trigger-menu-content"
 			data-open=""
-			data-has-icons=""
+			data-has-icons={state.items.some((item) => item.icon) ? "" : undefined}
 			style={style}
 		>
-			<div id={id} role="listbox" aria-label="Commands">
-				{state.items.map((command, index) => (
+			<div id={id} role="listbox" aria-label={state.label}>
+				{state.items.map((item, index) => (
 					<div
-						key={command.value}
-						id={optionId(command)}
+						key={item.value}
+						id={optionId(item)}
 						role="option"
 						tabIndex={-1}
 						aria-selected={index === state.active}
 						data-slot="trigger-menu-item"
-						data-has-icon=""
+						data-has-icon={item.icon ? "" : undefined}
 						data-highlighted={index === state.active ? "" : undefined}
 						onMouseDown={(event) => event.preventDefault()}
 						onMouseMove={() => {
 							if (index !== state.active)
 								store.setState({ ...state, active: index });
 						}}
-						onClick={() => state.choose(command)}
+						onClick={() => state.choose(index)}
 					>
-						<HugeiconsIcon
-							icon={command.icon}
-							className="size-4 shrink-0 text-muted-foreground"
-						/>
-						{command.label}
+						{item.icon && (
+							<HugeiconsIcon
+								icon={item.icon}
+								className="size-4 shrink-0 text-muted-foreground"
+							/>
+						)}
+						{item.label}
 					</div>
 				))}
 			</div>

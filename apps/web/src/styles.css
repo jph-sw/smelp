@@ -233,6 +233,8 @@
     & a[href] { @apply font-medium underline underline-offset-2 hover:text-foreground/70; }
     & img:not(.ProseMirror-separator) { @apply inline-block max-h-[32rem] max-w-full rounded-md border align-bottom; }
     & [data-uploading] { @apply text-muted-foreground opacity-60; }
+    & [data-mention] { @apply rounded-sm bg-primary/10 px-0.5 font-medium text-primary; }
+    & [data-mention][data-self] { @apply bg-primary/25; }
     & .ProseMirror-selectednode { @apply outline-2 outline-ring; }
     & p.is-editor-empty:first-child::before {
       @apply pointer-events-none float-left h-0 text-muted-foreground;

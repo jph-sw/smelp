@@ -114,4 +114,17 @@ describe("description Markdown", () => {
 		);
 		expect(save("![x](javascript:alert(1))")).toBe("x");
 	});
+
+	test("keeps mentions in the form the API reads", () => {
+		const markdown =
+			"hey @[Ada Lovelace](user:abcd1234efgh) see [docs](https://example.com)";
+		expect(nodeTypes(parse(markdown))).toContain("mention");
+		expect(save(markdown)).toBe(markdown);
+	});
+
+	test("reads a bare address as a link", () => {
+		expect(save("see https://example.com/docs now")).toBe(
+			"see [https://example.com/docs](https://example.com/docs) now",
+		);
+	});
 });
