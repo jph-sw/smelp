@@ -10,6 +10,11 @@ import {
 	findAttachmentLimits,
 	findAttachments,
 } from "./routes/attachment";
+import {
+	createApiToken,
+	findApiTokens,
+	revokeApiToken,
+} from "./routes/auth/api-tokens";
 import { me } from "./routes/auth/me";
 import {
 	findLinkedAccounts,
@@ -165,6 +170,11 @@ export const router = {
 		updateNotificationPreferences,
 		verifyEmail,
 		resendEmailVerification,
+	},
+	apiTokens: {
+		find: findApiTokens,
+		create: createApiToken,
+		revoke: revokeApiToken,
 	},
 	workspace: {
 		find: findWorkspace,
