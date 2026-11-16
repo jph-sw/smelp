@@ -1,10 +1,12 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useId } from "react";
 import * as v from "valibot";
 import { useAppForm } from "#/hooks/form";
 import { projectMembersQueryOptions } from "#/lib/data/project-members";
 import { statesQueryOptions } from "#/lib/data/state";
 import { toastError } from "#/lib/errors";
 import { orpc } from "#/lib/orpc";
+import { RichTextEditor } from "../rich-text/rich-text-editor";
 import { Field, FieldGroup } from "../ui/field";
 import { toast } from "../ui/toast";
 import { AssigneeSelect } from "./assignee-select";
@@ -35,6 +37,8 @@ export function CreateIssueForm({
 	);
 	const defaultState = states?.find((state) => state.isDefault);
 	const queryClient = useQueryClient();
+	const descriptionLabel = useId();
+	const descriptionHint = useId();
 
 	const form = useAppForm({
 		defaultValues: {
@@ -94,7 +98,23 @@ export function CreateIssueForm({
 				/>
 				<form.AppField
 					name="description"
-					children={(field) => <field.TextAreaField label="Description" />}
+					children={(field) => (
+						<Field>
+							<div id={descriptionLabel} className="text-xs font-medium">
+								Description
+							</div>
+							<RichTextEditor
+								aria-labelledby={descriptionLabel}
+								aria-describedby={descriptionHint}
+								value={field.state.value}
+								className="rounded-md border border-input px-2.5 py-1.5 focus-within:border-ring"
+								onChange={field.handleChange}
+							/>
+							<p id={descriptionHint} className="text-xs text-muted-foreground">
+								Type / for commands
+							</p>
+						</Field>
+					)}
 				/>
 				<form.AppField
 					name="assignee"
