@@ -2,6 +2,16 @@
 
 Each release is a git tag. To upgrade, follow [Upgrade](README.md#upgrade) in the README.
 
+## 0.8.0 (2026-11-16)
+
+Formatted descriptions, and AI agents that can work in smelp as you.
+
+- **Rich-text descriptions:** work item descriptions are edited as formatted text, in place. Typing "/" opens commands for headings, lists, checklists, quotes, code blocks, tables, links and images. Markdown shortcuts like `# ` and `- ` work too. Images can be pasted, dropped or picked, and are attached to the work item. Descriptions are still stored as Markdown. An old description is tidied once when it's next saved: `*` list markers become `-`, and characters like `[` and `*` are escaped.
+- **API tokens:** under API tokens on your account page, you can make a token for scripts and agents, with 30 days, 90 days, 1 year or no expiry. It's shown once. It acts as you, with the same access, sent as `Authorization: Bearer <token>`. Tokens can't change your password, linked accounts or tokens, or do instance administration. Revoking one cuts it off right away. Changing your password doesn't revoke tokens.
+- **MCP server:** AI agents like Claude Code and Cursor, or any other MCP client, can connect to `/mcp` with an API token. They can search, read, create and update work items, and comment. The account page shows the address, and the README shows how to connect. Set `APP_URL` so the links agents get use your public address.
+
+Upgrading runs one database change automatically, which adds API tokens. Back up first, as the README describes. A browser tab left open across the upgrade may show errors until it's reloaded.
+
 ## 0.7.0 (2026-11-15)
 
 Board backgrounds, and a published image, so installing smelp needs only its compose file.
