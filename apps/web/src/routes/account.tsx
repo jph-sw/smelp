@@ -11,7 +11,7 @@ import { ConfirmButton } from "#/components/confirm-button";
 import { CopyLink } from "#/components/copy-link";
 import { Avatar, AvatarFallback, AvatarImage } from "#/components/ui/avatar";
 import { Button } from "#/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "#/components/ui/card";
+import { Card, CardContent } from "#/components/ui/card";
 import { FieldGroup } from "#/components/ui/field";
 import { Switch } from "#/components/ui/switch";
 import { toast } from "#/components/ui/toast";
@@ -121,16 +121,18 @@ function RouteComponent() {
 	});
 
 	return (
-		<div className="mx-auto w-full max-w-md space-y-6 p-4 sm:p-8">
+		<div className="mx-auto w-full max-w-4xl space-y-10 p-4 sm:p-8">
 			<div className="flex items-baseline justify-between gap-4">
-				<h1 className="text-xl font-medium">Account</h1>
-				<Link to="/" className="underline underline-offset-3">
+				<div className="min-w-0 space-y-1">
+					<h1 className="text-xl font-medium">Account</h1>
+					<p className="text-sm text-muted-foreground [overflow-wrap:anywhere]">
+						Signed in as {user?.email}
+					</p>
+				</div>
+				<Link to="/" className="shrink-0 underline underline-offset-3">
 					Back to smelp
 				</Link>
 			</div>
-			<p className="text-sm text-muted-foreground [overflow-wrap:anywhere]">
-				Signed in as {user?.email}
-			</p>
 			{user && <ProfileCard user={user} />}
 			{user && <NotificationsCard user={user} />}
 			{accounts && (accounts.providers.length > 0 || accounts.linkable) && (
@@ -139,58 +141,85 @@ function RouteComponent() {
 			{accounts?.hasPassword === false && <SetPasswordCard />}
 			{/* Someone who only signs in through a provider has no password to change. */}
 			{accounts?.hasPassword !== false && (
-				<Card>
-					<CardHeader>
-						<CardTitle className="text-sm">Change password</CardTitle>
-					</CardHeader>
-					<CardContent>
-						<form
-							onSubmit={(e) => {
-								e.preventDefault();
-								form.handleSubmit();
-							}}
-						>
-							<FieldGroup>
-								<form.AppField
-									name="currentPassword"
-									children={(field) => (
-										<field.TextField
-											label="Current password"
-											type="password"
-											autoComplete="current-password"
-										/>
-									)}
-								/>
-								<form.AppField
-									name="password"
-									children={(field) => (
-										<field.TextField
-											label="New password"
-											type="password"
-											autoComplete="new-password"
-										/>
-									)}
-								/>
-								<form.AppField
-									name="confirm"
-									children={(field) => (
-										<field.TextField
-											label="Confirm new password"
-											type="password"
-											autoComplete="new-password"
-										/>
-									)}
-								/>
-							</FieldGroup>
-							<form.AppForm>
-								<form.SubscribeButton label="Change password" />
-							</form.AppForm>
-						</form>
-					</CardContent>
-				</Card>
+				<SettingsSection title="Change password">
+					<form
+						onSubmit={(e) => {
+							e.preventDefault();
+							form.handleSubmit();
+						}}
+					>
+						<FieldGroup>
+							<form.AppField
+								name="currentPassword"
+								children={(field) => (
+									<field.TextField
+										label="Current password"
+										type="password"
+										autoComplete="current-password"
+									/>
+								)}
+							/>
+							<form.AppField
+								name="password"
+								children={(field) => (
+									<field.TextField
+										label="New password"
+										type="password"
+										autoComplete="new-password"
+									/>
+								)}
+							/>
+							<form.AppField
+								name="confirm"
+								children={(field) => (
+									<field.TextField
+										label="Confirm new password"
+										type="password"
+										autoComplete="new-password"
+									/>
+								)}
+							/>
+						</FieldGroup>
+						<form.AppForm>
+							<form.SubscribeButton label="Change password" />
+						</form.AppForm>
+					</form>
+				</SettingsSection>
 			)}
 			<ApiTokensCard />
 		</div>
+	);
+}
+
+function SettingsSection({
+	title,
+	description,
+	className,
+	children,
+}: {
+	title: string;
+	description?: React.ReactNode;
+	className?: string;
+	children: React.ReactNode;
+}) {
+	const headingId = useId();
+	return (
+		<section
+			aria-labelledby={headingId}
+			className="grid gap-4 md:grid-cols-[minmax(0,15rem)_minmax(0,1fr)] md:gap-10"
+		>
+			<div className="space-y-1">
+				<h2 id={headingId} className="text-sm font-semibold">
+					{title}
+				</h2>
+				{description && (
+					<p className="text-sm text-muted-foreground">{description}</p>
+				)}
+			</div>
+			<Card>
+				<CardContent className={className}>{children}</CardContent>
+			</Card>
+		</section>
 	);
 }
 
@@ -226,49 +255,43 @@ function SetPasswordCard() {
 	});
 
 	return (
-		<Card>
-			<CardHeader>
-				<CardTitle className="text-sm">Set a password</CardTitle>
-			</CardHeader>
-			<CardContent className="space-y-4">
-				<p className="text-xs text-muted-foreground">
-					Your account has no password. A password lets you sign in without the
-					provider.
-				</p>
-				<form
-					onSubmit={(e) => {
-						e.preventDefault();
-						form.handleSubmit();
-					}}
-				>
-					<FieldGroup>
-						<form.AppField
-							name="password"
-							children={(field) => (
-								<field.TextField
-									label="New password"
-									type="password"
-									autoComplete="new-password"
-								/>
-							)}
-						/>
-						<form.AppField
-							name="confirm"
-							children={(field) => (
-								<field.TextField
-									label="Confirm new password"
-									type="password"
-									autoComplete="new-password"
-								/>
-							)}
-						/>
-					</FieldGroup>
-					<form.AppForm>
-						<form.SubscribeButton label="Set password" />
-					</form.AppForm>
-				</form>
-			</CardContent>
-		</Card>
+		<SettingsSection
+			title="Set a password"
+			description="Your account has no password. A password lets you sign in without the provider."
+		>
+			<form
+				onSubmit={(e) => {
+					e.preventDefault();
+					form.handleSubmit();
+				}}
+			>
+				<FieldGroup>
+					<form.AppField
+						name="password"
+						children={(field) => (
+							<field.TextField
+								label="New password"
+								type="password"
+								autoComplete="new-password"
+							/>
+						)}
+					/>
+					<form.AppField
+						name="confirm"
+						children={(field) => (
+							<field.TextField
+								label="Confirm new password"
+								type="password"
+								autoComplete="new-password"
+							/>
+						)}
+					/>
+				</FieldGroup>
+				<form.AppForm>
+					<form.SubscribeButton label="Set password" />
+				</form.AppForm>
+			</form>
+		</SettingsSection>
 	);
 }
 
@@ -313,49 +336,44 @@ function SignInMethodsCard({
 	};
 
 	return (
-		<Card>
-			<CardHeader>
-				<CardTitle className="text-sm">Single sign-on</CardTitle>
-			</CardHeader>
-			<CardContent className="space-y-2">
-				{accounts.providers.map((provider) => (
-					<div
-						key={provider.label}
-						className="flex items-center justify-between gap-4"
-					>
-						<span className="text-sm [overflow-wrap:anywhere]">
-							Linked to {provider.label}
-						</span>
-						{accounts.hasPassword && (
-							<Button
-								type="button"
-								variant="outline"
-								disabled={isUnlinking}
-								onClick={unlink}
-							>
-								Unlink
-							</Button>
-						)}
-					</div>
-				))}
-				{accounts.linkable && (
-					<Button
-						type="button"
-						variant="outline"
-						disabled={isLinking}
-						onClick={link}
-					>
-						Link {accounts.linkable.name}
-					</Button>
-				)}
-				{!accounts.hasPassword && accounts.providers.length > 0 && (
-					<p className="text-xs text-muted-foreground">
-						This is the only way you can sign in, because your account has no
-						password, so it can't be unlinked.
-					</p>
-				)}
-			</CardContent>
-		</Card>
+		<SettingsSection title="Single sign-on" className="space-y-2">
+			{accounts.providers.map((provider) => (
+				<div
+					key={provider.label}
+					className="flex items-center justify-between gap-4"
+				>
+					<span className="text-sm [overflow-wrap:anywhere]">
+						Linked to {provider.label}
+					</span>
+					{accounts.hasPassword && (
+						<Button
+							type="button"
+							variant="outline"
+							disabled={isUnlinking}
+							onClick={unlink}
+						>
+							Unlink
+						</Button>
+					)}
+				</div>
+			))}
+			{accounts.linkable && (
+				<Button
+					type="button"
+					variant="outline"
+					disabled={isLinking}
+					onClick={link}
+				>
+					Link {accounts.linkable.name}
+				</Button>
+			)}
+			{!accounts.hasPassword && accounts.providers.length > 0 && (
+				<p className="text-xs text-muted-foreground">
+					This is the only way you can sign in, because your account has no
+					password, so it can't be unlinked.
+				</p>
+			)}
+		</SettingsSection>
 	);
 }
 
@@ -401,79 +419,78 @@ function ProfileCard({ user }: { user: AuthUser }) {
 	};
 
 	return (
-		<Card>
-			<CardHeader>
-				<CardTitle className="text-sm">Profile</CardTitle>
-			</CardHeader>
-			<CardContent className="space-y-6">
-				<div className="flex items-center gap-4">
-					<Avatar size="lg">
-						<AvatarImage src={user.image ?? undefined} alt="" />
-						<AvatarFallback>{initials(user.displayName)}</AvatarFallback>
-					</Avatar>
-					<div className="flex flex-wrap gap-2">
-						<input
-							ref={fileInput}
-							type="file"
-							accept="image/png,image/jpeg,image/webp"
-							className="hidden"
-							aria-label="Choose a photo"
-							onChange={(e) => {
-								const file = e.target.files?.[0];
-								// Lets the same file be chosen again after an error.
-								e.target.value = "";
-								if (!file) return;
-								changePhoto(async () =>
-									orpc.auth.setAvatar({ image: await avatarAsBase64(file) }),
-								);
-							}}
-						/>
+		<SettingsSection
+			title="Profile"
+			description="Your name and photo appear on boards, member lists and comments."
+			className="space-y-6"
+		>
+			<div className="flex items-center gap-4">
+				<Avatar size="lg">
+					<AvatarImage src={user.image ?? undefined} alt="" />
+					<AvatarFallback>{initials(user.displayName)}</AvatarFallback>
+				</Avatar>
+				<div className="flex flex-wrap gap-2">
+					<input
+						ref={fileInput}
+						type="file"
+						accept="image/png,image/jpeg,image/webp"
+						className="hidden"
+						aria-label="Choose a photo"
+						onChange={(e) => {
+							const file = e.target.files?.[0];
+							// Lets the same file be chosen again after an error.
+							e.target.value = "";
+							if (!file) return;
+							changePhoto(async () =>
+								orpc.auth.setAvatar({ image: await avatarAsBase64(file) }),
+							);
+						}}
+					/>
+					<Button
+						type="button"
+						variant="outline"
+						disabled={isChangingPhoto}
+						onClick={() => fileInput.current?.click()}
+					>
+						{user.image ? "Change photo" : "Upload photo"}
+					</Button>
+					{user.image && (
 						<Button
 							type="button"
-							variant="outline"
+							variant="ghost"
 							disabled={isChangingPhoto}
-							onClick={() => fileInput.current?.click()}
+							onClick={() => changePhoto(() => orpc.auth.removeAvatar())}
 						>
-							{user.image ? "Change photo" : "Upload photo"}
+							Remove
 						</Button>
-						{user.image && (
-							<Button
-								type="button"
-								variant="ghost"
-								disabled={isChangingPhoto}
-								onClick={() => changePhoto(() => orpc.auth.removeAvatar())}
-							>
-								Remove
-							</Button>
-						)}
-					</div>
+					)}
 				</div>
-				<form
-					onSubmit={(e) => {
-						e.preventDefault();
-						form.handleSubmit();
-					}}
-				>
-					<FieldGroup>
-						<form.AppField
-							name="fullName"
-							children={(field) => (
-								<field.TextField label="Full name" autoComplete="name" />
-							)}
-						/>
-						<form.AppField
-							name="displayName"
-							children={(field) => (
-								<field.TextField label="Display name" autoComplete="username" />
-							)}
-						/>
-					</FieldGroup>
-					<form.AppForm>
-						<form.SubscribeButton label="Save profile" />
-					</form.AppForm>
-				</form>
-			</CardContent>
-		</Card>
+			</div>
+			<form
+				onSubmit={(e) => {
+					e.preventDefault();
+					form.handleSubmit();
+				}}
+			>
+				<FieldGroup>
+					<form.AppField
+						name="fullName"
+						children={(field) => (
+							<field.TextField label="Full name" autoComplete="name" />
+						)}
+					/>
+					<form.AppField
+						name="displayName"
+						children={(field) => (
+							<field.TextField label="Display name" autoComplete="username" />
+						)}
+					/>
+				</FieldGroup>
+				<form.AppForm>
+					<form.SubscribeButton label="Save profile" />
+				</form.AppForm>
+			</form>
+		</SettingsSection>
 	);
 }
 
@@ -498,29 +515,24 @@ function NotificationsCard({ user }: { user: AuthUser }) {
 	};
 
 	return (
-		<Card>
-			<CardHeader>
-				<CardTitle className="text-sm">Notifications</CardTitle>
-			</CardHeader>
-			<CardContent className="space-y-2">
-				<div className="flex items-center justify-between gap-4">
-					<span id={labelId} className="text-sm">
-						Email me about new notifications
-					</span>
-					<Switch
-						aria-labelledby={labelId}
-						checked={user.notifyByEmail === 1}
-						disabled={isSaving}
-						onCheckedChange={change}
-					/>
-				</div>
-				<p className="text-xs text-muted-foreground">
-					{status && !status.emailEnabled
-						? "This install can't send email yet, so you'll only see notifications in your inbox."
-						: "Assignments, comments on your work and mentions also arrive by email. The inbox always has them."}
-				</p>
-			</CardContent>
-		</Card>
+		<SettingsSection title="Notifications" className="space-y-2">
+			<div className="flex items-center justify-between gap-4">
+				<span id={labelId} className="text-sm">
+					Email me about new notifications
+				</span>
+				<Switch
+					aria-labelledby={labelId}
+					checked={user.notifyByEmail === 1}
+					disabled={isSaving}
+					onCheckedChange={change}
+				/>
+			</div>
+			<p className="text-xs text-muted-foreground">
+				{status && !status.emailEnabled
+					? "This install can't send email yet, so you'll only see notifications in your inbox."
+					: "Assignments, comments on your work and mentions also arrive by email. The inbox always has them."}
+			</p>
+		</SettingsSection>
 	);
 }
 
@@ -591,97 +603,97 @@ function ApiTokensCard() {
 	});
 
 	return (
-		<Card>
-			<CardHeader>
-				<CardTitle className="text-sm">API tokens</CardTitle>
-			</CardHeader>
-			<CardContent className="space-y-4">
-				<p className="text-xs text-muted-foreground">
+		<SettingsSection
+			title="API tokens"
+			description={
+				<>
 					Scripts and agents can use a token to act as you, with the same access
 					you have. Send it as{" "}
 					<code className="[overflow-wrap:anywhere]">
 						Authorization: Bearer &lt;token&gt;
 					</code>
 					.
-				</p>
-				<CopyLink
-					title="MCP endpoint"
-					hint="AI agents like Claude Code and Cursor connect to it as an MCP server, with a token."
-					link={`${window.location.origin}/mcp`}
-					copiedMessage="Address copied."
-				/>
-				<form
-					onSubmit={(e) => {
-						e.preventDefault();
-						form.handleSubmit();
-					}}
-				>
-					<FieldGroup>
-						<form.AppField
-							name="name"
-							children={(field) => (
-								<field.TextField label="Token name" autoComplete="off" />
-							)}
-						/>
-						<form.AppField
-							name="expiry"
-							children={(field) => (
-								<field.SelectField label="Expires after" items={EXPIRY_ITEMS} />
-							)}
-						/>
-					</FieldGroup>
-					<form.AppForm>
-						<form.SubscribeButton label="Create token" />
-					</form.AppForm>
-				</form>
-
-				{newToken && (
-					<CopyLink
-						title={`Your new token, ${newToken.name}`}
-						hint="It won't be shown again, so copy it now."
-						link={newToken.token}
-						copiedMessage="Token copied."
+				</>
+			}
+			className="space-y-4"
+		>
+			<CopyLink
+				title="MCP endpoint"
+				hint="AI agents like Claude Code and Cursor connect to it as an MCP server, with a token."
+				link={`${window.location.origin}/mcp`}
+				copiedMessage="Address copied."
+			/>
+			<form
+				onSubmit={(e) => {
+					e.preventDefault();
+					form.handleSubmit();
+				}}
+			>
+				<FieldGroup className="sm:grid sm:grid-cols-[minmax(0,1fr)_12rem]">
+					<form.AppField
+						name="name"
+						children={(field) => (
+							<field.TextField label="Token name" autoComplete="off" />
+						)}
 					/>
-				)}
+					<form.AppField
+						name="expiry"
+						children={(field) => (
+							<field.SelectField label="Expires after" items={EXPIRY_ITEMS} />
+						)}
+					/>
+				</FieldGroup>
+				<form.AppForm>
+					<form.SubscribeButton label="Create token" />
+				</form.AppForm>
+			</form>
 
-				{tokens && tokens.length > 0 && (
-					<div className="flex flex-col gap-1">
-						{tokens.map((token) => (
-							<div
-								key={token.id}
-								className="flex items-center gap-3 rounded-md py-2"
-							>
-								<div className="flex min-w-0 flex-col">
-									<span className="text-sm font-medium [overflow-wrap:anywhere]">
-										{token.name}
-									</span>
-									<span className="text-xs text-muted-foreground">
-										Created {formatDate(token.createdAt)},{" "}
-										{token.lastUsedAt === null
-											? "never used"
-											: `last used ${formatRelativeTime(token.lastUsedAt)}`}
-										,{" "}
-										{token.expiresAt === null
-											? "no expiry"
-											: `${token.expiresAt > Date.now() ? "expires" : "expired"} ${formatDate(token.expiresAt)}`}
-									</span>
-								</div>
-								<div className="ml-auto">
-									<ConfirmButton
-										label={`Revoke ${token.name}`}
-										buttonLabel="Revoke"
-										title={`Revoke ${token.name}?`}
-										description="Anything still using this token stops working right away. This can't be undone."
-										confirmLabel="Revoke token"
-										disabled={isRevoking}
-										onConfirm={() => revoke({ id: token.id })}
-									/>
-								</div>
+			{newToken && (
+				<CopyLink
+					title={`Your new token, ${newToken.name}`}
+					hint="It won't be shown again, so copy it now."
+					link={newToken.token}
+					copiedMessage="Token copied."
+				/>
+			)}
+
+			{tokens && tokens.length > 0 && (
+				<div className="flex flex-col gap-1">
+					{tokens.map((token) => (
+						<div
+							key={token.id}
+							className="flex items-center gap-3 rounded-md py-2"
+						>
+							<div className="flex min-w-0 flex-col">
+								<span className="text-sm font-medium [overflow-wrap:anywhere]">
+									{token.name}
+								</span>
+								<span className="text-xs text-muted-foreground">
+									Created {formatDate(token.createdAt)},{" "}
+									{token.lastUsedAt === null
+										? "never used"
+										: `last used ${formatRelativeTime(token.lastUsedAt)}`}
+									,{" "}
+									{token.expiresAt === null
+										? "no expiry"
+										: `${token.expiresAt > Date.now() ? "expires" : "expired"} ${formatDate(token.expiresAt)}`}
+								</span>
 							</div>
-						))}
-					</div>
-				)}
-			</CardContent>
-		</Card>
+							<div className="ml-auto">
+								<ConfirmButton
+									label={`Revoke ${token.name}`}
+									buttonLabel="Revoke"
+									title={`Revoke ${token.name}?`}
+									description="Anything still using this token stops working right away. This can't be undone."
+									confirmLabel="Revoke token"
+									disabled={isRevoking}
+									onConfirm={() => revoke({ id: token.id })}
+								/>
+							</div>
+						</div>
+					))}
+				</div>
+			)}
+		</SettingsSection>
 	);
 }
