@@ -43,6 +43,7 @@ function ViewToggle({
 								...previous,
 								view: option.value === "list" ? "list" : undefined,
 							})}
+							activeOptions={{ exact: true }}
 							replace
 						/>
 					}
