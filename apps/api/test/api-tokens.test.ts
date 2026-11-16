@@ -182,6 +182,15 @@ describe("calling the API with a token", () => {
 		expect(workspaces.map((workspace) => workspace.id)).toContain(WORKSPACE);
 	});
 
+	test("says who is signed in", async () => {
+		const { client } = await createToken(member);
+		expect((await client.auth.me()).user.id).toBe(member.id);
+
+		const wrong = clientWith(bearer("smelp_not-a-real-token"));
+		await expectCode(wrong.auth.me(), "UNAUTHORIZED");
+		await expect(wrong.auth.me()).rejects.toThrow("Not signed in");
+	});
+
 	test("gets no further than its owner could", async () => {
 		const { client } = await createToken(member);
 		await expectCode(

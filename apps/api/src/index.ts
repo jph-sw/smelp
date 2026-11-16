@@ -15,6 +15,7 @@ import { avatarResponse } from "./lib/avatars";
 import { markServerRunning } from "./lib/backup";
 import { statusResponse } from "./lib/health";
 import { logMailStatus } from "./lib/mail";
+import { mcpResponse } from "./lib/mcp";
 import { logOidcStatus } from "./lib/oidc";
 import { projectBackgroundResponse } from "./lib/project-backgrounds";
 import { version } from "./lib/version";
@@ -100,6 +101,7 @@ const server = Bun.serve({
 	routes: {
 		"/rpc": rpcRouteHandler,
 		"/rpc/*": rpcRouteHandler,
+		"/mcp": (request) => mcpResponse(request, clientIp(request)),
 		"/api/status": () => statusResponse(),
 		"/api/auth/oidc/start": (request) => oidcStart(request, clientIp(request)),
 		"/api/auth/oidc/callback": (request) =>
