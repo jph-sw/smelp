@@ -21,13 +21,11 @@ export const workspaceQueryOptions = ({
 		},
 	});
 
-export const updateWorkspace = ({
-	workspaceId,
-	name,
-}: {
+export const updateWorkspace = (input: {
 	workspaceId: string;
-	name: string;
-}) => orpc.workspace.update({ workspaceId, name });
+	name?: string;
+	public?: boolean;
+}) => orpc.workspace.update(input);
 
 export const deleteWorkspace = ({ workspaceId }: { workspaceId: string }) =>
 	orpc.workspace.delete({ workspaceId });
