@@ -2,6 +2,18 @@
 
 Each release is a git tag. To upgrade, follow [Upgrade](README.md#upgrade) in the README.
 
+## 0.9.0 (2026-11-16)
+
+Public workspaces, so people without an account can follow along.
+
+- **Public instance:** an instance admin can turn on "Public instance" at `/ceo`. It's off by default. Sign-up stays as it is.
+- **Public workspaces:** once the instance is public, a workspace admin can turn on "Public workspace" in the workspace settings. Anyone can then read the workspace's public projects without an account: the board, the list, work items with their comments, reactions and attachments, cycles and modules. Private projects stay hidden. The settings card lists the projects that become readable before you turn it on. New projects are public by default, so check the list.
+- **Read only for outsiders:** visitors, and signed-in people who aren't members, can't edit, comment or react. They never see email addresses, the activity feed, search, "My work" or settings. The header says "Public · read only" and offers "Sign in". The home page lists the public workspaces, and the sign-in page links to them.
+- **Back where you were:** signing in from a page that needs it returns you to that page. This doesn't work yet for single sign-on or sign-up.
+- **Fixed:** someone without an account could tell which work items exist from the answer the upload address gave.
+
+Upgrading runs one database change automatically, which adds the public switches. Back up first, as the README describes.
+
 ## 0.8.0 (2026-11-16)
 
 Formatted descriptions, and AI agents that can work in smelp as you.
