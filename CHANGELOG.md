@@ -2,6 +2,13 @@
 
 Each release is a git tag. To upgrade, follow [Upgrade](README.md#upgrade) in the README.
 
+## Unreleased
+
+- **Work item types:** every work item is a Task, Bug, Story or Epic, with its own icon on the board, in the list and on the work item page. Pick the type when creating a work item, or change it in its properties; new work items are tasks. Boards and lists can be filtered by type. Changing a type shows in the work item's activity and on the Activity page.
+- **Types in imports and agents:** the Jira import keeps Task, Bug, Story and Epic types, and a "User Story" becomes a Story. Other Jira types become tasks, and their name stays in the description's import footer as before. MCP agents can set a type when creating or updating a work item, and see it when reading one.
+
+Upgrading runs one database change automatically. Existing work items keep their type if it's one of the four, and become tasks otherwise. Back up first, as the README describes.
+
 ## 0.9.0 (2026-11-16)
 
 Public workspaces, so people without an account can follow along.
