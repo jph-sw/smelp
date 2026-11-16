@@ -3,7 +3,7 @@ import { DB, type tables } from "@smelp/db";
 import { eventBus } from "@smelp/events";
 import { SQL } from "bun";
 import * as v from "valibot";
-import { requireProjectPermission, requireSession } from "../lib/access";
+import { requireProjectPermission, requireUser } from "../lib/access";
 import {
 	attachmentKeysOfIssue,
 	removeAttachmentFiles,
@@ -130,7 +130,7 @@ async function requireAssigneeInProject(
 export const findIssue = base
 	.input(v.object({ issueId: v.string() }))
 	.handler(async ({ input, context }) => {
-		await requireSession(context.headers);
+		await requireUser(context.headers);
 
 		const issue = (
 			await sql`
@@ -174,7 +174,7 @@ export const updateIssue = base
 		}),
 	)
 	.handler(async ({ input, context }) => {
-		const session = await requireSession(context.headers);
+		const caller = await requireUser(context.headers);
 
 		const oldIssue = (
 			await sql`SELECT * FROM issue WHERE id = ${input.id}`
@@ -263,7 +263,7 @@ export const updateIssue = base
 				moduleId = CASE WHEN ${setModule} = 1 THEN ${next.moduleId} ELSE moduleId END,
 				cycleId = CASE WHEN ${setCycle} = 1 THEN ${next.cycleId} ELSE cycleId END,
 				updatedAt = ${Date.now()},
-				updatedBy = ${session.userId}
+				updatedBy = ${caller.userId}
 			WHERE id = ${input.id}
 				AND (
 					${setModule} = 0
@@ -332,7 +332,7 @@ export const updateIssue = base
 		const event = {
 			entityId: issue.id,
 			workspaceId: issue.workspaceId,
-			actorId: session.userId,
+			actorId: caller.userId,
 		};
 		const ref = { projectId: issue.projectId, title: issue.title };
 		if (stateChanged) {
@@ -435,7 +435,7 @@ export const updateIssue = base
 export const deleteIssue = base
 	.input(v.object({ id: v.string() }))
 	.handler(async ({ input, context }) => {
-		const session = await requireSession(context.headers);
+		const caller = await requireUser(context.headers);
 
 		const issue = (await sql`SELECT * FROM issue WHERE id = ${input.id}`)[0] as
 			| tables["issue"]
@@ -458,7 +458,7 @@ export const deleteIssue = base
 				UPDATE issue SET
 					parentId = NULL,
 					updatedAt = ${Date.now()},
-					updatedBy = ${session.userId}
+					updatedBy = ${caller.userId}
 				WHERE parentId = ${issue.id}
 			`;
 			await tx`DELETE FROM issue WHERE id = ${issue.id}`;
@@ -470,7 +470,7 @@ export const deleteIssue = base
 				type: "issue.updated",
 				entityId: child.id,
 				workspaceId: issue.workspaceId,
-				actorId: session.userId,
+				actorId: caller.userId,
 				payload: {
 					projectId: issue.projectId,
 					title: child.title,
@@ -485,7 +485,7 @@ export const deleteIssue = base
 			type: "issue.deleted",
 			entityId: issue.id,
 			workspaceId: issue.workspaceId,
-			actorId: session.userId,
+			actorId: caller.userId,
 			payload: { title: issue.title, projectId: issue.projectId },
 		});
 
@@ -506,7 +506,7 @@ export const createIssue = base
 		}),
 	)
 	.handler(async ({ input, context }) => {
-		const { session, project } = await requireProjectPermission(
+		const { caller, project } = await requireProjectPermission(
 			context.headers,
 			input.projectId,
 			"content:write",
@@ -537,8 +537,8 @@ export const createIssue = base
 			projectId: project.id,
 			createdAt: Date.now(),
 			updatedAt: Date.now(),
-			createdBy: session.userId,
-			updatedBy: session.userId,
+			createdBy: caller.userId,
+			updatedBy: caller.userId,
 		};
 
 		try {
@@ -559,7 +559,7 @@ export const createIssue = base
 		eventBus.emit({
 			type: "issue.created",
 			entityId: issue.id,
-			actorId: session.userId,
+			actorId: caller.userId,
 			workspaceId: issue.workspaceId,
 			payload: { title: issue.title, projectId: issue.projectId },
 		});
@@ -567,7 +567,7 @@ export const createIssue = base
 			eventBus.emit({
 				type: "issue.updated",
 				entityId: issue.id,
-				actorId: session.userId,
+				actorId: caller.userId,
 				workspaceId: issue.workspaceId,
 				payload: {
 					title: issue.title,
@@ -583,7 +583,7 @@ export const createIssue = base
 			eventBus.emit({
 				type: "issue.assigned",
 				entityId: issue.id,
-				actorId: session.userId,
+				actorId: caller.userId,
 				workspaceId: issue.workspaceId,
 				payload: {
 					title: issue.title,

@@ -4,7 +4,7 @@ import path from "node:path";
 import { ORPCError } from "@orpc/server";
 import { DB, databasePath, type tables, Utils } from "@smelp/db";
 import { eventBus } from "@smelp/events";
-import { requireProjectPermission, requireSession } from "./access";
+import { requireProjectPermission, requireUser } from "./access";
 import { detectImageType } from "./avatars";
 import { STORAGE_KEY } from "./backup";
 
@@ -204,7 +204,7 @@ export async function uploadAttachment(request: Request) {
 			| tables["issue"]
 			| undefined;
 		if (!issue) return fail(404, "Work item not found");
-		const { session } = await requireProjectPermission(
+		const { caller } = await requireProjectPermission(
 			request.headers,
 			issue.projectId,
 			"content:write",
@@ -219,7 +219,7 @@ export async function uploadAttachment(request: Request) {
 				return fail(404, "Comment not found");
 			}
 			// Like editing it, adding to a comment is for the person it speaks for.
-			if (comment.authorId !== session.userId) {
+			if (comment.authorId !== caller.userId) {
 				return fail(403, "Only the author can attach files to a comment");
 			}
 		}
@@ -252,7 +252,7 @@ export async function uploadAttachment(request: Request) {
 			id: crypto.randomUUID(),
 			issueId: issue.id,
 			commentId: commentId || null,
-			uploaderId: session.userId,
+			uploaderId: caller.userId,
 			name: cleanFileName(file.name),
 			size: file.size,
 			contentType,
@@ -277,7 +277,7 @@ export async function uploadAttachment(request: Request) {
 			type: "issue.attachment_added",
 			entityId: issue.id,
 			workspaceId: issue.workspaceId,
-			actorId: session.userId,
+			actorId: caller.userId,
 			payload: {
 				projectId: issue.projectId,
 				title: issue.title,
@@ -304,7 +304,7 @@ export async function attachmentResponse(
 			return fail(405, "Method not allowed");
 		}
 		// Signed-out visitors learn nothing about what exists.
-		await requireSession(headers);
+		await requireUser(headers);
 		const attachment = (
 			await sql`SELECT * FROM attachment WHERE id = ${id}`
 		)[0] as tables["attachment"] | undefined;

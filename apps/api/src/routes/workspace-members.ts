@@ -1,10 +1,9 @@
 import { ORPCError } from "@orpc/server";
-import { getCookie } from "@orpc/server/helpers";
 import { Auth } from "@smelp/auth";
 import { DB, type tables } from "@smelp/db";
 import { eventBus } from "@smelp/events";
 import * as v from "valibot";
-import { requireWorkspacePermission } from "../lib/access";
+import { requireUser, requireWorkspacePermission } from "../lib/access";
 import { changeWorkspaceRole, removeFromWorkspace } from "../lib/membership";
 import { displayNameOf } from "../lib/names";
 import { base } from "../orpc";
@@ -18,11 +17,7 @@ type WorkspaceMember = tables["auth_space_member"] &
 export const findWorkspaceMembers = base
 	.input(v.object({ workspaceId: v.string() }))
 	.handler(async ({ input, context }) => {
-		const token = getCookie(context.headers, "auth_session");
-		if (!token) throw new ORPCError("UNAUTHORIZED");
-
-		const session = await auth.validateAuthSessionToken(token);
-		if (!session) throw new ORPCError("UNAUTHORIZED");
+		const caller = await requireUser(context.headers);
 
 		const workspace = (
 			await sql`SELECT * FROM workspace WHERE id = ${input.workspaceId}`
@@ -33,7 +28,7 @@ export const findWorkspaceMembers = base
 		}
 
 		const allowed = await auth.userHasPermission(
-			session.userId,
+			caller.userId,
 			workspace.spaceId,
 			"space:read",
 		);
@@ -67,7 +62,7 @@ async function findMemberOrThrow(spaceId: string, memberId: string) {
 export const removeWorkspaceMember = base
 	.input(v.object({ workspaceId: v.string(), memberId: v.string() }))
 	.handler(async ({ input, context }) => {
-		const { session, workspace } = await requireWorkspacePermission(
+		const { caller, workspace } = await requireWorkspacePermission(
 			context.headers,
 			input.workspaceId,
 			"members:remove",
@@ -79,7 +74,7 @@ export const removeWorkspaceMember = base
 		eventBus.emit({
 			type: "workspace.member_removed",
 			workspaceId: workspace.id,
-			actorId: session.userId,
+			actorId: caller.userId,
 			entityId: member.id,
 			payload: {
 				userId: member.userId,
@@ -100,7 +95,7 @@ export const updateWorkspaceMemberRole = base
 		}),
 	)
 	.handler(async ({ input, context }) => {
-		const { session, workspace } = await requireWorkspacePermission(
+		const { caller, workspace } = await requireWorkspacePermission(
 			context.headers,
 			input.workspaceId,
 			"space:update",
@@ -113,7 +108,7 @@ export const updateWorkspaceMemberRole = base
 		eventBus.emit({
 			type: "workspace.member_role_changed",
 			workspaceId: workspace.id,
-			actorId: session.userId,
+			actorId: caller.userId,
 			entityId: member.id,
 			payload: {
 				userId: member.userId,
@@ -130,7 +125,7 @@ export const updateWorkspaceMemberRole = base
 export const leaveWorkspace = base
 	.input(v.object({ workspaceId: v.string() }))
 	.handler(async ({ input, context }) => {
-		const { session, workspace } = await requireWorkspacePermission(
+		const { caller, workspace } = await requireWorkspacePermission(
 			context.headers,
 			input.workspaceId,
 			"space:read",
@@ -139,7 +134,7 @@ export const leaveWorkspace = base
 		const member = (
 			await sql`
 				SELECT * FROM auth_space_member
-				WHERE spaceId = ${workspace.spaceId} AND userId = ${session.userId}
+				WHERE spaceId = ${workspace.spaceId} AND userId = ${caller.userId}
 			`
 		)[0] as tables["auth_space_member"] | undefined;
 		if (!member) {
@@ -153,7 +148,7 @@ export const leaveWorkspace = base
 		eventBus.emit({
 			type: "workspace.member_removed",
 			workspaceId: workspace.id,
-			actorId: session.userId,
+			actorId: caller.userId,
 			entityId: member.id,
 			payload: {
 				userId: member.userId,

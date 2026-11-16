@@ -113,14 +113,14 @@ const PreviewInput = v.object({
 export const previewJiraImport = base
 	.input(PreviewInput)
 	.handler(async ({ input, context }) => {
-		const { session, workspace } = await requireWorkspacePermission(
+		const { caller, workspace } = await requireWorkspacePermission(
 			context.headers,
 			input.workspaceId,
 			IMPORT_PERMISSION,
 		);
 
 		const parsed = parse(input.csv);
-		const ctx = await loadContext(sql, workspace, session.userId);
+		const ctx = await loadContext(sql, workspace, caller.userId);
 		return buildPlan(parsed, (input.mapping ?? {}) as Mapping, ctx).dryRun;
 	});
 
@@ -130,7 +130,7 @@ export const previewJiraImport = base
 export const applyJiraImport = base
 	.input(v.object({ ...PreviewInput.entries, mapping: MappingInput }))
 	.handler(async ({ input, context }) => {
-		const { session, workspace } = await requireWorkspacePermission(
+		const { caller, workspace } = await requireWorkspacePermission(
 			context.headers,
 			input.workspaceId,
 			IMPORT_PERMISSION,
@@ -141,7 +141,7 @@ export const applyJiraImport = base
 		let plan: Plan;
 		try {
 			plan = await sql.begin(async (tx) => {
-				const ctx = await loadContext(tx, workspace, session.userId);
+				const ctx = await loadContext(tx, workspace, caller.userId);
 				const plan = buildPlan(parsed, input.mapping as Mapping, ctx);
 				if (plan.dryRun.errors.length > 0) {
 					throw new ORPCError("BAD_REQUEST", {
@@ -196,7 +196,7 @@ export const applyJiraImport = base
 				type: "project.created",
 				workspaceId: workspace.id,
 				entityId: write.project.id,
-				actorId: session.userId,
+				actorId: caller.userId,
 				payload: {
 					projectId: write.project.id,
 					name: write.project.name,

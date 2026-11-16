@@ -3,7 +3,7 @@ import { DB, type tables } from "@smelp/db";
 import { eventBus } from "@smelp/events";
 import { SQL } from "bun";
 import * as v from "valibot";
-import { requireProjectPermission, requireSession } from "../lib/access";
+import { requireProjectPermission, requireUser } from "../lib/access";
 import { base } from "../orpc";
 
 const sql = new DB().sqlite;
@@ -90,7 +90,7 @@ async function requireCycle(
 		| tables["cycle"]
 		| undefined;
 	if (!cycle) {
-		await requireSession(headers);
+		await requireUser(headers);
 		throw new ORPCError("NOT_FOUND");
 	}
 	const access = await requireProject(headers, cycle.projectId, permission);
@@ -191,7 +191,7 @@ export const createCycle = base
 		),
 	)
 	.handler(async ({ input, context }) => {
-		const { session } = await requireProject(
+		const { caller } = await requireProject(
 			context.headers,
 			input.projectId,
 			"space:update",
@@ -203,7 +203,7 @@ export const createCycle = base
 			INSERT INTO cycle (id, projectId, name, startDate, endDate, createdBy, createdAt)
 			SELECT
 				${crypto.randomUUID()}, ${input.projectId}, ${input.name},
-				${input.startDate}, ${input.endDate}, ${session.userId}, ${Date.now()}
+				${input.startDate}, ${input.endDate}, ${caller.userId}, ${Date.now()}
 			WHERE NOT EXISTS (
 				SELECT 1 FROM cycle AS other
 				WHERE other.projectId = ${input.projectId}
@@ -287,7 +287,7 @@ export const updateCycle = base
 export const deleteCycle = base
 	.input(v.object({ id: NonEmpty }))
 	.handler(async ({ input, context }) => {
-		const { cycle, session, project } = await requireCycle(
+		const { cycle, caller, project } = await requireCycle(
 			context.headers,
 			input.id,
 			"space:update",
@@ -302,7 +302,7 @@ export const deleteCycle = base
 				UPDATE issue SET
 					cycleId = NULL,
 					updatedAt = ${Date.now()},
-					updatedBy = ${session.userId}
+					updatedBy = ${caller.userId}
 				WHERE cycleId = ${cycle.id}
 			`;
 			await tx`DELETE FROM cycle WHERE id = ${cycle.id}`;
@@ -314,7 +314,7 @@ export const deleteCycle = base
 				type: "issue.updated",
 				entityId: item.id,
 				workspaceId: project.workspaceId,
-				actorId: session.userId,
+				actorId: caller.userId,
 				payload: {
 					projectId: project.id,
 					title: item.title,
@@ -333,7 +333,7 @@ export const moveUnfinishedToCycle = base
 	.handler(async ({ input, context }) => {
 		const {
 			cycle: from,
-			session,
+			caller,
 			project,
 		} = await requireCycle(context.headers, input.fromCycleId, "content:write");
 
@@ -358,7 +358,7 @@ export const moveUnfinishedToCycle = base
 				UPDATE issue SET
 					cycleId = ${target.id},
 					updatedAt = ${Date.now()},
-					updatedBy = ${session.userId}
+					updatedBy = ${caller.userId}
 				WHERE cycleId = ${from.id}
 					AND state IN (
 						SELECT id FROM state WHERE "group" NOT IN ('completed', 'cancelled')
@@ -374,7 +374,7 @@ export const moveUnfinishedToCycle = base
 				type: "issue.updated",
 				entityId: item.id,
 				workspaceId: project.workspaceId,
-				actorId: session.userId,
+				actorId: caller.userId,
 				payload: {
 					projectId: project.id,
 					title: item.title,

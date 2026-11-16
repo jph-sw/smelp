@@ -3,7 +3,7 @@ import { DB, type tables } from "@smelp/db";
 import { eventBus, type ModuleChange } from "@smelp/events";
 import { SQL } from "bun";
 import * as v from "valibot";
-import { requireProjectPermission, requireSession } from "../lib/access";
+import { requireProjectPermission, requireUser } from "../lib/access";
 import { base } from "../orpc";
 
 const sql = new DB().sqlite;
@@ -112,7 +112,7 @@ async function requireReadableProject(headers: Headers, projectId: string) {
 }
 
 async function requireModule(headers: Headers, moduleId: string) {
-	await requireSession(headers);
+	await requireUser(headers);
 	const found = (await sql`SELECT * FROM module WHERE id = ${moduleId}`)[0] as
 		| tables["module"]
 		| undefined;
@@ -124,21 +124,21 @@ async function requireModule(headers: Headers, moduleId: string) {
 // Same rule as the project's states: it takes someone who can update the project.
 async function requireManageableModule(headers: Headers, moduleId: string) {
 	const found = await requireModule(headers, moduleId);
-	const { session, project } = await requireProjectPermission(
+	const { caller, project } = await requireProjectPermission(
 		headers,
 		found.projectId,
 		"space:update",
 	);
-	return { module: found, session, project };
+	return { module: found, caller, project };
 }
 
 const eventBase = (
-	session: { userId: string },
+	caller: { userId: string },
 	project: tables["project"],
 	entityId: string,
 ) => ({
 	workspaceId: project.workspaceId,
-	actorId: session.userId,
+	actorId: caller.userId,
 	entityId,
 });
 
@@ -155,7 +155,7 @@ const notAMember = () =>
 export const findModules = base
 	.input(v.object({ projectId: v.string() }))
 	.handler(async ({ input, context }) => {
-		await requireSession(context.headers);
+		await requireUser(context.headers);
 		await requireReadableProject(context.headers, input.projectId);
 		return loadModules(input.projectId, null);
 	});
@@ -178,9 +178,9 @@ export const createModule = base
 		}),
 	)
 	.handler(async ({ input, context }) => {
-		await requireSession(context.headers);
+		await requireUser(context.headers);
 		await requireReadableProject(context.headers, input.projectId);
-		const { session, project } = await requireProjectPermission(
+		const { caller, project } = await requireProjectPermission(
 			context.headers,
 			input.projectId,
 			"space:update",
@@ -195,7 +195,7 @@ export const createModule = base
 			written = await sql`
 				INSERT INTO module (id, projectId, name, description, leadId, targetDate, createdAt, createdBy)
 				SELECT ${id}, ${project.id}, ${input.name}, ${input.description},
-					${leadId}, ${input.targetDate ?? null}, ${Date.now()}, ${session.userId}
+					${leadId}, ${input.targetDate ?? null}, ${Date.now()}, ${caller.userId}
 				WHERE ${leadId} IS NULL OR EXISTS (
 					SELECT 1 FROM auth_space_member
 					WHERE spaceId = ${project.spaceId} AND userId = ${leadId}
@@ -214,7 +214,7 @@ export const createModule = base
 		if (written.length === 0) throw notAMember();
 
 		eventBus.emit({
-			...eventBase(session, project, id),
+			...eventBase(caller, project, id),
 			type: "module.created",
 			payload: {
 				projectId: project.id,
@@ -239,7 +239,7 @@ export const updateModule = base
 	.handler(async ({ input, context }) => {
 		const {
 			module: old,
-			session,
+			caller,
 			project,
 		} = await requireManageableModule(context.headers, input.id);
 
@@ -300,7 +300,7 @@ export const updateModule = base
 		}
 
 		eventBus.emit({
-			...eventBase(session, project, old.id),
+			...eventBase(caller, project, old.id),
 			type: "module.updated",
 			payload: {
 				projectId: project.id,
@@ -319,7 +319,7 @@ export const deleteModule = base
 	.handler(async ({ input, context }) => {
 		const {
 			module: old,
-			session,
+			caller,
 			project,
 		} = await requireManageableModule(context.headers, input.id);
 
@@ -332,7 +332,7 @@ export const deleteModule = base
 				UPDATE issue SET
 					moduleId = NULL,
 					updatedAt = ${Date.now()},
-					updatedBy = ${session.userId}
+					updatedBy = ${caller.userId}
 				WHERE moduleId = ${old.id}
 			`;
 			const deleted =
@@ -343,7 +343,7 @@ export const deleteModule = base
 
 		for (const item of result.items) {
 			eventBus.emit({
-				...eventBase(session, project, item.id),
+				...eventBase(caller, project, item.id),
 				type: "issue.updated",
 				payload: {
 					projectId: project.id,
@@ -355,7 +355,7 @@ export const deleteModule = base
 			});
 		}
 		eventBus.emit({
-			...eventBase(session, project, old.id),
+			...eventBase(caller, project, old.id),
 			type: "module.deleted",
 			payload: {
 				projectId: project.id,

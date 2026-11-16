@@ -3,7 +3,7 @@ import { Auth } from "@smelp/auth";
 import { DB, type tables } from "@smelp/db";
 import { eventBus } from "@smelp/events";
 import * as v from "valibot";
-import { requireProjectPermission, requireSession } from "../lib/access";
+import { requireProjectPermission, requireUser } from "../lib/access";
 import { maxAttachmentBytes, removeAttachmentFiles } from "../lib/attachments";
 import { base } from "../orpc";
 
@@ -12,14 +12,14 @@ const auth = new Auth();
 
 // So the web app can say a file is too large before sending it.
 export const findAttachmentLimits = base.handler(async ({ context }) => {
-	await requireSession(context.headers);
+	await requireUser(context.headers);
 	return { maxBytes: maxAttachmentBytes() };
 });
 
 export const findAttachments = base
 	.input(v.object({ issueId: v.string() }))
 	.handler(async ({ input, context }) => {
-		await requireSession(context.headers);
+		await requireUser(context.headers);
 		const issue = (
 			await sql`SELECT projectId FROM issue WHERE id = ${input.issueId}`
 		)[0] as Pick<tables["issue"], "projectId"> | undefined;
@@ -54,7 +54,7 @@ export const findAttachments = base
 export const deleteAttachment = base
 	.input(v.object({ id: v.string() }))
 	.handler(async ({ input, context }) => {
-		const session = await requireSession(context.headers);
+		const caller = await requireUser(context.headers);
 
 		const attachment = (
 			await sql`SELECT * FROM attachment WHERE id = ${input.id}`
@@ -74,9 +74,9 @@ export const deleteAttachment = base
 		);
 
 		const canDelete =
-			attachment.uploaderId === session.userId ||
+			attachment.uploaderId === caller.userId ||
 			(await auth.userHasPermission(
-				session.userId,
+				caller.userId,
 				project.spaceId,
 				"space:update",
 			));
@@ -89,7 +89,7 @@ export const deleteAttachment = base
 			type: "issue.attachment_removed",
 			entityId: issue.id,
 			workspaceId: issue.workspaceId,
-			actorId: session.userId,
+			actorId: caller.userId,
 			payload: {
 				projectId: issue.projectId,
 				title: issue.title,

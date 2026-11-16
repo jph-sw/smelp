@@ -7,7 +7,7 @@ import * as v from "valibot";
 import {
 	requireNotArchived,
 	requireProjectPermission,
-	requireSession,
+	requireUser,
 } from "../lib/access";
 import { base } from "../orpc";
 
@@ -87,9 +87,9 @@ type RelationRow = tables["issue_relation"] & {
 export const findIssueRelations = base
 	.input(v.object({ issueId: v.string() }))
 	.handler(async ({ input, context }): Promise<IssueRelation[]> => {
-		await requireSession(context.headers);
+		await requireUser(context.headers);
 		const issue = await findIssueOrThrow(input.issueId);
-		const { session } = await requireProjectPermission(
+		const { caller } = await requireProjectPermission(
 			context.headers,
 			issue.projectId,
 			"space:read",
@@ -123,7 +123,7 @@ export const findIssueRelations = base
 			let allowed = readable.get(row.projectId);
 			if (allowed === undefined) {
 				allowed = await auth.userHasPermission(
-					session.userId,
+					caller.userId,
 					row.projectSpaceId,
 					"space:read",
 				);
@@ -161,7 +161,7 @@ export const addIssueRelation = base
 		}),
 	)
 	.handler(async ({ input, context }) => {
-		const session = await requireSession(context.headers);
+		const caller = await requireUser(context.headers);
 		const issue = await findIssueOrThrow(input.issueId);
 		await requireProjectPermission(
 			context.headers,
@@ -207,7 +207,7 @@ export const addIssueRelation = base
 			targetId: fromSource ? related.id : issue.id,
 			type,
 			createdAt: Date.now(),
-			createdBy: session.userId,
+			createdBy: caller.userId,
 		};
 		// The unique index on the pair is what keeps a pair to one relation.
 		try {
@@ -238,7 +238,7 @@ export const addIssueRelation = base
 			type: "issue.relation_added",
 			entityId: issue.id,
 			workspaceId: issue.workspaceId,
-			actorId: session.userId,
+			actorId: caller.userId,
 			payload: {
 				projectId: issue.projectId,
 				title: issue.title,
@@ -255,7 +255,7 @@ export const addIssueRelation = base
 export const removeIssueRelation = base
 	.input(v.object({ issueId: v.string(), id: v.string() }))
 	.handler(async ({ input, context }) => {
-		const session = await requireSession(context.headers);
+		const caller = await requireUser(context.headers);
 		const issue = await findIssueOrThrow(input.issueId);
 		await requireProjectPermission(
 			context.headers,
@@ -299,7 +299,7 @@ export const removeIssueRelation = base
 			type: "issue.relation_removed",
 			entityId: issue.id,
 			workspaceId: issue.workspaceId,
-			actorId: session.userId,
+			actorId: caller.userId,
 			payload: {
 				projectId: issue.projectId,
 				title: issue.title,
