@@ -13,6 +13,14 @@ import {
 } from "@tanstack/react-query";
 import { useState } from "react";
 import {
+	ACTIVITY_FILTERS,
+	ACTIVITY_SORTS,
+	arrangeTimeline,
+	isActivityFilter,
+	isActivitySort,
+	useActivityView,
+} from "#/lib/activity-view";
+import {
 	commentsQueryOptions,
 	createComment,
 	deleteComment,
@@ -39,6 +47,13 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Button } from "../ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "../ui/select";
 import { CommentAttachments } from "./attachments";
 
 const relatedLabel = (entry: { relatedId?: string | null }) =>
@@ -414,6 +429,51 @@ function CommentItem({
 	);
 }
 
+function ViewSelect<T extends string>({
+	label,
+	value,
+	options,
+	isOption,
+	onChange,
+}: {
+	label: string;
+	value: T;
+	options: Record<T, string>;
+	isOption: (value: unknown) => value is T;
+	onChange: (value: T) => void;
+}) {
+	const items = Object.entries<string>(options).map(([value, label]) => ({
+		value,
+		label,
+	}));
+	return (
+		<Select
+			items={items}
+			value={value}
+			onValueChange={(next) => {
+				if (isOption(next)) onChange(next);
+			}}
+		>
+			<SelectTrigger aria-label={label} className="w-auto">
+				<SelectValue />
+			</SelectTrigger>
+			<SelectContent>
+				{items.map((item) => (
+					<SelectItem key={item.value} value={item.value}>
+						{item.label}
+					</SelectItem>
+				))}
+			</SelectContent>
+		</Select>
+	);
+}
+
+const EMPTY_MESSAGES = {
+	all: "No comments yet.",
+	comments: "No comments yet.",
+	history: "No changes yet.",
+} as const;
+
 export function IssueActivity({
 	issueId,
 	userId,
@@ -446,6 +506,7 @@ export function IssueActivity({
 	const [draft, setDraft] = useState("");
 	// A new editor after each post starts empty, with no undo history.
 	const [composer, setComposer] = useState(0);
+	const [view, setView] = useActivityView();
 
 	const refreshComments = () =>
 		queryClient.invalidateQueries({ queryKey: commentsOptions.queryKey });
@@ -518,16 +579,70 @@ export function IssueActivity({
 		if (draft.trim() && !isAdding) addComment({ issueId, body: draft });
 	};
 
-	const timeline = [
-		...comments.map((comment) => ({ kind: "comment" as const, ...comment })),
-		...activity.map((entry) => ({ kind: "activity" as const, ...entry })),
-	].sort((a, b) => a.createdAt - b.createdAt);
+	// Without history only comments remain, whatever filter was saved.
+	const filter = showHistory ? view.filter : "all";
+	const timeline = arrangeTimeline(
+		[
+			...comments.map((comment) => ({ kind: "comment" as const, ...comment })),
+			...activity.map((entry) => ({ kind: "activity" as const, ...entry })),
+		],
+		{ filter, sort: view.sort },
+	);
+	const showEmpty = timeline.length === 0 && (readOnly || filter !== "all");
+
+	const composerForm = !readOnly && (
+		<form
+			className="space-y-2"
+			onSubmit={(event) => {
+				event.preventDefault();
+				submit();
+			}}
+		>
+			<RichTextEditor
+				key={composer}
+				value=""
+				issueId={issueId}
+				mentions={{ members, currentUserId: userId }}
+				aria-label="Add a comment"
+				placeholder="Add a comment. Type @ to mention someone, / for formatting."
+				className={composerBox}
+				onChange={setDraft}
+				onSubmit={submit}
+			/>
+			<Button type="submit" disabled={!draft.trim() || isAdding}>
+				Comment
+			</Button>
+		</form>
+	);
 
 	return (
 		<section className="space-y-4" aria-label="Activity">
-			<h2 className="text-sm font-semibold">Activity</h2>
-			{timeline.length === 0 && readOnly && (
-				<p className="text-sm text-muted-foreground">No comments yet.</p>
+			<div className="flex flex-wrap items-center justify-between gap-2">
+				<h2 className="text-sm font-semibold">Activity</h2>
+				<div className="flex items-center gap-2">
+					{showHistory && (
+						<ViewSelect
+							label="Show"
+							value={filter}
+							options={ACTIVITY_FILTERS}
+							isOption={isActivityFilter}
+							onChange={(next) => setView({ filter: next })}
+						/>
+					)}
+					<ViewSelect
+						label="Sort"
+						value={view.sort}
+						options={ACTIVITY_SORTS}
+						isOption={isActivitySort}
+						onChange={(sort) => setView({ sort })}
+					/>
+				</div>
+			</div>
+			{view.sort === "newest" && composerForm}
+			{showEmpty && (
+				<p className="text-sm text-muted-foreground">
+					{EMPTY_MESSAGES[filter]}
+				</p>
 			)}
 			<ol className="space-y-3">
 				{timeline.map((entry) =>
@@ -567,30 +682,7 @@ export function IssueActivity({
 					),
 				)}
 			</ol>
-			{!readOnly && (
-				<form
-					className="space-y-2"
-					onSubmit={(event) => {
-						event.preventDefault();
-						submit();
-					}}
-				>
-					<RichTextEditor
-						key={composer}
-						value=""
-						issueId={issueId}
-						mentions={{ members, currentUserId: userId }}
-						aria-label="Add a comment"
-						placeholder="Add a comment. Type @ to mention someone, / for formatting."
-						className={composerBox}
-						onChange={setDraft}
-						onSubmit={submit}
-					/>
-					<Button type="submit" disabled={!draft.trim() || isAdding}>
-						Comment
-					</Button>
-				</form>
-			)}
+			{view.sort === "oldest" && composerForm}
 		</section>
 	);
 }
