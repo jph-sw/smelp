@@ -55,7 +55,6 @@ const createIssue = (title: string) =>
 		title,
 		description: "",
 		state,
-		type: "task",
 		workspaceId,
 		projectId,
 	});

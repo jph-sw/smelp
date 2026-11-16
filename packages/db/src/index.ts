@@ -23,7 +23,7 @@ import {
 } from "../types/tables/comment_reaction";
 import type { cycle } from "../types/tables/cycle";
 import type { import_record } from "../types/tables/import_record";
-import type { issue } from "../types/tables/issue";
+import { ISSUE_TYPES, type issue } from "../types/tables/issue";
 import type { issue_link } from "../types/tables/issue_link";
 import type { issue_relation } from "../types/tables/issue_relation";
 import type { schema_migrations } from "../types/tables/migration";
@@ -189,7 +189,10 @@ export type tables = {
 export const DEFAULTS = {
 	STATE_GROUPS: STATE_GROUPS,
 	REACTION_EMOJIS: REACTION_EMOJIS,
+	ISSUE_TYPES: ISSUE_TYPES,
 };
+
+export type { IssueType } from "../types/tables/issue";
 
 export type ProjectMember = tables["auth_space_member"] &
 	Pick<tables["auth_user"], "fullName" | "displayName" | "image"> & {

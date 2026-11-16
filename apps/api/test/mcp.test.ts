@@ -289,6 +289,36 @@ describe("working on an item", () => {
 		expect(updated.assignee).toBeNull();
 	});
 
+	test("sets and changes the type", async () => {
+		const task = await value(agent, "create_work_item", {
+			project: PROJECT,
+			title: "Plain work",
+		});
+		expect(task.type).toBe("task");
+
+		const bug = await value(agent, "create_work_item", {
+			project: PROJECT,
+			title: "It crashes",
+			type: "bug",
+		});
+		expect(bug.type).toBe("bug");
+
+		const story = await value(agent, "update_work_item", {
+			key: bug.key,
+			type: "story",
+		});
+		expect(story.type).toBe("story");
+		expect((await ada.client.issue.find({ issueId: bug.key })).type).toBe(
+			"story",
+		);
+
+		const refused = await call(agent, "update_work_item", {
+			key: bug.key,
+			type: "incident",
+		});
+		expect(refused.isError).toBe(true);
+	});
+
 	test("search finds items by title or key", async () => {
 		const created = await value(agent, "create_work_item", {
 			project: PROJECT,
@@ -337,7 +367,6 @@ describe("errors come back as tool errors", () => {
 			state: (
 				await outsider.client.states.find({ projectId: HIDDEN_PROJECT })
 			)[0]?.id as string,
-			type: "task",
 			workspaceId: (
 				await outsider.client.project.find({ projectId: HIDDEN_PROJECT })
 			).workspaceId,

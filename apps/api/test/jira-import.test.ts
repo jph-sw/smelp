@@ -512,7 +512,6 @@ describe("jira import: apply", () => {
 					id: string;
 				}
 			).id,
-			type: "task",
 			workspaceId: WORKSPACE,
 			projectId: "ZQA",
 		});
@@ -524,7 +523,7 @@ describe("jira import: apply", () => {
 			assignee: ada.id,
 			createdBy: grace.id,
 			workspaceId: WORKSPACE,
-			type: "task",
+			type: "story",
 			createdAt: Date.parse("2024-11-12T10:15:00Z"),
 			updatedAt: Date.parse("2024-11-13T11:00:00Z"),
 		});
@@ -1047,6 +1046,42 @@ describe("jira import: awkward exports", () => {
 		const by = Object.fromEntries(plan.projects.map((p) => [p.jiraKey, p.id]));
 		expect(by.ZQQ).toBe("ZQQ");
 		expect(by.ZQ_Q).not.toBe("ZQQ");
+	});
+
+	test("Jira issue types become work item types", async () => {
+		const csv = jiraCsv([
+			{ summary: "Crash", key: "ZQJ-1", projectName: "Types", type: "Bug" },
+			{ summary: "Feature", key: "ZQJ-2", type: "User Story" },
+			{ summary: "Big one", key: "ZQJ-3", type: "epic" },
+			{ summary: "Polish", key: "ZQJ-4", type: "Improvement" },
+			{ summary: "Plain", key: "ZQJ-5", type: "Task" },
+		]);
+		await admin.client.jiraImport.apply({
+			workspaceId: WORKSPACE,
+			csv,
+			mapping: {},
+		});
+		const items = new Map(
+			(
+				(await sql`
+					SELECT id, type, description FROM issue WHERE projectId = 'ZQJ'
+				`) as { id: string; type: string; description: string }[]
+			).map((item) => [item.id, item]),
+		);
+
+		expect([...items.values()].map((item) => [item.id, item.type])).toEqual(
+			expect.arrayContaining([
+				["ZQJ-1", "bug"],
+				["ZQJ-2", "story"],
+				["ZQJ-3", "epic"],
+				["ZQJ-4", "task"],
+				["ZQJ-5", "task"],
+			]),
+		);
+		expect(items.get("ZQJ-1")?.description).not.toContain("Jira type");
+		expect(items.get("ZQJ-5")?.description).not.toContain("Jira type");
+		expect(items.get("ZQJ-2")?.description).toContain("Jira type: User Story");
+		expect(items.get("ZQJ-4")?.description).toContain("Jira type: Improvement");
 	});
 
 	test("very long status names still import", async () => {

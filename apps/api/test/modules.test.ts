@@ -66,7 +66,6 @@ const newIssue = (title: string, state?: string, projectId = PROJECT) => ({
 	title,
 	description: "",
 	state: state ?? first(stateIds[projectId] ?? []),
-	type: "task",
 	workspaceId: WORKSPACE,
 	projectId,
 });

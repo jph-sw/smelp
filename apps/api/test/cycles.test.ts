@@ -76,7 +76,6 @@ const newIssue = (
 	title,
 	description: "",
 	state: states[projectId]?.[stateName] ?? "",
-	type: "task",
 	workspaceId: WORKSPACE,
 	projectId,
 });

@@ -19,7 +19,13 @@ const LEGACY_ACTIONS: Record<string, string> = {
 };
 
 // issue.updated fields whose new value is short enough to show in the feed.
-const FIELDS_WITH_VALUE = new Set(["title", "parent", "cycle", "module"]);
+const FIELDS_WITH_VALUE = new Set([
+	"title",
+	"type",
+	"parent",
+	"cycle",
+	"module",
+]);
 
 type FeedRow = Pick<
 	tables["activity_logs"],

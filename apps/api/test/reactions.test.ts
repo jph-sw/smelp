@@ -104,7 +104,6 @@ beforeAll(async () => {
 		title: "Discuss",
 		description: "",
 		state: first(states).id,
-		type: "task",
 		workspaceId: WORKSPACE,
 		projectId: PROJECT,
 	});

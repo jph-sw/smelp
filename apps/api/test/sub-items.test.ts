@@ -53,7 +53,6 @@ const newIssue = (title: string, parentId?: string, projectId = PROJECT) => ({
 	title,
 	description: "",
 	state: first(stateIds[projectId] ?? []),
-	type: "task",
 	workspaceId: WORKSPACE,
 	projectId,
 	parentId,

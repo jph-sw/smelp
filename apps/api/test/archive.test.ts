@@ -70,7 +70,6 @@ const newIssue = (title = "A work item") => ({
 	title,
 	description: "",
 	state: first(stateIds),
-	type: "task",
 	workspaceId: WORKSPACE,
 	projectId: PROJECT,
 });

@@ -1,4 +1,4 @@
-import type { tables } from "@smelp/db";
+import type { IssueType, tables } from "@smelp/db";
 import type { JiraIssue, JiraLink, ParsedJira } from "./jira-csv";
 
 // Turns parsed Jira data plus the importer's choices into (a) the dry run shown before
@@ -619,7 +619,7 @@ export function buildPlan(
 				state: stateId(targetOf(issue.status)),
 				title: longTitle ? `${clip(title, TITLE_MAX - 1)}…` : title,
 				description,
-				type: "task",
+				type: typeOf(issue.type),
 				parentId: parentOf.has(issue.key)
 					? issueId(byKey.get(parentOf.get(issue.key) as string) as JiraIssue)
 					: null,
@@ -815,6 +815,18 @@ function mentions(text: string, names: Map<string, string>) {
 	);
 }
 
+const JIRA_TYPES = new Map<string, IssueType>([
+	["task", "task"],
+	["bug", "bug"],
+	["story", "story"],
+	["user story", "story"],
+	["epic", "epic"],
+]);
+
+function typeOf(jiraType: string): IssueType {
+	return JIRA_TYPES.get(jiraType.trim().toLowerCase()) ?? "task";
+}
+
 function footerOf(
 	issue: JiraIssue,
 	extra: {
@@ -827,7 +839,9 @@ function footerOf(
 	const lines = ["---", `Imported from Jira: ${issue.key}`];
 	if (extra.fullTitle) lines.push(`Full title: ${clip(extra.fullTitle, 500)}`);
 	if (issue.status) lines.push(`Jira status: ${clip(issue.status, 100)}`);
-	if (issue.type) lines.push(`Jira type: ${clip(issue.type, 100)}`);
+	if (issue.type && issue.type.trim().toLowerCase() !== typeOf(issue.type)) {
+		lines.push(`Jira type: ${clip(issue.type, 100)}`);
+	}
 	if (issue.priority) lines.push(`Priority: ${clip(issue.priority, 100)}`);
 	if (issue.resolution)
 		lines.push(`Resolution: ${clip(issue.resolution, 100)}`);

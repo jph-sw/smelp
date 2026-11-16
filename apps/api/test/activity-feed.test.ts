@@ -87,7 +87,6 @@ async function issueIn(projectId: string, title: string) {
 		title,
 		description: "",
 		state: state.id,
-		type: "task",
 		workspaceId: WORKSPACE,
 		projectId,
 	});
@@ -382,7 +381,6 @@ describe("assigning while creating", () => {
 			title: "Assigned at birth",
 			description: "",
 			state: states[0]?.id ?? "",
-			type: "task",
 			workspaceId: WORKSPACE,
 			projectId: PUBLIC_PROJECT,
 			assignee: member.id,
@@ -394,6 +392,19 @@ describe("assigning while creating", () => {
 				event.type === "issue.assigned" && event.issue?.id === issue.id,
 		);
 		expect(assigned?.details?.to).toBe(member.displayName);
+	});
+});
+
+describe("changing the type", () => {
+	test("shows the new type", async () => {
+		const issue = await issueIn(PUBLIC_PROJECT, "Turns out it's a bug");
+		await owner.client.issue.update({ id: issue.id, type: "bug" });
+		await settle();
+
+		const changed = (await feedTypes(member)).find(
+			(event) => event.type === "issue.updated" && event.issue?.id === issue.id,
+		);
+		expect(changed?.details).toMatchObject({ field: "type", to: "bug" });
 	});
 });
 
