@@ -31,19 +31,28 @@ const SignInSchema = v.object({
 	password: v.pipe(v.string(), v.minLength(1, "Enter your password.")),
 });
 
+// Only a path on this site, so a crafted link can't send someone elsewhere after
+// they sign in.
+function localPath(value: unknown) {
+	return typeof value === "string" && /^\/(?![/\\])/.test(value)
+		? value
+		: undefined;
+}
+
 export const Route = createFileRoute("/signin")({
 	validateSearch: (
 		search: Record<string, unknown>,
-	): { invite?: string; oidcError?: string } => ({
+	): { invite?: string; oidcError?: string; redirect?: string } => ({
 		invite: typeof search.invite === "string" ? search.invite : undefined,
 		oidcError:
 			typeof search.oidcError === "string" ? search.oidcError : undefined,
+		redirect: localPath(search.redirect),
 	}),
 	beforeLoad: ({ context, search }) => {
 		if (context.user != null) {
 			throw search.invite
 				? redirect({ to: "/invite/$token", params: { token: search.invite } })
-				: redirect({ to: "/" });
+				: redirect({ href: search.redirect ?? "/" });
 		}
 	},
 	loader: async ({ context: { queryClient } }) => {
@@ -60,7 +69,7 @@ function SignIn() {
 	usePageTitle("Sign in");
 	const navigate = useNavigate();
 	const queryClient = useQueryClient();
-	const { invite, oidcError } = Route.useSearch();
+	const { invite, oidcError, redirect: returnTo } = Route.useSearch();
 	const { data: status } = useSuspenseQuery(instanceStatusQueryOptions);
 	const form = useAppForm({
 		defaultValues: {
@@ -77,7 +86,7 @@ function SignIn() {
 				if (invite) {
 					navigate({ to: "/invite/$token", params: { token: invite } });
 				} else {
-					navigate({ to: "/" });
+					navigate({ href: returnTo ?? "/" });
 				}
 			} catch (error) {
 				toastError(error);
