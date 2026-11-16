@@ -2,6 +2,19 @@
 
 Each release is a git tag. To upgrade, follow [Upgrade](README.md#upgrade) in the README.
 
+## 0.10.0 (2026-11-16)
+
+Work item types, and comments written and shown as rich text.
+
+- **Work item types:** every work item is a task, bug, story or epic. Its icon shows on board cards, list rows and the work item page, where Type is the first property. Pick it in the New work item dialog, and filter the board by it. Type changes show in the activity feed. New work items are tasks unless you pick another type. AI agents can set it through the MCP server too.
+- **Jira import:** Bug, Story, User Story and Epic become their type, and anything else becomes a task. Types that don't map directly, like Improvement or Sub-task, are still noted in the description.
+- **Rich-text comments:** comments are written in the same editor as descriptions, and show formatted. `@` picks a person, `/` opens the formatting commands, and Ctrl or Cmd+Enter posts. Links are clickable, and pasted images are attached to the work item. Comments are still stored as Markdown, so an old comment with a stray `*` or `_` may now show as formatting. Comment emails show the Markdown as written.
+- **Quieter comments:** each comment is a card, with the reaction button next to edit and delete. Reactions only show once someone has reacted, and "Attach files" only shows while you edit your own comment.
+- **Account settings:** the account page is as wide as the other settings pages, with each section's title and description beside its controls.
+- **Fixed:** picking List in the project view toggle left Board highlighted too.
+
+Upgrading runs one database change automatically, which sets every existing work item's type. Items whose type isn't one of the four become tasks. Back up first, as the README describes.
+
 ## 0.9.0 (2026-11-16)
 
 Public workspaces, so people without an account can follow along.
