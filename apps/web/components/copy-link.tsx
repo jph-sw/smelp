@@ -2,24 +2,26 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { toast } from "./ui/toast";
 
-// Shows a one-time link that can't be retrieved later.
+// Shows a one-time link or secret that can't be retrieved later.
 export function CopyLink({
 	title,
 	hint,
 	link,
+	copiedMessage = "Link copied.",
 }: {
 	title: string;
 	hint: string;
 	link: string;
+	copiedMessage?: string;
 }) {
 	const copy = async () => {
 		try {
 			await navigator.clipboard.writeText(link);
-			toast({ type: "success", description: "Link copied." });
+			toast({ type: "success", description: copiedMessage });
 		} catch {
 			toast({
 				type: "error",
-				description: "Couldn't copy the link. Select it and copy it yourself.",
+				description: "Couldn't copy it. Select it and copy it yourself.",
 			});
 		}
 	};
