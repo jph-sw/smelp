@@ -17,7 +17,11 @@ export const instanceUsersQueryOptions = queryOptions({
 	queryFn: () => orpc.instance.users(),
 });
 
-export const updateInstance = (input: { signupOpen: boolean }) =>
+export type SignupMode = Awaited<
+	ReturnType<typeof orpc.instance.status>
+>["signup"];
+
+export const updateInstance = (input: { signup: SignupMode }) =>
 	orpc.instance.update(input);
 
 export const createPasswordReset = ({

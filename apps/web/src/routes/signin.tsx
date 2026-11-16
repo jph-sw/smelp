@@ -134,7 +134,7 @@ function SignIn() {
 					</form>
 					<OidcButton invite={invite} />
 				</CardContent>
-				{(status.signupOpen || invite || status.emailEnabled) && (
+				{(status.signup !== "closed" || invite || status.emailEnabled) && (
 					<CardFooter className="flex-col items-start gap-2">
 						{status.emailEnabled && (
 							<Link
@@ -144,7 +144,7 @@ function SignIn() {
 								Forgot your password?
 							</Link>
 						)}
-						{(status.signupOpen || invite) && (
+						{(status.signup !== "closed" || invite) && (
 							<p>
 								No account?{" "}
 								<Link

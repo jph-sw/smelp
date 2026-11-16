@@ -6,7 +6,12 @@ import { SQL } from "bun";
 import * as v from "valibot";
 import { useSecureCookies } from "../../lib/cookies";
 import { emailVerificationLink } from "../../lib/email-verification";
-import { isFirstRun, isSignupOpen, makeFirstAdmin } from "../../lib/instance";
+import {
+	getSignupMode,
+	isFirstRun,
+	makeFirstAdmin,
+	signupAccess,
+} from "../../lib/instance";
 import { findUsableInvite } from "../../lib/invites";
 import { isMailEnabled } from "../../lib/mail";
 import { enforceRateLimit, RateLimiter } from "../../lib/rate-limit";
@@ -29,12 +34,16 @@ export const signUp = base.input(Params).handler(async ({ input, context }) => {
 	enforceRateLimit(signUpsByIp, context.ip);
 
 	const firstRun = await isFirstRun();
-	const signupOpen = await isSignupOpen();
 	const invite =
 		input.inviteToken !== undefined
 			? await findUsableInvite(input.inviteToken)
 			: undefined;
-	if (!(firstRun || signupOpen || invite !== undefined)) {
+	const access = signupAccess({
+		firstRun,
+		mode: await getSignupMode(),
+		hasInvite: invite !== undefined,
+	});
+	if (!access.allowed) {
 		throw new ORPCError("FORBIDDEN", {
 			message: "Sign-ups are closed. Ask an admin for an invite link.",
 		});
@@ -42,8 +51,7 @@ export const signUp = base.input(Params).handler(async ({ input, context }) => {
 
 	// Only public sign-up on an instance that can send the link needs it. An invite
 	// proves the address, and the first account is the instance admin.
-	const needsVerification =
-		!firstRun && signupOpen && invite === undefined && isMailEnabled();
+	const needsVerification = access.public && isMailEnabled();
 
 	try {
 		const { session, user } = await auth.signUp(
@@ -51,7 +59,7 @@ export const signUp = base.input(Params).handler(async ({ input, context }) => {
 			input.fullName,
 			input.displayName,
 			input.password,
-			!needsVerification,
+			{ emailVerified: !needsVerification, role: access.role },
 		);
 
 		if (firstRun) await makeFirstAdmin(user.id);

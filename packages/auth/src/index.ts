@@ -2,7 +2,7 @@
   this was inspired by https://raw.githubusercontent.com/lucia-auth/lucia
 */
 
-import { DB, type tables } from "@smelp/db";
+import { DB, type InstanceRole, type tables } from "@smelp/db";
 import { eventBus } from "@smelp/events";
 import type { SQL } from "bun";
 import {
@@ -114,7 +114,10 @@ export class Auth {
 		fullName: string,
 		displayName: string,
 		password: string,
-		emailVerified = true,
+		{
+			emailVerified = true,
+			role = "user",
+		}: { emailVerified?: boolean; role?: InstanceRole } = {},
 	) {
 		const now = Date.now();
 		const passwordHash = await Bun.password.hash(password, {
@@ -129,7 +132,7 @@ export class Auth {
 			email: email,
 			createdAt: now,
 			updatedAt: now,
-			role: "user",
+			role,
 			image: null,
 			notifyByEmail: 0,
 			emailVerified: emailVerified ? 1 : 0,

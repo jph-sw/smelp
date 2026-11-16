@@ -78,4 +78,36 @@ describe("Migrator", () => {
 
 		expect(await tableExists("only_once")).toBe(true);
 	});
+
+	test("the signup mode migration keeps whether sign-up was open", async () => {
+		const migration = (
+			await Array.fromAsync(
+				new Bun.Glob("*_signup_mode.sql").scan("migrations"),
+			)
+		)[0];
+		if (!migration) throw new Error("signup mode migration not found");
+		const contents = await Bun.file(`migrations/${migration}`).text();
+		const [{ value: current }] = (await sql`
+			SELECT value FROM instance_setting WHERE key = 'signup'
+		`) as [{ value: string }];
+
+		for (const [old, mode] of [
+			["true", "open"],
+			["false", "closed"],
+		] as const) {
+			await sql`DELETE FROM instance_setting WHERE key = 'signup'`;
+			await sql`INSERT INTO instance_setting (key, value) VALUES ('signupOpen', ${old})`;
+
+			// The migrator skips content it has run before, by checksum.
+			const copy = `${contents}\n-- test copy ${old}`;
+			await new Migrator(folderWith(`4_signup_${old}.sql`, copy)).up();
+
+			const settings = (await sql`
+				SELECT key, value FROM instance_setting WHERE key LIKE 'signup%'
+			`) as { key: string; value: string }[];
+			expect(settings).toEqual([{ key: "signup", value: mode }]);
+		}
+
+		await sql`UPDATE instance_setting SET value = ${current} WHERE key = 'signup'`;
+	});
 });

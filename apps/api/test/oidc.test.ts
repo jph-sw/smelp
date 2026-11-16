@@ -348,8 +348,8 @@ const identitiesOf = async (userId: string) =>
 const sessionUser = async (token: string | undefined) =>
 	token ? (await auth.validateAuthSessionToken(token))?.userId : undefined;
 
-const setSignupOpen = (open: boolean) =>
-	sql`UPDATE instance_setting SET value = ${String(open)} WHERE key = 'signupOpen'`;
+const setSignupMode = (mode: "closed" | "open" | "guest") =>
+	sql`UPDATE instance_setting SET value = ${mode} WHERE key = 'signup'`;
 
 const clientFor = (token?: string) =>
 	createRouterClient(router, {
@@ -384,7 +384,7 @@ beforeAll(async () => {
 
 	// Keeps this from being the first run, which would allow any sign-up.
 	admin = await passwordUser("admin");
-	await setSignupOpen(false);
+	await setSignupMode("closed");
 	const workspace = await clientFor(admin.token).workspace.create({
 		name: "oidc-test-workspace",
 	});
@@ -398,7 +398,7 @@ afterAll(async () => {
 		else process.env[key] = savedEnv[key];
 	}
 	resetOidcCache();
-	await setSignupOpen(false);
+	await setSignupMode("closed");
 	// Straight to the tables: the delete route's own activity entry would be written
 	// after the rows it points at are gone.
 	await sql`DELETE FROM auth_space WHERE ownerId = ${admin.id}`;
@@ -518,7 +518,7 @@ describe("signing in never links by email", () => {
 	});
 
 	test("the answer is identical whether or not an account has the email", async () => {
-		await setSignupOpen(false);
+		await setSignupMode("closed");
 		const person = await passwordUser("same-answer");
 		const known = await signInWith(verified(unique("sub"), person.email));
 		const unknown = await signInWith(
@@ -531,7 +531,7 @@ describe("signing in never links by email", () => {
 	});
 
 	test("with sign-up open, an email that has an account still gets that answer", async () => {
-		await setSignupOpen(true);
+		await setSignupMode("open");
 		try {
 			const person = await passwordUser("open-exists");
 			const result = await signInWith(verified(unique("sub"), person.email));
@@ -548,12 +548,12 @@ describe("signing in never links by email", () => {
 				await sql`SELECT 1 FROM auth_user WHERE lower(email) = ${person.email}`;
 			expect(users).toHaveLength(1);
 		} finally {
-			await setSignupOpen(false);
+			await setSignupMode("closed");
 		}
 	});
 
 	test("an unverified or missing email gives the same answer for any email while sign-up is closed", async () => {
-		await setSignupOpen(false);
+		await setSignupMode("closed");
 		const person = await passwordUser("unverified");
 		const sub = unique("sub");
 		const results = [];
@@ -800,7 +800,7 @@ describe("linking from account settings", () => {
 
 describe("new accounts", () => {
 	test("are refused while sign-up is closed", async () => {
-		await setSignupOpen(false);
+		await setSignupMode("closed");
 		const email = `${unique("closed")}@${EMAIL_DOMAIN}`;
 		const result = await signInWith(verified(unique("sub"), email));
 		expect(result.error).toBe("not_linked");
@@ -809,7 +809,7 @@ describe("new accounts", () => {
 	});
 
 	test("are made when public sign-up is open", async () => {
-		await setSignupOpen(true);
+		await setSignupMode("open");
 		try {
 			const email = `${unique("open")}@${EMAIL_DOMAIN}`;
 			const sub = unique("sub");
@@ -833,12 +833,38 @@ describe("new accounts", () => {
 			const again = await signInWith(scenario);
 			expect(await sessionUser(again.sessionToken)).toBe(user?.id);
 		} finally {
-			await setSignupOpen(false);
+			await setSignupMode("closed");
+		}
+	});
+
+	test("are guests in guest mode, unless an invite brought them", async () => {
+		await setSignupMode("guest");
+		try {
+			const publicEmail = `${unique("guest")}@${EMAIL_DOMAIN}`;
+			const viaPublic = await signInWith(verified(unique("sub"), publicEmail));
+			expect(viaPublic.error).toBeNull();
+			expect((await userByEmail(publicEmail))?.role).toBe("guest");
+
+			const invite = await clientFor(admin.token).workspaceInvites.create({
+				workspaceId,
+				role: "member",
+			});
+			const invitedEmail = `${unique("guest-invited")}@${EMAIL_DOMAIN}`;
+			const viaInvite = await signInWith(
+				verified(unique("sub"), invitedEmail),
+				{
+					query: `?invite=${encodeURIComponent(invite.token)}`,
+				},
+			);
+			expect(viaInvite.error).toBeNull();
+			expect((await userByEmail(invitedEmail))?.role).toBe("user");
+		} finally {
+			await setSignupMode("closed");
 		}
 	});
 
 	test("are never made from an unverified email", async () => {
-		await setSignupOpen(true);
+		await setSignupMode("open");
 		try {
 			const email = `${unique("unv")}@${EMAIL_DOMAIN}`;
 			const result = await signInWith({
@@ -849,12 +875,12 @@ describe("new accounts", () => {
 			expect(result.error).toBe("email_unverified");
 			expect(await userByEmail(email)).toBeUndefined();
 		} finally {
-			await setSignupOpen(false);
+			await setSignupMode("closed");
 		}
 	});
 
 	test("a taken display name gets a suffix instead of failing", async () => {
-		await setSignupOpen(true);
+		await setSignupMode("open");
 		try {
 			const wanted = unique("shared-name");
 			const people = [];
@@ -868,12 +894,12 @@ describe("new accounts", () => {
 			}
 			expect(people).toEqual([wanted, `${wanted}-2`, `${wanted}-3`]);
 		} finally {
-			await setSignupOpen(false);
+			await setSignupMode("closed");
 		}
 	});
 
 	test("a long name is cut to what a profile allows", async () => {
-		await setSignupOpen(true);
+		await setSignupMode("open");
 		try {
 			const email = `${unique("long")}@${EMAIL_DOMAIN}`;
 			await signInWith(
@@ -886,7 +912,7 @@ describe("new accounts", () => {
 			expect(user?.fullName.length).toBe(80);
 			expect(user?.displayName.length).toBe(40);
 		} finally {
-			await setSignupOpen(false);
+			await setSignupMode("closed");
 		}
 	});
 
@@ -916,7 +942,7 @@ describe("new accounts", () => {
 	});
 
 	test("two sign-ins for one new identity at once make one account", async () => {
-		await setSignupOpen(true);
+		await setSignupMode("open");
 		try {
 			const email = `${unique("race")}@${EMAIL_DOMAIN}`;
 			const scenario = verified(unique("sub"), email);
@@ -932,7 +958,7 @@ describe("new accounts", () => {
 			expect(await sessionUser(b.sessionToken)).toBe(users[0].id);
 			expect(await identitiesOf(users[0].id)).toHaveLength(1);
 		} finally {
-			await setSignupOpen(false);
+			await setSignupMode("closed");
 		}
 	});
 
@@ -966,7 +992,7 @@ describe("new accounts", () => {
 
 describe("ID token validation", () => {
 	const rejects = async (scenario: Partial<Scenario>) => {
-		await setSignupOpen(true);
+		await setSignupMode("open");
 		try {
 			const email = `${unique("tok")}@${EMAIL_DOMAIN}`;
 			const result = await signInWith({
@@ -977,7 +1003,7 @@ describe("ID token validation", () => {
 			expect(result.sessionToken).toBeUndefined();
 			expect(await userByEmail(email)).toBeUndefined();
 		} finally {
-			await setSignupOpen(false);
+			await setSignupMode("closed");
 		}
 	};
 
@@ -995,14 +1021,14 @@ describe("ID token validation", () => {
 	test("a missing nonce is refused", () => rejects({ nonce: null }));
 
 	test("a good token from the same provider is accepted", async () => {
-		await setSignupOpen(true);
+		await setSignupMode("open");
 		try {
 			const result = await signInWith(
 				verified(unique("sub"), `${unique("ok")}@${EMAIL_DOMAIN}`),
 			);
 			expect(result.error).toBeNull();
 		} finally {
-			await setSignupOpen(false);
+			await setSignupMode("closed");
 		}
 	});
 });
@@ -1182,7 +1208,7 @@ describe("account settings", () => {
 	});
 
 	test("won't unlink when it would leave no way to sign in", async () => {
-		await setSignupOpen(true);
+		await setSignupMode("open");
 		try {
 			const email = `${unique("only")}@${EMAIL_DOMAIN}`;
 			const result = await signInWith(verified(unique("sub"), email));
@@ -1194,12 +1220,12 @@ describe("account settings", () => {
 			});
 			expect((await client.auth.linkedAccounts()).providers).toHaveLength(1);
 		} finally {
-			await setSignupOpen(false);
+			await setSignupMode("closed");
 		}
 	});
 
 	test("setting a password works once, and then Change password takes over", async () => {
-		await setSignupOpen(true);
+		await setSignupMode("open");
 		try {
 			const email = `${unique("setpw")}@${EMAIL_DOMAIN}`;
 			const result = await signInWith(verified(unique("sub"), email));
@@ -1219,12 +1245,12 @@ describe("account settings", () => {
 				clientFor().auth.setPassword({ newPassword: "whatever-password-1" }),
 			).rejects.toMatchObject({ code: "UNAUTHORIZED" });
 		} finally {
-			await setSignupOpen(false);
+			await setSignupMode("closed");
 		}
 	});
 
 	test("a password reset gives a provider-only account its first password", async () => {
-		await setSignupOpen(true);
+		await setSignupMode("open");
 		try {
 			const email = `${unique("reset")}@${EMAIL_DOMAIN}`;
 			const result = await signInWith(verified(unique("sub"), email));
@@ -1255,7 +1281,7 @@ describe("account settings", () => {
 			});
 			expect(viaPassword.user.id).toBe(user?.id ?? "");
 		} finally {
-			await setSignupOpen(false);
+			await setSignupMode("closed");
 		}
 	});
 

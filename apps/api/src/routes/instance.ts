@@ -4,7 +4,12 @@ import * as v from "valibot";
 import { requireInstanceAdmin } from "../lib/access";
 import { useSecureCookies } from "../lib/cookies";
 import { markEmailVerified } from "../lib/email-verification";
-import { isFirstRun, isSignupOpen, setSignupOpen } from "../lib/instance";
+import {
+	getSignupMode,
+	isFirstRun,
+	SIGNUP_MODES,
+	setSignupMode,
+} from "../lib/instance";
 import {
 	isMailEnabled,
 	sendMailOrThrow,
@@ -19,7 +24,7 @@ const sql = new DB().sqlite;
 // Public: the sign-in and sign-up pages need this before anyone is signed in.
 export const findInstanceStatus = base.handler(async () => ({
 	needsSetup: await isFirstRun(),
-	signupOpen: await isSignupOpen(),
+	signup: await getSignupMode(),
 	emailEnabled: isMailEnabled(),
 	secureCookies: useSecureCookies(),
 }));
@@ -31,11 +36,34 @@ export const findInstanceVersion = base.handler(async ({ context }) => {
 });
 
 export const updateInstance = base
-	.input(v.object({ signupOpen: v.boolean() }))
+	.input(v.object({ signup: v.picklist(SIGNUP_MODES) }))
 	.handler(async ({ input, context }) => {
 		await requireInstanceAdmin(context.headers);
-		await setSignupOpen(input.signupOpen);
-		return { signupOpen: input.signupOpen };
+		await setSignupMode(input.signup);
+		return { signup: input.signup };
+	});
+
+// Instance admins stay admins: there's no way back to admin from here.
+export const setUserRole = base
+	.input(v.object({ userId: v.string(), role: v.picklist(["guest", "user"]) }))
+	.handler(async ({ input, context }) => {
+		await requireInstanceAdmin(context.headers);
+
+		const user = (
+			await sql`SELECT role FROM auth_user WHERE id = ${input.userId}`
+		)[0] as Pick<tables["auth_user"], "role"> | undefined;
+		if (!user) throw new ORPCError("NOT_FOUND");
+		if (user.role === "admin") {
+			throw new ORPCError("BAD_REQUEST", {
+				message: "An instance admin's role can't be changed.",
+			});
+		}
+
+		await sql`
+			UPDATE auth_user SET role = ${input.role}, updatedAt = ${Date.now()}
+			WHERE id = ${input.userId}
+		`;
+		return { role: input.role };
 	});
 
 export const findInstanceUsers = base.handler(async ({ context }) => {

@@ -6,12 +6,15 @@ export type auth_session = {
 	createdAt: number;
 };
 
+export type InstanceRole = "admin" | "user" | "guest";
+
 export type auth_user = {
 	id: string;
 	fullName: string;
 	displayName: string;
 	email: string;
-	role: string | null;
+	/** null only on accounts from before instance roles existed. */
+	role: InstanceRole | null;
 	image: string | null;
 	/** 1 when they asked for notification emails; off (0) by default. */
 	notifyByEmail: number;

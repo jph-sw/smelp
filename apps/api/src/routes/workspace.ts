@@ -157,6 +157,16 @@ export const createWorkspace = base
 
 		await requireVerifiedEmail(caller.userId);
 
+		const { role } = (
+			await sql`SELECT role FROM auth_user WHERE id = ${caller.userId}`
+		)[0] as Pick<tables["auth_user"], "role">;
+		if (role === "guest") {
+			throw new ORPCError("FORBIDDEN", {
+				message:
+					"Guest accounts can't create workspaces. Ask a workspace admin for an invite link.",
+			});
+		}
+
 		const slug = utils.toSlug(input.name);
 		if (!slug) {
 			throw new ORPCError("BAD_REQUEST", {

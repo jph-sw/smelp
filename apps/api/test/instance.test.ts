@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { createRouterClient } from "@orpc/server";
 
 // Imported dynamically so setup.ts points the database at a temp file first.
@@ -69,14 +69,14 @@ beforeAll(async () => {
 	await sql`DELETE FROM auth_space_invite`;
 	await sql`DELETE FROM auth_space`;
 	await sql`DELETE FROM auth_user`;
-	await sql`UPDATE instance_setting SET value = 'false' WHERE key = 'signupOpen'`;
+	await sql`UPDATE instance_setting SET value = 'closed' WHERE key = 'signup'`;
 });
 
 describe("first run", () => {
 	test("a fresh install reports that it needs setup", async () => {
 		expect(await clientFor().instance.status()).toEqual({
 			needsSetup: true,
-			signupOpen: false,
+			signup: "closed",
 			emailEnabled: false,
 			secureCookies: false,
 		});
@@ -100,12 +100,12 @@ describe("sign-up policy", () => {
 		const user = await signUp("regular", invite.token);
 
 		await expectCode(
-			user.client.instance.update({ signupOpen: true }),
+			user.client.instance.update({ signup: "open" }),
 			"FORBIDDEN",
 		);
 		await expectCode(user.client.instance.users(), "FORBIDDEN");
 		await expectCode(
-			clientFor().instance.update({ signupOpen: true }),
+			clientFor().instance.update({ signup: "open" }),
 			"UNAUTHORIZED",
 		);
 		await expectCode(clientFor().instance.users(), "UNAUTHORIZED");
@@ -121,11 +121,11 @@ describe("sign-up policy", () => {
 	});
 
 	test("an admin can open it, and later accounts aren't admins", async () => {
-		await admin.client.instance.update({ signupOpen: true });
+		await admin.client.instance.update({ signup: "open" });
 		const user = await signUp("open-door");
 		expect(await roleOf(user.id)).toBe("user");
 
-		await admin.client.instance.update({ signupOpen: false });
+		await admin.client.instance.update({ signup: "closed" });
 		await expectCode(signUp("closed-again"), "FORBIDDEN");
 	});
 
@@ -142,6 +142,102 @@ describe("sign-up policy", () => {
 			"image",
 			"role",
 		]);
+	});
+});
+
+describe("guest sign-up", () => {
+	const statusMode = async () => (await clientFor().instance.status()).signup;
+
+	afterAll(() => admin.client.instance.update({ signup: "closed" }));
+
+	test("public sign-up in guest mode makes a guest", async () => {
+		await admin.client.instance.update({ signup: "guest" });
+		expect(await statusMode()).toBe("guest");
+
+		const guest = await signUp("guest-door");
+		expect(await roleOf(guest.id)).toBe("guest");
+	});
+
+	test("an invite in guest mode still makes a user", async () => {
+		await admin.client.instance.update({ signup: "guest" });
+		const invite = await newInvite("guest");
+		const user = await signUp("guest-mode-invitee", invite.token);
+		expect(await roleOf(user.id)).toBe("user");
+	});
+
+	test("open mode makes a user and closed refuses", async () => {
+		await admin.client.instance.update({ signup: "open" });
+		expect(await roleOf((await signUp("open-again")).id)).toBe("user");
+
+		await admin.client.instance.update({ signup: "closed" });
+		await expectCode(signUp("closed-guest"), "FORBIDDEN");
+	});
+
+	test("an unknown mode is rejected", () =>
+		expectCode(
+			admin.client.instance.update({ signup: "everyone" as "open" }),
+			"BAD_REQUEST",
+		));
+
+	test("a guest can't create a workspace until an admin makes them a user", async () => {
+		await admin.client.instance.update({ signup: "guest" });
+		const guest = await signUp("guest-promoted");
+
+		await expect(
+			guest.client.workspace.create({ name: "Guest space" }),
+		).rejects.toMatchObject({
+			code: "FORBIDDEN",
+			message:
+				"Guest accounts can't create workspaces. Ask a workspace admin for an invite link.",
+		});
+
+		await admin.client.instance.setUserRole({ userId: guest.id, role: "user" });
+		expect(await roleOf(guest.id)).toBe("user");
+		await guest.client.workspace.create({ name: "Guest space" });
+
+		await admin.client.instance.setUserRole({
+			userId: guest.id,
+			role: "guest",
+		});
+		expect(await roleOf(guest.id)).toBe("guest");
+	});
+
+	test("a guest can still accept a workspace invite with its role", async () => {
+		await admin.client.instance.update({ signup: "guest" });
+		const guest = await signUp("guest-joins");
+		const invite = await newInvite("member");
+
+		await guest.client.workspaceInvites.accept({ token: invite.token });
+		const members = await admin.client.workspaceMembers.find({
+			workspaceId: WORKSPACE,
+		});
+		expect(members.find((member) => member.userId === guest.id)?.role).toBe(
+			"member",
+		);
+	});
+
+	test("only instance admins can change roles, and never an admin's", async () => {
+		await admin.client.instance.update({ signup: "guest" });
+		const guest = await signUp("guest-pusher");
+
+		await expectCode(
+			guest.client.instance.setUserRole({ userId: guest.id, role: "user" }),
+			"FORBIDDEN",
+		);
+		await expectCode(
+			clientFor().instance.setUserRole({ userId: guest.id, role: "user" }),
+			"UNAUTHORIZED",
+		);
+		await expectCode(
+			admin.client.instance.setUserRole({ userId: admin.id, role: "guest" }),
+			"BAD_REQUEST",
+		);
+		await expectCode(
+			admin.client.instance.setUserRole({ userId: "nobody", role: "user" }),
+			"NOT_FOUND",
+		);
+		expect(await roleOf(guest.id)).toBe("guest");
+		expect(await roleOf(admin.id)).toBe("admin");
 	});
 });
 

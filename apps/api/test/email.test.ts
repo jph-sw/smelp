@@ -600,6 +600,6 @@ test("the status endpoint never exposes mail settings", async () => {
 		"emailEnabled",
 		"needsSetup",
 		"secureCookies",
-		"signupOpen",
+		"signup",
 	]);
 });

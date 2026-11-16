@@ -64,6 +64,7 @@ import {
 	findInstanceVersion,
 	markEmailVerifiedByAdmin,
 	sendTestEmail,
+	setUserRole,
 	updateInstance,
 } from "./routes/instance";
 import {
@@ -149,6 +150,7 @@ export const router = {
 		createPasswordReset,
 		sendTestEmail,
 		markEmailVerified: markEmailVerifiedByAdmin,
+		setUserRole,
 	},
 	auth: {
 		signIn,

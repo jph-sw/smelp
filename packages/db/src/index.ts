@@ -186,6 +186,8 @@ export type tables = {
 	cycle: cycle;
 };
 
+export type { InstanceRole } from "../types/tables/auth";
+
 export const DEFAULTS = {
 	STATE_GROUPS: STATE_GROUPS,
 	REACTION_EMOJIS: REACTION_EMOJIS,

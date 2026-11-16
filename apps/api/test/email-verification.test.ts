@@ -162,7 +162,7 @@ async function settle() {
 }
 
 let admin: { client: ReturnType<typeof clientFor>; id: string };
-let wasOpen = "false";
+let previousMode = "false";
 let workspaceCount = 0;
 
 beforeAll(async () => {
@@ -178,18 +178,18 @@ beforeAll(async () => {
 	admin = { id: user.id, client: clientFor(session.authSessionToken) };
 
 	const setting = (
-		await sql`SELECT value FROM instance_setting WHERE key = 'signupOpen'`
+		await sql`SELECT value FROM instance_setting WHERE key = 'signup'`
 	)[0] as { value: string };
-	wasOpen = setting.value;
+	previousMode = setting.value;
 });
 beforeEach(async () => {
 	received.length = 0;
-	await sql`UPDATE instance_setting SET value = 'true' WHERE key = 'signupOpen'`;
+	await sql`UPDATE instance_setting SET value = 'open' WHERE key = 'signup'`;
 	turnMailOn();
 });
 afterEach(clearMailEnv);
 afterAll(async () => {
-	await sql`UPDATE instance_setting SET value = ${wasOpen} WHERE key = 'signupOpen'`;
+	await sql`UPDATE instance_setting SET value = ${previousMode} WHERE key = 'signup'`;
 	smtp.stop(true);
 });
 
@@ -360,7 +360,7 @@ describe("accounts that count as verified", () => {
 			workspaceId: workspace.id,
 			role: "member",
 		});
-		await sql`UPDATE instance_setting SET value = 'false' WHERE key = 'signupOpen'`;
+		await sql`UPDATE instance_setting SET value = 'closed' WHERE key = 'signup'`;
 
 		await expectCode(
 			clientFor().auth.signUp({

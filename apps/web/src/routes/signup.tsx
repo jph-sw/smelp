@@ -75,7 +75,7 @@ function SignUp() {
 	const { invite } = Route.useSearch();
 	const { data: status } = useSuspenseQuery(instanceStatusQueryOptions);
 
-	if (!status.needsSetup && !status.signupOpen && !invite) {
+	if (!status.needsSetup && status.signup === "closed" && !invite) {
 		return (
 			<div className="flex min-h-dvh w-full items-center justify-center p-4">
 				<Card className="w-full max-w-sm">

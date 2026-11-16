@@ -2,7 +2,12 @@ import { Auth } from "@smelp/auth";
 import { DB, type tables } from "@smelp/db";
 import { eventBus } from "@smelp/events";
 import { SQL } from "bun";
-import { isFirstRun, isSignupOpen, makeFirstAdmin } from "./instance";
+import {
+	getSignupMode,
+	isFirstRun,
+	makeFirstAdmin,
+	signupAccess,
+} from "./instance";
 import { findUsableInvite } from "./invites";
 import type { LinkTarget, OidcClaims } from "./oidc";
 
@@ -112,11 +117,13 @@ async function resolve(
 	if (linked[0]) return { ok: true, userId: linked[0].userId, created: false };
 
 	const firstRun = await isFirstRun();
-	const allowed =
-		firstRun ||
-		(await isSignupOpen()) ||
-		(invite !== null && (await findUsableInvite(invite)) !== undefined);
-	if (!allowed) return { ok: false, error: "not_linked" };
+	const access = signupAccess({
+		firstRun,
+		mode: await getSignupMode(),
+		hasInvite:
+			invite !== null && (await findUsableInvite(invite)) !== undefined,
+	});
+	if (!access.allowed) return { ok: false, error: "not_linked" };
 
 	// Only the claims decide this one, so it says nothing about existing accounts.
 	if (!claims.email || !claims.emailVerified) {
@@ -145,7 +152,7 @@ async function resolve(
 		email: claims.email,
 		createdAt: now,
 		updatedAt: now,
-		role: "user",
+		role: access.role,
 		image: null,
 		notifyByEmail: 0,
 		// The provider said the address is verified, or we'd have stopped above.

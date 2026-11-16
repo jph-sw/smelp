@@ -116,9 +116,9 @@ function RouteComponent() {
 					</div>
 					<Switch
 						aria-labelledby="signup-label"
-						checked={status.signupOpen}
+						checked={status.signup === "open"}
 						disabled={isPending}
-						onCheckedChange={(signupOpen) => update({ signupOpen })}
+						onCheckedChange={(on) => update({ signup: on ? "open" : "closed" })}
 					/>
 				</CardContent>
 			</Card>
