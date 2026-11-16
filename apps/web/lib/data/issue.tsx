@@ -1,3 +1,4 @@
+import type { tables } from "@smelp/db";
 import { queryOptions } from "@tanstack/react-query";
 import { orpc } from "../orpc";
 import type { ReactionEmoji } from "../reactions";
@@ -108,7 +109,7 @@ export const attachmentLimitsQueryOptions = queryOptions({
 	staleTime: Number.POSITIVE_INFINITY,
 });
 
-export const attachmentUrl = (id: string) => `/api/attachments/${id}`;
+export type UploadedAttachment = Omit<tables["attachment"], "storageKey">;
 
 // Its message is written for the user, like the server's own refusals.
 export class AttachmentUploadError extends Error {}
@@ -118,7 +119,7 @@ export async function uploadAttachment(input: {
 	issueId: string;
 	commentId?: string;
 	file: File;
-}) {
+}): Promise<UploadedAttachment> {
 	const query = new URLSearchParams({ issueId: input.issueId });
 	if (input.commentId) query.set("commentId", input.commentId);
 	const body = new FormData();
@@ -143,6 +144,7 @@ export async function uploadAttachment(input: {
 		const message = (await response.text().catch(() => "")).slice(0, 200);
 		throw new AttachmentUploadError(message || "The upload failed.");
 	}
+	return response.json();
 }
 
 export const setReaction = (input: {

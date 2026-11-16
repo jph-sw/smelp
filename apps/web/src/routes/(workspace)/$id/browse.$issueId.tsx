@@ -9,6 +9,7 @@ import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
 import { IssueAttachments } from "#/components/issue/attachments";
 import { IssueActivity } from "#/components/issue/issue-activity";
+import { IssueDescription } from "#/components/issue/issue-description";
 import { IssueLinks } from "#/components/issue/issue-links";
 import { IssueProperties } from "#/components/issue/issue-properties";
 import { IssueRelations } from "#/components/issue/issue-relations";
@@ -189,6 +190,13 @@ function RouteComponent() {
 			moduleId?: string | null;
 			cycleId?: string | null;
 		}) => updateIssue({ id: issue.id, ...changes }),
+		// Shown at once, so a saved description doesn't flash its old text before
+		// the refetch below.
+		onMutate: (changes) =>
+			queryClient.setQueryData(
+				issueQueryOptions({ issueId: issue.id }).queryKey,
+				(current) => current && { ...current, ...changes },
+			),
 		onError: (e) => toastError(e, "Couldn't save your change."),
 		onSettled: () =>
 			Promise.all([
@@ -278,41 +286,27 @@ function RouteComponent() {
 							{issue.id}
 						</div>
 						{canWrite ? (
-							<>
-								<EditableText
-									key={`${issue.id}-title`}
-									label="Title"
-									value={issue.title}
-									singleLine
-									required
-									className="-ml-1 text-xl font-semibold md:text-xl"
-									onSave={(title) => update({ title })}
-								/>
-								<EditableText
-									key={`${issue.id}-description`}
-									label="Description"
-									placeholder="Add a description"
-									value={issue.description}
-									className="-ml-1 min-h-16 max-w-prose text-sm/relaxed md:text-sm/relaxed"
-									onSave={(description) => update({ description })}
-								/>
-							</>
+							<EditableText
+								key={`${issue.id}-title`}
+								label="Title"
+								value={issue.title}
+								singleLine
+								required
+								className="-ml-1 text-xl font-semibold md:text-xl"
+								onSave={(title) => update({ title })}
+							/>
 						) : (
-							<>
-								<h1 className="text-xl font-semibold [overflow-wrap:anywhere]">
-									{issue.title}
-								</h1>
-								{issue.description ? (
-									<p className="max-w-prose text-sm/relaxed whitespace-pre-wrap [overflow-wrap:anywhere]">
-										{issue.description}
-									</p>
-								) : (
-									<p className="text-sm text-muted-foreground">
-										No description.
-									</p>
-								)}
-							</>
+							<h1 className="text-xl font-semibold [overflow-wrap:anywhere]">
+								{issue.title}
+							</h1>
 						)}
+						<IssueDescription
+							key={`${issue.id}-description`}
+							issueId={issue.id}
+							value={issue.description}
+							canWrite={canWrite}
+							onSave={(description) => update({ description })}
+						/>
 					</div>
 					<SubItems
 						issue={issue}

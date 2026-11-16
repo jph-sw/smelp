@@ -11,11 +11,11 @@ import {
 	useSuspenseQuery,
 } from "@tanstack/react-query";
 import { useRef } from "react";
+import { attachmentUrl } from "#/lib/attachment-url";
 import {
 	AttachmentUploadError,
 	attachmentLimitsQueryOptions,
 	attachmentsQueryOptions,
-	attachmentUrl,
 	deleteAttachment,
 	uploadAttachment,
 } from "#/lib/data/issue";
@@ -67,7 +67,7 @@ function AttachButton({
 	const { mutate, isPending } = useMutation({
 		mutationFn: (files: File[]) =>
 			// One at a time, so a refused file doesn't leave the rest in doubt.
-			files.reduce(
+			files.reduce<Promise<unknown>>(
 				(previous, file) =>
 					previous.then(() => uploadAttachment({ issueId, commentId, file })),
 				Promise.resolve(),
