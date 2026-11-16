@@ -25,6 +25,7 @@ import { issueTypeLabel } from "#/lib/issue-types";
 import { REACTION_EMOJIS, type ReactionEmoji } from "#/lib/reactions";
 import { RELATION_PHRASES } from "#/lib/relations";
 import { cn, formatDate, formatRelativeTime, initials } from "#/lib/utils";
+import { RichTextEditor } from "../rich-text/rich-text-editor";
 import {
 	AlertDialog,
 	AlertDialogCancel,
@@ -38,9 +39,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Button } from "../ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
-import { Textarea } from "../ui/textarea";
 import { CommentAttachments } from "./attachments";
-import { CommentBody, MentionTextarea } from "./mentions";
 
 const relatedLabel = (entry: { relatedId?: string | null }) =>
 	entry.relatedId ?? "another work item";
@@ -121,6 +120,9 @@ function describeActivity(
 	}
 }
 
+const composerBox =
+	"rounded-md border border-input bg-background px-3 py-2 focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 [&_.rich-text]:min-h-16";
+
 function Timestamp({ time }: { time: number }) {
 	return (
 		<time
@@ -176,7 +178,7 @@ type CommentReaction = {
 	users: string[];
 };
 
-function Reactions({
+function ReactionPills({
 	reactions,
 	canReact,
 	onToggle,
@@ -185,9 +187,7 @@ function Reactions({
 	canReact: boolean;
 	onToggle: (emoji: ReactionEmoji, reacted: boolean) => void;
 }) {
-	const [pickerOpen, setPickerOpen] = useState(false);
-	if (reactions.length === 0 && !canReact) return null;
-
+	if (reactions.length === 0) return null;
 	return (
 		<div className="mt-2 flex flex-wrap items-center gap-1">
 			{reactions.map((reaction) => (
@@ -209,7 +209,7 @@ function Reactions({
 						"flex h-6 items-center gap-1 rounded-full border px-2 text-xs",
 						reaction.reacted
 							? "border-primary bg-primary/10 text-foreground"
-							: "border-transparent bg-background text-muted-foreground",
+							: "bg-background text-muted-foreground",
 						canReact && "cursor-pointer hover:border-foreground/30",
 					)}
 				>
@@ -217,34 +217,44 @@ function Reactions({
 					<span className="tabular-nums">{reaction.count}</span>
 				</button>
 			))}
-			{canReact && (
-				<Popover open={pickerOpen} onOpenChange={setPickerOpen}>
-					<PopoverTrigger
-						aria-label="Add reaction"
-						render={<Button variant="ghost" size="icon-sm" />}
-					>
-						<HugeiconsIcon icon={SmileIcon} />
-					</PopoverTrigger>
-					<PopoverContent align="start" className="w-auto flex-row gap-1 p-1.5">
-						{REACTION_EMOJIS.map((emoji) => (
-							<button
-								key={emoji}
-								type="button"
-								aria-label={`React with ${emoji}`}
-								className="cursor-pointer rounded-md p-1 text-base hover:bg-secondary"
-								onClick={() => {
-									setPickerOpen(false);
-									const existing = reactions.find((r) => r.emoji === emoji);
-									onToggle(emoji, !existing?.reacted);
-								}}
-							>
-								{emoji}
-							</button>
-						))}
-					</PopoverContent>
-				</Popover>
-			)}
 		</div>
+	);
+}
+
+function ReactionPicker({
+	reactions,
+	onToggle,
+}: {
+	reactions: CommentReaction[];
+	onToggle: (emoji: ReactionEmoji, reacted: boolean) => void;
+}) {
+	const [open, setOpen] = useState(false);
+	return (
+		<Popover open={open} onOpenChange={setOpen}>
+			<PopoverTrigger
+				aria-label="Add reaction"
+				render={<Button variant="ghost" size="icon-sm" />}
+			>
+				<HugeiconsIcon icon={SmileIcon} />
+			</PopoverTrigger>
+			<PopoverContent align="end" className="w-auto flex-row gap-1 p-1.5">
+				{REACTION_EMOJIS.map((emoji) => (
+					<button
+						key={emoji}
+						type="button"
+						aria-label={`React with ${emoji}`}
+						className="cursor-pointer rounded-md p-1 text-base hover:bg-secondary"
+						onClick={() => {
+							setOpen(false);
+							const existing = reactions.find((r) => r.emoji === emoji);
+							onToggle(emoji, !existing?.reacted);
+						}}
+					>
+						{emoji}
+					</button>
+				))}
+			</PopoverContent>
+		</Popover>
 	);
 }
 
@@ -307,17 +317,17 @@ function CommentItem({
 	};
 
 	return (
-		<li className="flex gap-3 rounded-lg bg-secondary p-3">
-			<Avatar size="sm">
+		<li className="flex gap-3">
+			<Avatar size="sm" className="mt-2">
 				<AvatarImage src={comment.authorImage ?? undefined} alt="" />
 				<AvatarFallback>{initials(comment.authorName)}</AvatarFallback>
 			</Avatar>
-			<div className="min-w-0 flex-1">
-				<div className="flex items-baseline justify-between gap-3">
+			<div className="min-w-0 flex-1 rounded-lg border bg-card px-3 py-2">
+				<div className="flex min-h-7 items-center justify-between gap-3">
 					<span className="text-xs font-medium [overflow-wrap:anywhere]">
 						{comment.authorName ?? "Former member"}
 					</span>
-					<div className="flex items-center gap-1">
+					<div className="flex items-center gap-0.5">
 						<Timestamp time={comment.createdAt} />
 						{comment.editedAt !== null && (
 							<span
@@ -326,6 +336,12 @@ function CommentItem({
 							>
 								· edited
 							</span>
+						)}
+						{canReact && !editing && (
+							<ReactionPicker
+								reactions={comment.reactions}
+								onToggle={onToggleReaction}
+							/>
 						)}
 						{canEdit && !editing && (
 							<Button
@@ -350,23 +366,16 @@ function CommentItem({
 							save();
 						}}
 					>
-						<Textarea
+						<RichTextEditor
+							value={comment.body}
+							issueId={issueId}
+							mentions={{ members, currentUserId }}
 							aria-label="Edit comment"
 							autoFocus
-							value={draft}
-							onChange={(event) => setDraft(event.target.value)}
-							onKeyDown={(event) => {
-								if (event.key === "Escape") {
-									event.preventDefault();
-									cancel();
-								} else if (
-									event.key === "Enter" &&
-									(event.metaKey || event.ctrlKey)
-								) {
-									event.preventDefault();
-									save();
-								}
-							}}
+							className={composerBox}
+							onChange={setDraft}
+							onSubmit={save}
+							onCancel={cancel}
 						/>
 						<div className="flex gap-2">
 							<Button type="submit" size="sm" disabled={!canSave}>
@@ -378,28 +387,27 @@ function CommentItem({
 						</div>
 					</form>
 				) : (
-					<CommentBody
-						body={comment.body}
-						members={members}
-						currentUserId={currentUserId}
+					<RichTextEditor
+						value={comment.body}
+						editable={false}
+						mentions={{ members, currentUserId }}
+						aria-label={`Comment by ${comment.authorName ?? "a former member"}`}
 					/>
 				)}
+				<CommentAttachments
+					issueId={issueId}
+					commentId={comment.id}
+					userId={userId}
+					canWrite={canWrite}
+					canManage={canManage}
+					canAttach={editing && canWrite && comment.authorId === userId}
+				/>
 				{!editing && (
-					<>
-						<CommentAttachments
-							issueId={issueId}
-							commentId={comment.id}
-							userId={userId}
-							canWrite={canWrite}
-							canManage={canManage}
-							canAttach={canWrite && comment.authorId === userId}
-						/>
-						<Reactions
-							reactions={comment.reactions}
-							canReact={canReact}
-							onToggle={onToggleReaction}
-						/>
-					</>
+					<ReactionPills
+						reactions={comment.reactions}
+						canReact={canReact}
+						onToggle={onToggleReaction}
+					/>
 				)}
 			</div>
 		</li>
@@ -436,6 +444,8 @@ export function IssueActivity({
 		enabled: showHistory,
 	});
 	const [draft, setDraft] = useState("");
+	// A new editor after each post starts empty, with no undo history.
+	const [composer, setComposer] = useState(0);
 
 	const refreshComments = () =>
 		queryClient.invalidateQueries({ queryKey: commentsOptions.queryKey });
@@ -444,6 +454,7 @@ export function IssueActivity({
 		mutationFn: createComment,
 		onSuccess: async () => {
 			setDraft("");
+			setComposer((n) => n + 1);
 			await refreshComments();
 		},
 		onError: (e) => toastError(e),
@@ -564,12 +575,15 @@ export function IssueActivity({
 						submit();
 					}}
 				>
-					<MentionTextarea
+					<RichTextEditor
+						key={composer}
+						value=""
+						issueId={issueId}
+						mentions={{ members, currentUserId: userId }}
 						aria-label="Add a comment"
-						placeholder="Add a comment. Type @ to mention someone."
-						value={draft}
-						onValueChange={setDraft}
-						members={members}
+						placeholder="Add a comment. Type @ to mention someone, / for formatting."
+						className={composerBox}
+						onChange={setDraft}
 						onSubmit={submit}
 					/>
 					<Button type="submit" disabled={!draft.trim() || isAdding}>

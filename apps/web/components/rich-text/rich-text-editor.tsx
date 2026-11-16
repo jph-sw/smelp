@@ -1,3 +1,4 @@
+import type { ProjectMember } from "@smelp/db";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Editor } from "@tiptap/core";
 import { TextSelection } from "@tiptap/pm/state";
@@ -19,6 +20,7 @@ import {
 	askForLink,
 	createSlashMenuStore,
 	isSlashMenuOpen,
+	mentionSuggestions,
 	SlashMenu,
 	slashCommands,
 } from "./slash-menu";
@@ -46,7 +48,11 @@ function findUpload(editor: Editor, uploadId: string) {
 //
 // With `onCommit`, it edits in place: leaving it or Ctrl+Enter hands back the
 // Markdown when it changed, and Escape goes back to the last committed value.
-// Without, it reports every change through `onChange`, as in a form.
+// Without, it reports every change through `onChange`, as in a form, and
+// Ctrl+Enter and Escape call `onSubmit` and `onCancel`.
+//
+// With `mentions`, "@" offers those project members, and mentions show their
+// current names.
 //
 // With an `issueId`, pasted, dropped and picked files are uploaded to that work
 // item and inserted at the caret.
@@ -57,6 +63,10 @@ export function RichTextEditor({
 	placeholder,
 	onChange,
 	onCommit,
+	onSubmit,
+	onCancel,
+	mentions,
+	autoFocus = false,
 	className,
 	...aria
 }: {
@@ -66,6 +76,10 @@ export function RichTextEditor({
 	placeholder?: string;
 	onChange?: (markdown: string) => void;
 	onCommit?: (markdown: string) => void;
+	onSubmit?: () => void;
+	onCancel?: () => void;
+	mentions?: { members: ProjectMember[]; currentUserId: string | undefined };
+	autoFocus?: boolean;
 	className?: string;
 	"aria-label"?: string;
 	"aria-labelledby"?: string;
@@ -81,8 +95,26 @@ export function RichTextEditor({
 	const [store] = useState(createSlashMenuStore);
 
 	// The editor is made once, so its handlers read these through a ref.
-	const latest = useRef({ value, issueId, limits, onChange, onCommit });
-	latest.current = { value, issueId, limits, onChange, onCommit };
+	const latest = useRef({
+		value,
+		issueId,
+		limits,
+		onChange,
+		onCommit,
+		onSubmit,
+		onCancel,
+		mentions,
+	});
+	latest.current = {
+		value,
+		issueId,
+		limits,
+		onChange,
+		onCommit,
+		onSubmit,
+		onCancel,
+		mentions,
+	};
 	// What the editor last showed or reported, so a `value` that only echoes it
 	// back doesn't reset the content and the caret.
 	const known = useRef(value);
@@ -191,9 +223,34 @@ export function RichTextEditor({
 	const [options] = useState(
 		(): UseEditorOptions => ({
 			editable,
+			autofocus: autoFocus && "end",
 			content: parseMarkdown(value),
 			extensions: [
-				...richTextExtensions({ placeholder }),
+				...richTextExtensions({
+					placeholder,
+					mentionLookup: (id) => {
+						const { mentions } = latest.current;
+						const member = mentions?.members.find((m) => m.userId === id);
+						return (
+							member && {
+								name: member.displayName,
+								self: member.userId === mentions?.currentUserId,
+							}
+						);
+					},
+				}),
+				...(mentions
+					? [
+							mentionSuggestions({
+								store,
+								people: () =>
+									(latest.current.mentions?.members ?? []).map((member) => ({
+										value: member.userId,
+										label: member.displayName,
+									})),
+							}),
+						]
+					: []),
 				slashCommands({
 					store,
 					uploads: issueId !== undefined,
@@ -216,9 +273,19 @@ export function RichTextEditor({
 					: { role: "group", ...aria, class: "rich-text" },
 				handleKeyDown: (view, event) => {
 					const editor = editorRef.current;
-					if (!editor || !latest.current.onCommit || isSlashMenuOpen(store)) {
-						return false;
+					const { onCommit, onSubmit, onCancel } = latest.current;
+					if (!editor || isSlashMenuOpen(store)) return false;
+					if (event.key === "Escape" && onCancel) {
+						event.preventDefault();
+						onCancel();
+						return true;
 					}
+					if (isModEnter(event) && onSubmit) {
+						event.preventDefault();
+						onSubmit();
+						return true;
+					}
+					if (!onCommit) return false;
 					if (event.key === "Escape") {
 						event.preventDefault();
 						editor.commands.setContent(latest.current.value, {
