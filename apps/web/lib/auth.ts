@@ -1,4 +1,3 @@
-import { ORPCError, safe } from "@orpc/client";
 import type { tables } from "@smelp/db";
 import { type QueryClient, queryOptions } from "@tanstack/react-query";
 import { orpc } from "./orpc";
@@ -37,16 +36,8 @@ export async function signOut() {
 }
 
 export async function getCurrentUser(): Promise<AuthUser | null> {
-	const { data, error } = await safe(orpc.auth.me());
-
-	if (error) {
-		if (error instanceof ORPCError && error.code === "UNAUTHORIZED") {
-			return null;
-		}
-		throw error;
-	}
-
-	return data.user;
+	const { user } = await orpc.auth.session();
+	return user;
 }
 
 export const currentUserQueryOptions = queryOptions({

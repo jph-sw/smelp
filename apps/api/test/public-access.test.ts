@@ -480,6 +480,11 @@ describe("a visitor without an account", () => {
 		await expectCode(visitor.auth.me(), "UNAUTHORIZED");
 	});
 
+	test("is told there's no session instead of being refused", async () => {
+		expect(await visitor.auth.session()).toEqual({ user: null });
+		expect((await outsider.client.auth.session()).user?.id).toBe(outsider.id);
+	});
+
 	test("is refused the same way for a project that doesn't exist", async () => {
 		await expectCode(
 			visitor.project.find({ projectId: "NOPE" }),
@@ -722,6 +727,7 @@ describe("a session cookie that no longer works", () => {
 			expect((await attachmentResponse(headers, attachmentId)).status).toBe(
 				200,
 			);
+			expect(await client.auth.session()).toEqual({ user: null });
 		}
 	});
 

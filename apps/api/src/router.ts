@@ -15,7 +15,7 @@ import {
 	findApiTokens,
 	revokeApiToken,
 } from "./routes/auth/api-tokens";
-import { me } from "./routes/auth/me";
+import { me, session } from "./routes/auth/me";
 import {
 	findLinkedAccounts,
 	findSignInOptions,
@@ -157,6 +157,7 @@ export const router = {
 		signUp,
 		signOut,
 		me,
+		session,
 		signInOptions: findSignInOptions,
 		linkedAccounts: findLinkedAccounts,
 		unlinkOidc,
