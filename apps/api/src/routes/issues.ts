@@ -28,7 +28,7 @@ export const findIssues = base
 export const findMyIssues = base
 	.input(v.object({ workspaceId: v.string() }))
 	.handler(async ({ input, context }) => {
-		const { session } = await requireWorkspacePermission(
+		const { caller } = await requireWorkspacePermission(
 			context.headers,
 			input.workspaceId,
 			"space:read",
@@ -45,9 +45,9 @@ export const findMyIssues = base
 			JOIN state ON state.id = issue.state
 			JOIN auth_space_member
 				ON auth_space_member.spaceId = project.spaceId
-				AND auth_space_member.userId = ${session.userId}
+				AND auth_space_member.userId = ${caller.userId}
 			WHERE issue.workspaceId = ${input.workspaceId}
-				AND issue.assignee = ${session.userId}
+				AND issue.assignee = ${caller.userId}
 				AND project.archivedAt IS NULL
 				AND state."group" NOT IN ('completed', 'cancelled')
 			ORDER BY issue.updatedAt DESC
@@ -85,7 +85,7 @@ export const searchIssues = base
 		}),
 	)
 	.handler(async ({ input, context }) => {
-		const { session } = await requireWorkspacePermission(
+		const { caller } = await requireWorkspacePermission(
 			context.headers,
 			input.workspaceId,
 			"space:read",
@@ -97,9 +97,7 @@ export const searchIssues = base
 		// Members of a project, in any role, find its issues. Being in the workspace alone
 		// isn't enough. Instance admins also find public projects' issues, but never a
 		// private project's unless they're in it: searching shouldn't reach past that.
-		const isInstanceAdmin = (await auth.isInstanceAdmin(session.userId))
-			? 1
-			: 0;
+		const isInstanceAdmin = (await auth.isInstanceAdmin(caller.userId)) ? 1 : 0;
 		const pattern = `%${escapeLike(query)}%`;
 
 		const rows = (await sql`
@@ -126,7 +124,7 @@ export const searchIssues = base
 					OR EXISTS (
 						SELECT 1 FROM auth_space_member
 						WHERE auth_space_member.spaceId = project.spaceId
-							AND auth_space_member.userId = ${session.userId}
+							AND auth_space_member.userId = ${caller.userId}
 					)
 				)
 				AND (

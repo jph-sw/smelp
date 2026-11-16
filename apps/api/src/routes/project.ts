@@ -1,5 +1,4 @@
 import { ORPCError } from "@orpc/server";
-import { getCookie } from "@orpc/server/helpers";
 import { Auth } from "@smelp/auth";
 import { DB, type tables } from "@smelp/db";
 import { eventBus, type ProjectChange } from "@smelp/events";
@@ -8,6 +7,7 @@ import * as v from "valibot";
 import {
 	requireNotArchived,
 	requireProjectPermission,
+	requireUser,
 	requireWorkspacePermission,
 } from "../lib/access";
 import {
@@ -33,7 +33,7 @@ export const createProject = base
 		}),
 	)
 	.handler(async ({ input, context }) => {
-		const { session } = await requireWorkspacePermission(
+		const { caller } = await requireWorkspacePermission(
 			context.headers,
 			input.workspaceId,
 			"content:write",
@@ -44,7 +44,7 @@ export const createProject = base
 		const auth_space: tables["auth_space"] = {
 			id: input.id,
 			name: input.name,
-			ownerId: session.userId,
+			ownerId: caller.userId,
 			createdAt: now,
 			updatedAt: now,
 		};
@@ -52,7 +52,7 @@ export const createProject = base
 		const auth_space_member: tables["auth_space_member"] = {
 			id: crypto.randomUUID(),
 			spaceId: auth_space.id,
-			userId: session.userId,
+			userId: caller.userId,
 			role: "admin",
 			createdAt: now,
 		};
@@ -68,7 +68,7 @@ export const createProject = base
 			spaceId: auth_space.id,
 			image: null,
 			icon: input.icon,
-			createdBy: session.userId,
+			createdBy: caller.userId,
 			createdAt: now,
 			updatedAt: now,
 			archivedAt: null,
@@ -147,7 +147,7 @@ export const createProject = base
 			type: "project.created",
 			workspaceId: input.workspaceId,
 			entityId: project.id,
-			actorId: session.userId,
+			actorId: caller.userId,
 			payload: { projectId: project.id, name: project.name },
 		});
 
@@ -157,11 +157,7 @@ export const createProject = base
 export const findProject = base
 	.input(v.object({ projectId: v.string() }))
 	.handler(async ({ input, context }) => {
-		const token = getCookie(context.headers, "auth_session");
-		if (!token) throw new ORPCError("UNAUTHORIZED");
-
-		const session = await auth.validateAuthSessionToken(token);
-		if (!session) throw new ORPCError("UNAUTHORIZED");
+		const caller = await requireUser(context.headers);
 
 		const project = (
 			await sql`SELECT * FROM project WHERE id = ${input.projectId}`
@@ -172,7 +168,7 @@ export const findProject = base
 		}
 
 		const allowed = await auth.userHasPermission(
-			session.userId,
+			caller.userId,
 			project.spaceId,
 			"space:read",
 		);
@@ -196,7 +192,7 @@ export const updateProject = base
 		}),
 	)
 	.handler(async ({ input, context }) => {
-		const { session, project } = await requireProjectPermission(
+		const { caller, project } = await requireProjectPermission(
 			context.headers,
 			input.projectId,
 			"space:update",
@@ -226,7 +222,7 @@ export const updateProject = base
 		eventBus.emit({
 			type: "project.updated",
 			workspaceId: project.workspaceId,
-			actorId: session.userId,
+			actorId: caller.userId,
 			entityId: project.id,
 			payload: {
 				projectId: project.id,
@@ -245,11 +241,7 @@ export const updateProject = base
 export const deleteProject = base
 	.input(v.object({ projectId: v.string() }))
 	.handler(async ({ input, context }) => {
-		const token = getCookie(context.headers, "auth_session");
-		if (!token) throw new ORPCError("UNAUTHORIZED");
-
-		const session = await auth.validateAuthSessionToken(token);
-		if (!session) throw new ORPCError("UNAUTHORIZED");
+		const caller = await requireUser(context.headers);
 
 		const project = (
 			await sql`SELECT * FROM project WHERE id = ${input.projectId}`
@@ -260,7 +252,7 @@ export const deleteProject = base
 		}
 
 		const allowed = await auth.userHasPermission(
-			session.userId,
+			caller.userId,
 			project.spaceId,
 			"space:delete",
 		);
@@ -281,7 +273,7 @@ export const deleteProject = base
 		eventBus.emit({
 			type: "project.deleted",
 			workspaceId: project.workspaceId,
-			actorId: session.userId,
+			actorId: caller.userId,
 			entityId: project.id,
 			payload: {
 				projectId: project.id,
@@ -297,11 +289,7 @@ export const deleteProject = base
 export const joinProject = base
 	.input(v.object({ projectId: v.string() }))
 	.handler(async ({ input, context }) => {
-		const token = getCookie(context.headers, "auth_session");
-		if (!token) throw new ORPCError("UNAUTHORIZED");
-
-		const session = await auth.validateAuthSessionToken(token);
-		if (!session) throw new ORPCError("UNAUTHORIZED");
+		const caller = await requireUser(context.headers);
 
 		const project = (
 			await sql`SELECT * FROM project WHERE id = ${input.projectId}`
@@ -329,7 +317,7 @@ export const joinProject = base
 		const member: tables["auth_space_member"] = {
 			id: crypto.randomUUID(),
 			spaceId: project.spaceId,
-			userId: session.userId,
+			userId: caller.userId,
 			role: "member",
 			createdAt: Date.now(),
 		};
@@ -356,7 +344,7 @@ function setArchived(archived: boolean) {
 	return base
 		.input(v.object({ projectId: v.string() }))
 		.handler(async ({ input, context }) => {
-			const { session, project } = await requireProjectPermission(
+			const { caller, project } = await requireProjectPermission(
 				context.headers,
 				input.projectId,
 				"space:delete",
@@ -375,7 +363,7 @@ function setArchived(archived: boolean) {
 			await sql`
 				UPDATE project SET
 					archivedAt = ${archived ? now : null},
-					archivedBy = ${archived ? session.userId : null},
+					archivedBy = ${archived ? caller.userId : null},
 					updatedAt = ${now}
 				WHERE id = ${project.id}
 			`;
@@ -383,7 +371,7 @@ function setArchived(archived: boolean) {
 			eventBus.emit({
 				type: archived ? "project.archived" : "project.unarchived",
 				workspaceId: project.workspaceId,
-				actorId: session.userId,
+				actorId: caller.userId,
 				entityId: project.id,
 				payload: {
 					projectId: project.id,

@@ -2,7 +2,7 @@ import { ORPCError } from "@orpc/server";
 import { Auth } from "@smelp/auth";
 import { DB, type tables } from "@smelp/db";
 import * as v from "valibot";
-import { requireSession } from "../lib/access";
+import { requireUser } from "../lib/access";
 import { base } from "../orpc";
 
 const sql = new DB().sqlite;
@@ -42,8 +42,8 @@ function readable(userId: string, isInstanceAdmin: boolean) {
 export const findNotifications = base
 	.input(v.object({ workspaceId: v.string(), before: v.optional(Cursor) }))
 	.handler(async ({ input, context }) => {
-		const session = await requireSession(context.headers);
-		const isAdmin = await auth.isInstanceAdmin(session.userId);
+		const caller = await requireUser(context.headers);
+		const isAdmin = await auth.isInstanceAdmin(caller.userId);
 		const beforeAt = input.before?.createdAt ?? null;
 		const beforeId = input.before?.id ?? "";
 
@@ -54,9 +54,9 @@ export const findNotifications = base
 				actor.image AS actorImage
 			FROM notification
 			LEFT JOIN auth_user actor ON actor.id = notification.actorId
-			WHERE notification.userId = ${session.userId}
+			WHERE notification.userId = ${caller.userId}
 				AND notification.workspaceId = ${input.workspaceId}
-				AND ${readable(session.userId, isAdmin)}
+				AND ${readable(caller.userId, isAdmin)}
 				AND (
 					${beforeAt} IS NULL
 					OR notification.createdAt < ${beforeAt}
@@ -80,15 +80,15 @@ export const findNotifications = base
 export const countUnreadNotifications = base
 	.input(v.object({ workspaceId: v.string() }))
 	.handler(async ({ input, context }) => {
-		const session = await requireSession(context.headers);
-		const isAdmin = await auth.isInstanceAdmin(session.userId);
+		const caller = await requireUser(context.headers);
+		const isAdmin = await auth.isInstanceAdmin(caller.userId);
 		const row = (
 			await sql`
 				SELECT COUNT(*) AS count FROM notification
-				WHERE userId = ${session.userId}
+				WHERE userId = ${caller.userId}
 					AND workspaceId = ${input.workspaceId}
 					AND readAt IS NULL
-					AND ${readable(session.userId, isAdmin)}
+					AND ${readable(caller.userId, isAdmin)}
 			`
 		)[0] as { count: number };
 		return { count: Number(row.count) };
@@ -97,9 +97,9 @@ export const countUnreadNotifications = base
 export const markNotificationRead = base
 	.input(v.object({ id: v.string() }))
 	.handler(async ({ input, context }) => {
-		const session = await requireSession(context.headers);
+		const caller = await requireUser(context.headers);
 		const row = (
-			await sql`SELECT id FROM notification WHERE id = ${input.id} AND userId = ${session.userId}`
+			await sql`SELECT id FROM notification WHERE id = ${input.id} AND userId = ${caller.userId}`
 		)[0];
 		// Someone else's notification looks the same as one that doesn't exist.
 		if (!row) throw new ORPCError("NOT_FOUND");
@@ -113,10 +113,10 @@ export const markNotificationRead = base
 export const markAllNotificationsRead = base
 	.input(v.object({ workspaceId: v.string() }))
 	.handler(async ({ input, context }) => {
-		const session = await requireSession(context.headers);
+		const caller = await requireUser(context.headers);
 		await sql`
 			UPDATE notification SET readAt = ${Date.now()}
-			WHERE userId = ${session.userId}
+			WHERE userId = ${caller.userId}
 				AND workspaceId = ${input.workspaceId}
 				AND readAt IS NULL
 		`;
@@ -128,10 +128,10 @@ export const markAllNotificationsRead = base
 export const markIssueNotificationRead = base
 	.input(v.object({ issueId: v.string() }))
 	.handler(async ({ input, context }) => {
-		const session = await requireSession(context.headers);
+		const caller = await requireUser(context.headers);
 		await sql`
 			UPDATE notification SET readAt = ${Date.now()}
-			WHERE userId = ${session.userId}
+			WHERE userId = ${caller.userId}
 				AND issueId = ${input.issueId}
 				AND readAt IS NULL
 		`;

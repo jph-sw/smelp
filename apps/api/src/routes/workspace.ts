@@ -1,10 +1,10 @@
 import { ORPCError } from "@orpc/server";
-import { getCookie } from "@orpc/server/helpers";
 import { Auth } from "@smelp/auth";
 import { DB, type tables, Utils } from "@smelp/db";
 import { eventBus } from "@smelp/events";
 import { SQL } from "bun";
 import * as v from "valibot";
+import { requireUser } from "../lib/access";
 import {
 	attachmentKeysOfWorkspace,
 	removeAttachmentFiles,
@@ -34,11 +34,7 @@ const RESERVED_WORKSPACE_IDS = new Set([
 export const findWorkspace = base
 	.input(v.object({ workspaceId: v.string() }))
 	.handler(async ({ input, context }) => {
-		const token = getCookie(context.headers, "auth_session");
-		if (!token) throw new ORPCError("UNAUTHORIZED");
-
-		const session = await auth.validateAuthSessionToken(token);
-		if (!session) throw new ORPCError("UNAUTHORIZED");
+		const caller = await requireUser(context.headers);
 
 		let workspace: tables["workspace"];
 		try {
@@ -55,7 +51,7 @@ export const findWorkspace = base
 		}
 
 		const allowed = await auth.userHasPermission(
-			session.userId,
+			caller.userId,
 			workspace.spaceId,
 			"space:read",
 		);
@@ -74,11 +70,7 @@ export const updateWorkspace = base
 		}),
 	)
 	.handler(async ({ input, context }) => {
-		const token = getCookie(context.headers, "auth_session");
-		if (!token) throw new ORPCError("UNAUTHORIZED");
-
-		const session = await auth.validateAuthSessionToken(token);
-		if (!session) throw new ORPCError("UNAUTHORIZED");
+		const caller = await requireUser(context.headers);
 
 		const workspace = (
 			await sql`SELECT * FROM workspace WHERE id = ${input.workspaceId}`
@@ -89,7 +81,7 @@ export const updateWorkspace = base
 		}
 
 		const allowed = await auth.userHasPermission(
-			session.userId,
+			caller.userId,
 			workspace.spaceId,
 			"space:update",
 		);
@@ -107,11 +99,7 @@ export const updateWorkspace = base
 export const deleteWorkspace = base
 	.input(v.object({ workspaceId: v.string() }))
 	.handler(async ({ input, context }) => {
-		const token = getCookie(context.headers, "auth_session");
-		if (!token) throw new ORPCError("UNAUTHORIZED");
-
-		const session = await auth.validateAuthSessionToken(token);
-		if (!session) throw new ORPCError("UNAUTHORIZED");
+		const caller = await requireUser(context.headers);
 
 		const workspace = (
 			await sql`SELECT * FROM workspace WHERE id = ${input.workspaceId}`
@@ -122,7 +110,7 @@ export const deleteWorkspace = base
 		}
 
 		const allowed = await auth.userHasPermission(
-			session.userId,
+			caller.userId,
 			workspace.spaceId,
 			"space:delete",
 		);
@@ -148,7 +136,7 @@ export const deleteWorkspace = base
 		eventBus.emit({
 			type: "workspace.deleted",
 			workspaceId: workspace.id,
-			actorId: session.userId,
+			actorId: caller.userId,
 			entityId: "",
 			payload: {
 				name: workspace.name,
@@ -165,13 +153,9 @@ export const createWorkspace = base
 		}),
 	)
 	.handler(async ({ input, context }) => {
-		const token = getCookie(context.headers, "auth_session");
-		if (!token) throw new ORPCError("UNAUTHORIZED");
+		const caller = await requireUser(context.headers);
 
-		const session = await auth.validateAuthSessionToken(token);
-		if (!session) throw new ORPCError("UNAUTHORIZED");
-
-		await requireVerifiedEmail(session.userId);
+		await requireVerifiedEmail(caller.userId);
 
 		const slug = utils.toSlug(input.name);
 		if (!slug) {
@@ -191,7 +175,7 @@ export const createWorkspace = base
 		const auth_space: tables["auth_space"] = {
 			id: slug,
 			name: input.name,
-			ownerId: session.userId,
+			ownerId: caller.userId,
 			createdAt: now,
 			updatedAt: now,
 		};
@@ -199,7 +183,7 @@ export const createWorkspace = base
 		const auth_space_member: tables["auth_space_member"] = {
 			id: crypto.randomUUID(),
 			spaceId: auth_space.id,
-			userId: session.userId,
+			userId: caller.userId,
 			role: "admin",
 			createdAt: now,
 		};
@@ -207,7 +191,7 @@ export const createWorkspace = base
 		const workspace: tables["workspace"] = {
 			id: slug,
 			name: input.name,
-			ownerId: session.userId,
+			ownerId: caller.userId,
 			spaceId: auth_space.id,
 			image: null,
 		};

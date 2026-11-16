@@ -1,11 +1,10 @@
 import { ORPCError } from "@orpc/server";
-import { getCookie } from "@orpc/server/helpers";
 import { Auth } from "@smelp/auth";
 import { DB, type ProjectMember, type tables } from "@smelp/db";
 import { eventBus } from "@smelp/events";
 import { SQL } from "bun";
 import * as v from "valibot";
-import { requireProjectPermission } from "../lib/access";
+import { requireProjectPermission, requireUser } from "../lib/access";
 import { displayNameOf } from "../lib/names";
 import { base } from "../orpc";
 
@@ -15,11 +14,7 @@ const auth = new Auth();
 export const findProjectMembers = base
 	.input(v.object({ projectId: v.string() }))
 	.handler(async ({ input, context }) => {
-		const token = getCookie(context.headers, "auth_session");
-		if (!token) throw new ORPCError("UNAUTHORIZED");
-
-		const session = await auth.validateAuthSessionToken(token);
-		if (!session) throw new ORPCError("UNAUTHORIZED");
+		const caller = await requireUser(context.headers);
 
 		const project = (
 			await sql`SELECT * FROM project WHERE id = ${input.projectId}`
@@ -30,7 +25,7 @@ export const findProjectMembers = base
 		}
 
 		const allowed = await auth.userHasPermission(
-			session.userId,
+			caller.userId,
 			project.spaceId,
 			"space:read",
 		);
@@ -58,11 +53,7 @@ export const findProjectMembers = base
 export const findAvailableProjectMembers = base
 	.input(v.object({ projectId: v.string() }))
 	.handler(async ({ input, context }) => {
-		const token = getCookie(context.headers, "auth_session");
-		if (!token) throw new ORPCError("UNAUTHORIZED");
-
-		const session = await auth.validateAuthSessionToken(token);
-		if (!session) throw new ORPCError("UNAUTHORIZED");
+		const caller = await requireUser(context.headers);
 
 		const project = (
 			await sql`SELECT * FROM project WHERE id = ${input.projectId}`
@@ -73,7 +64,7 @@ export const findAvailableProjectMembers = base
 		}
 
 		const allowed = await auth.userHasPermission(
-			session.userId,
+			caller.userId,
 			project.spaceId,
 			"members:invite",
 		);
@@ -112,7 +103,7 @@ export const addProjectMember = base
 		}),
 	)
 	.handler(async ({ input, context }) => {
-		const { session, project } = await requireProjectPermission(
+		const { caller, project } = await requireProjectPermission(
 			context.headers,
 			input.projectId,
 			"members:invite",
@@ -157,7 +148,7 @@ export const addProjectMember = base
 		eventBus.emit({
 			type: "project.member_added",
 			workspaceId: project.workspaceId,
-			actorId: session.userId,
+			actorId: caller.userId,
 			entityId: member.id,
 			payload: {
 				projectId: project.id,
@@ -178,7 +169,7 @@ export const removeProjectMember = base
 		}),
 	)
 	.handler(async ({ input, context }) => {
-		const { session, project } = await requireProjectPermission(
+		const { caller, project } = await requireProjectPermission(
 			context.headers,
 			input.projectId,
 			"members:remove",
@@ -213,7 +204,7 @@ export const removeProjectMember = base
 		eventBus.emit({
 			type: "project.member_removed",
 			workspaceId: project.workspaceId,
-			actorId: session.userId,
+			actorId: caller.userId,
 			entityId: member.id,
 			payload: {
 				projectId: project.id,

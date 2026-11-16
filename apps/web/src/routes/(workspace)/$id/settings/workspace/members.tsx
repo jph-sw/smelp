@@ -6,17 +6,8 @@ import {
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import * as v from "valibot";
+import { ConfirmButton } from "#/components/confirm-button";
 import { CopyLink } from "#/components/copy-link";
-import {
-	AlertDialog,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-	AlertDialogTrigger,
-} from "#/components/ui/alert-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "#/components/ui/avatar";
 import { Button } from "#/components/ui/button";
 import { FieldGroup } from "#/components/ui/field";
@@ -250,53 +241,6 @@ function RoleSelect({
 				))}
 			</SelectContent>
 		</Select>
-	);
-}
-
-function ConfirmButton({
-	label,
-	title,
-	description,
-	confirmLabel,
-	buttonLabel,
-	disabled,
-	onConfirm,
-}: {
-	label?: string;
-	title: string;
-	description: string;
-	confirmLabel: string;
-	buttonLabel: string;
-	disabled?: boolean;
-	onConfirm: () => void;
-}) {
-	return (
-		<AlertDialog>
-			<AlertDialogTrigger
-				aria-label={label}
-				render={<Button variant="ghost" size="sm" className="shrink-0" />}
-			>
-				{buttonLabel}
-			</AlertDialogTrigger>
-			<AlertDialogContent>
-				<AlertDialogHeader>
-					<AlertDialogTitle className="[overflow-wrap:anywhere]">
-						{title}
-					</AlertDialogTitle>
-					<AlertDialogDescription>{description}</AlertDialogDescription>
-				</AlertDialogHeader>
-				<AlertDialogFooter>
-					<AlertDialogCancel>Cancel</AlertDialogCancel>
-					<AlertDialogCancel
-						variant="destructive"
-						disabled={disabled}
-						onClick={onConfirm}
-					>
-						{confirmLabel}
-					</AlertDialogCancel>
-				</AlertDialogFooter>
-			</AlertDialogContent>
-		</AlertDialog>
 	);
 }
 

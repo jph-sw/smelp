@@ -10,7 +10,7 @@ const auth = new Auth();
 export const findProjects = base
 	.input(v.object({ workspaceId: v.string() }))
 	.handler(async ({ input, context }) => {
-		const { session } = await requireWorkspacePermission(
+		const { caller } = await requireWorkspacePermission(
 			context.headers,
 			input.workspaceId,
 			"space:read",
@@ -23,11 +23,11 @@ export const findProjects = base
 			FROM project
 			LEFT JOIN auth_space_member
 				ON auth_space_member.spaceId = project.spaceId
-				AND auth_space_member.userId = ${session.userId}
+				AND auth_space_member.userId = ${caller.userId}
 			WHERE project.workspaceId = ${input.workspaceId}
 		`) as (tables["project"] & { isMember: number })[];
 
-		const isInstanceAdmin = await auth.isInstanceAdmin(session.userId);
+		const isInstanceAdmin = await auth.isInstanceAdmin(caller.userId);
 
 		return projects
 			.filter(

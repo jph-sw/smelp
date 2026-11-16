@@ -260,12 +260,12 @@ function toFeedEvent(row: FeedRow, canSeeInviteEmails: boolean): FeedEvent {
 export const findWorkspaceActivity = base
 	.input(v.object({ workspaceId: v.string(), before: v.optional(Cursor) }))
 	.handler(async ({ input, context }) => {
-		const { session, workspace } = await requireWorkspacePermission(
+		const { caller, workspace } = await requireWorkspacePermission(
 			context.headers,
 			input.workspaceId,
 			"space:read",
 		);
-		const userId = session.userId;
+		const userId = caller.userId;
 		const isInstanceAdmin = await auth.isInstanceAdmin(userId);
 		const membership = (
 			await sql`SELECT role FROM auth_space_member WHERE spaceId = ${workspace.spaceId} AND userId = ${userId}`

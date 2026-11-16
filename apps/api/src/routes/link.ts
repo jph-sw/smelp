@@ -2,7 +2,7 @@ import { ORPCError } from "@orpc/server";
 import { DB, type tables } from "@smelp/db";
 import { eventBus } from "@smelp/events";
 import * as v from "valibot";
-import { requireProjectPermission, requireSession } from "../lib/access";
+import { requireProjectPermission, requireUser } from "../lib/access";
 import { base } from "../orpc";
 
 const sql = new DB().sqlite;
@@ -78,7 +78,7 @@ function emit(
 export const findLinks = base
 	.input(v.object({ issueId: v.string() }))
 	.handler(async ({ input, context }) => {
-		await requireSession(context.headers);
+		await requireUser(context.headers);
 		const issue = await findIssueOrThrow(input.issueId);
 		await requireProjectPermission(
 			context.headers,
@@ -96,7 +96,7 @@ export const findLinks = base
 export const createLink = base
 	.input(v.object({ issueId: v.string(), url: Url, title: v.optional(Title) }))
 	.handler(async ({ input, context }) => {
-		const session = await requireSession(context.headers);
+		const caller = await requireUser(context.headers);
 		const issue = await findIssueOrThrow(input.issueId);
 		await requireProjectPermission(
 			context.headers,
@@ -109,11 +109,11 @@ export const createLink = base
 			issueId: issue.id,
 			url: input.url,
 			title: input.title ?? null,
-			createdBy: session.userId,
+			createdBy: caller.userId,
 			createdAt: Date.now(),
 		};
 		await sql`INSERT INTO issue_link ${sql(link)}`;
-		emit("issue.link_added", issue, session.userId, null, link.title);
+		emit("issue.link_added", issue, caller.userId, null, link.title);
 
 		return link;
 	});
@@ -121,7 +121,7 @@ export const createLink = base
 export const updateLink = base
 	.input(v.object({ id: v.string(), url: Url, title: v.optional(Title) }))
 	.handler(async ({ input, context }) => {
-		const session = await requireSession(context.headers);
+		const caller = await requireUser(context.headers);
 		const link = await findLinkOrThrow(input.id);
 		const issue = await findIssueOrThrow(link.issueId);
 		await requireProjectPermission(
@@ -144,13 +144,7 @@ export const updateLink = base
 			SET url = ${updated.url}, title = ${updated.title}
 			WHERE id = ${link.id}
 		`;
-		emit(
-			"issue.link_updated",
-			issue,
-			session.userId,
-			link.title,
-			updated.title,
-		);
+		emit("issue.link_updated", issue, caller.userId, link.title, updated.title);
 
 		return updated;
 	});
@@ -158,7 +152,7 @@ export const updateLink = base
 export const deleteLink = base
 	.input(v.object({ id: v.string() }))
 	.handler(async ({ input, context }) => {
-		const session = await requireSession(context.headers);
+		const caller = await requireUser(context.headers);
 		const link = await findLinkOrThrow(input.id);
 		const issue = await findIssueOrThrow(link.issueId);
 		await requireProjectPermission(
@@ -168,7 +162,7 @@ export const deleteLink = base
 		);
 
 		await sql`DELETE FROM issue_link WHERE id = ${link.id}`;
-		emit("issue.link_removed", issue, session.userId, link.title, null);
+		emit("issue.link_removed", issue, caller.userId, link.title, null);
 
 		return { id: link.id };
 	});

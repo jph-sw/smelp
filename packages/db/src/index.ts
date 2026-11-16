@@ -5,6 +5,7 @@ import { Logger } from "tslog";
 import type { activity_logs } from "../types/tables/activity";
 import type { attachment } from "../types/tables/attachment";
 import type {
+	api_token,
 	auth_account,
 	auth_email_verification,
 	auth_password_reset,
@@ -166,6 +167,7 @@ export type tables = {
 	auth_password_reset: auth_password_reset;
 	auth_email_verification: auth_email_verification;
 	auth_user_avatar: auth_user_avatar;
+	api_token: api_token;
 	activity_logs: activity_logs;
 	workspace: workspace;
 	project: project;

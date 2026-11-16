@@ -4,7 +4,7 @@ import { DB, type tables } from "@smelp/db";
 import { eventBus } from "@smelp/events";
 import { SQL } from "bun";
 import * as v from "valibot";
-import { requireSession, requireWorkspacePermission } from "../lib/access";
+import { requireUser, requireWorkspacePermission } from "../lib/access";
 import { findUsableInvite, INVITE_LIFETIME_MS } from "../lib/invites";
 import {
 	type EmailDelivery,
@@ -36,7 +36,7 @@ export const createInvite = base
 		}),
 	)
 	.handler(async ({ input, context }) => {
-		const { session, workspace } = await requireWorkspacePermission(
+		const { caller, workspace } = await requireWorkspacePermission(
 			context.headers,
 			input.workspaceId,
 			"members:invite",
@@ -64,7 +64,7 @@ export const createInvite = base
 			spaceId: workspace.spaceId,
 			email: input.email ?? null,
 			role: input.role,
-			invitedByUserId: session.userId,
+			invitedByUserId: caller.userId,
 			createdAt: now,
 			acceptedAt: null,
 			tokenHash: hashSecretToken(token),
@@ -75,16 +75,16 @@ export const createInvite = base
 		eventBus.emit({
 			type: "workspace.member_invited",
 			workspaceId: workspace.id,
-			actorId: session.userId,
+			actorId: caller.userId,
 			entityId: invite.id,
 			payload: { email: invite.email, role: invite.role },
 		});
 
 		let emailDelivery: EmailDelivery = "none";
 		if (invite.email && isMailEnabled()) {
-			if (inviteEmailsByUser.consume(session.userId).allowed) {
+			if (inviteEmailsByUser.consume(caller.userId).allowed) {
 				const inviter = (
-					await sql`SELECT displayName FROM auth_user WHERE id = ${session.userId}`
+					await sql`SELECT displayName FROM auth_user WHERE id = ${caller.userId}`
 				)[0] as Pick<tables["auth_user"], "displayName">;
 				emailDelivery = await sendInviteEmail({
 					to: invite.email,
@@ -133,7 +133,7 @@ export const findInvites = base
 export const cancelInvite = base
 	.input(v.object({ inviteId: v.string() }))
 	.handler(async ({ input, context }) => {
-		const session = await requireSession(context.headers);
+		const caller = await requireUser(context.headers);
 
 		const invite = (
 			await sql`SELECT spaceId FROM auth_space_invite WHERE id = ${input.inviteId}`
@@ -141,7 +141,7 @@ export const cancelInvite = base
 		if (!invite) throw new ORPCError("NOT_FOUND");
 
 		const allowed = await auth.userHasPermission(
-			session.userId,
+			caller.userId,
 			invite.spaceId,
 			"members:invite",
 		);
@@ -171,7 +171,7 @@ export const previewInvite = base
 export const acceptInvite = base
 	.input(v.object({ token: v.string() }))
 	.handler(async ({ input, context }) => {
-		const session = await requireSession(context.headers);
+		const caller = await requireUser(context.headers);
 
 		const invite = await findUsableInvite(input.token);
 		if (!invite) throw invalidLink();
@@ -180,7 +180,7 @@ export const acceptInvite = base
 		const member: tables["auth_space_member"] = {
 			id: crypto.randomUUID(),
 			spaceId: invite.spaceId,
-			userId: session.userId,
+			userId: caller.userId,
 			role: invite.role,
 			createdAt: now,
 		};
@@ -216,11 +216,11 @@ export const acceptInvite = base
 		eventBus.emit({
 			type: "workspace.member_joined",
 			workspaceId: workspace?.id ?? "",
-			actorId: session.userId,
+			actorId: caller.userId,
 			entityId: member.id,
 			payload: {
-				userId: session.userId,
-				userName: await displayNameOf(session.userId),
+				userId: caller.userId,
+				userName: await displayNameOf(caller.userId),
 				role: member.role,
 			},
 		});

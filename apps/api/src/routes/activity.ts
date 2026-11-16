@@ -1,7 +1,7 @@
 import { ORPCError } from "@orpc/server";
 import { DB, type tables } from "@smelp/db";
 import * as v from "valibot";
-import { requireProjectPermission, requireSession } from "../lib/access";
+import { requireProjectPermission, requireUser } from "../lib/access";
 import { base } from "../orpc";
 
 const sql = new DB().sqlite;
@@ -9,7 +9,7 @@ const sql = new DB().sqlite;
 export const findIssueActivity = base
 	.input(v.object({ issueId: v.string() }))
 	.handler(async ({ input, context }) => {
-		const session = await requireSession(context.headers);
+		const caller = await requireUser(context.headers);
 
 		const issue = (
 			await sql`SELECT projectId FROM issue WHERE id = ${input.issueId}`
@@ -36,7 +36,7 @@ export const findIssueActivity = base
 					JOIN project rp ON rp.id = ri.projectId
 					JOIN auth_space_member rm ON rm.spaceId = rp.spaceId
 					WHERE ri.id = json_extract(activity_logs.metadata, '$.relatedId')
-						AND rm.userId = ${session.userId}
+						AND rm.userId = ${caller.userId}
 				) THEN json_extract(activity_logs.metadata, '$.relatedId') END AS relatedId,
 				auth_user.displayName AS actorName
 			FROM activity_logs

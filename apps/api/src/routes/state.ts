@@ -2,7 +2,7 @@ import { ORPCError } from "@orpc/server";
 import { DB, type tables, Utils } from "@smelp/db";
 import { eventBus, type StateChange } from "@smelp/events";
 import * as v from "valibot";
-import { requireProjectPermission, requireSession } from "../lib/access";
+import { requireProjectPermission, requireUser } from "../lib/access";
 import { base } from "../orpc";
 
 const sql = new DB().sqlite;
@@ -19,30 +19,30 @@ const Group = v.picklist([
 ]);
 
 async function requireManageableState(headers: Headers, stateId: string) {
-	await requireSession(headers);
+	await requireUser(headers);
 
 	const state = (await sql`SELECT * FROM state WHERE id = ${stateId}`)[0] as
 		| tables["state"]
 		| undefined;
 	if (!state) throw new ORPCError("NOT_FOUND");
 
-	const { session, project } = await requireProjectPermission(
+	const { caller, project } = await requireProjectPermission(
 		headers,
 		state.projectId,
 		"space:update",
 	);
 
-	return { state, session, project };
+	return { state, caller, project };
 }
 
 // Who did it and where, shared by every state event.
 const eventBase = (
-	session: { userId: string },
+	caller: { userId: string },
 	project: tables["project"],
 	entityId: string,
 ) => ({
 	workspaceId: project.workspaceId,
-	actorId: session.userId,
+	actorId: caller.userId,
 	entityId,
 });
 
@@ -56,7 +56,7 @@ export const createState = base
 		}),
 	)
 	.handler(async ({ input, context }) => {
-		const { session, project } = await requireProjectPermission(
+		const { caller, project } = await requireProjectPermission(
 			context.headers,
 			input.projectId,
 			"space:update",
@@ -79,7 +79,7 @@ export const createState = base
 		await sql`INSERT INTO state ${sql(state)}`;
 
 		eventBus.emit({
-			...eventBase(session, project, state.id),
+			...eventBase(caller, project, state.id),
 			type: "state.created",
 			payload: {
 				projectId: project.id,
@@ -104,7 +104,7 @@ export const updateState = base
 		}),
 	)
 	.handler(async ({ input, context }) => {
-		const { state, session, project } = await requireManageableState(
+		const { state, caller, project } = await requireManageableState(
 			context.headers,
 			input.id,
 		);
@@ -134,7 +134,7 @@ export const updateState = base
 		if (input.isDefault && !state.isDefault) changes.push("isDefault");
 		if (changes.length > 0) {
 			eventBus.emit({
-				...eventBase(session, project, state.id),
+				...eventBase(caller, project, state.id),
 				type: "state.updated",
 				payload: {
 					projectId: project.id,
@@ -155,7 +155,7 @@ export const updateState = base
 export const deleteState = base
 	.input(v.object({ id: v.string(), moveToStateId: v.string() }))
 	.handler(async ({ input, context }) => {
-		const { state, session, project } = await requireManageableState(
+		const { state, caller, project } = await requireManageableState(
 			context.headers,
 			input.id,
 		);
@@ -181,7 +181,7 @@ export const deleteState = base
 		});
 
 		eventBus.emit({
-			...eventBase(session, project, state.id),
+			...eventBase(caller, project, state.id),
 			type: "state.deleted",
 			payload: {
 				projectId: project.id,
@@ -197,7 +197,7 @@ export const deleteState = base
 export const reorderStates = base
 	.input(v.object({ projectId: v.string(), stateIds: v.array(v.string()) }))
 	.handler(async ({ input, context }) => {
-		const { session, project } = await requireProjectPermission(
+		const { caller, project } = await requireProjectPermission(
 			context.headers,
 			input.projectId,
 			"space:update",
@@ -227,7 +227,7 @@ export const reorderStates = base
 		});
 
 		eventBus.emit({
-			...eventBase(session, project, project.id),
+			...eventBase(caller, project, project.id),
 			type: "state.reordered",
 			payload: { projectId: project.id, projectName: project.name },
 		});

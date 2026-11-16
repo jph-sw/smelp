@@ -2,12 +2,21 @@ import { ORPCError } from "@orpc/server";
 import { getCookie } from "@orpc/server/helpers";
 import { Auth } from "@smelp/auth";
 import { DB, type tables } from "@smelp/db";
+import { hashSecretToken } from "./tokens";
 
 const sql = new DB().sqlite;
 const auth = new Auth();
 
 type Permission = Parameters<Auth["userHasPermission"]>[2];
 
+export const API_TOKEN_PREFIX = "smelp_";
+
+const LAST_USED_PRECISION_MS = 60 * 60 * 1000;
+
+type Caller = { userId: string };
+
+// Browser sign-in only. Account security (password, linked accounts, tokens) and
+// instance administration stay behind it, so a leaked API token can't take them over.
 export async function requireSession(headers: Headers) {
 	const token = getCookie(headers, "auth_session");
 	if (!token) throw new ORPCError("UNAUTHORIZED");
@@ -16,6 +25,42 @@ export async function requireSession(headers: Headers) {
 	if (!session) throw new ORPCError("UNAUTHORIZED");
 
 	return session;
+}
+
+/** The person making the call, from an API token or else the browser session. */
+export async function requireUser(headers: Headers): Promise<Caller> {
+	const authorization = headers.get("authorization");
+	if (authorization === null) {
+		const { userId } = await requireSession(headers);
+		return { userId };
+	}
+
+	const token = authorization.slice("Bearer ".length);
+	if (
+		!authorization.startsWith("Bearer ") ||
+		!token.startsWith(API_TOKEN_PREFIX)
+	) {
+		throw new ORPCError("UNAUTHORIZED");
+	}
+
+	const now = Date.now();
+	const row = (
+		await sql`
+			SELECT id, userId, lastUsedAt FROM api_token
+			WHERE secretHash = ${hashSecretToken(token)}
+			  AND (expiresAt IS NULL OR expiresAt > ${now})
+		`
+	)[0] as Pick<tables["api_token"], "id" | "userId" | "lastUsedAt"> | undefined;
+	if (!row) throw new ORPCError("UNAUTHORIZED");
+
+	if (
+		row.lastUsedAt === null ||
+		now - row.lastUsedAt >= LAST_USED_PRECISION_MS
+	) {
+		await sql`UPDATE api_token SET lastUsedAt = ${now} WHERE id = ${row.id}`;
+	}
+
+	return { userId: row.userId };
 }
 
 export async function requireInstanceAdmin(headers: Headers) {
@@ -50,7 +95,7 @@ export async function requireProjectPermission(
 	permission: Permission,
 	options: ProjectAccessOptions = {},
 ) {
-	const session = await requireSession(headers);
+	const caller = await requireUser(headers);
 
 	const project = (
 		await sql`SELECT * FROM project WHERE id = ${projectId}`
@@ -58,7 +103,7 @@ export async function requireProjectPermission(
 	if (!project) throw new ORPCError("NOT_FOUND");
 
 	const allowed = await auth.userHasPermission(
-		session.userId,
+		caller.userId,
 		project.spaceId,
 		permission,
 	);
@@ -67,7 +112,7 @@ export async function requireProjectPermission(
 	const writes = options.write ?? !READ_PERMISSIONS.includes(permission);
 	if (writes && !options.allowArchived) requireNotArchived(project);
 
-	return { session, project };
+	return { caller, project };
 }
 
 export async function requireWorkspacePermission(
@@ -75,7 +120,7 @@ export async function requireWorkspacePermission(
 	workspaceId: string,
 	permission: Permission,
 ) {
-	const session = await requireSession(headers);
+	const caller = await requireUser(headers);
 
 	const workspace = (
 		await sql`SELECT * FROM workspace WHERE id = ${workspaceId}`
@@ -83,11 +128,11 @@ export async function requireWorkspacePermission(
 	if (!workspace) throw new ORPCError("NOT_FOUND");
 
 	const allowed = await auth.userHasPermission(
-		session.userId,
+		caller.userId,
 		workspace.spaceId,
 		permission,
 	);
 	if (!allowed) throw new ORPCError("FORBIDDEN");
 
-	return { session, workspace };
+	return { caller, workspace };
 }
