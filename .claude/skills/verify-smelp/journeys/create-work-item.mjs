@@ -17,7 +17,10 @@ export default async ({ page, seed, step, shot, aria, expect }) => {
 
 	step(`Fill in "${title}" and create it`);
 	await dialog.getByRole("textbox", { name: "Title" }).fill(title);
-	await dialog.getByRole("textbox", { name: "Description" }).fill("Created by the verify-smelp journey");
+	await dialog.getByRole("textbox", { name: "Description" }).click();
+	await page.keyboard.type("/head");
+	await dialog.getByRole("option", { name: "Heading 2" }).click();
+	await page.keyboard.type("Created by the verify-smelp journey");
 	await shot("dialog-filled");
 	await dialog.getByRole("button", { name: "Create work item" }).click();
 	await dialog.waitFor({ state: "hidden" });
@@ -35,8 +38,8 @@ export default async ({ page, seed, step, shot, aria, expect }) => {
 	await page.getByRole("textbox", { name: "Title" }).waitFor();
 	expect((await page.getByRole("textbox", { name: "Title" }).inputValue()) === title, "title survived the reload");
 	expect(
-		(await page.getByRole("textbox", { name: "Description" }).inputValue()).includes("Created by the verify-smelp journey"),
-		"description was saved",
+		await page.getByRole("heading", { name: "Created by the verify-smelp journey", level: 2 }).isVisible(),
+		"description was saved as a heading",
 	);
 	await shot("item-detail");
 
