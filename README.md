@@ -17,6 +17,7 @@ smelp is early software. Each release is a git tag, and [CHANGELOG.md](CHANGELOG
 - Invite links, closed sign-up and password reset that work without a mail server
 - Optional sign-in with OpenID Connect (Google, GitLab, Authentik, Keycloak and others)
 - Optional email over any SMTP server, with email verification when public sign-up is open
+- An MCP server, so AI agents can find, file and update work items as you
 - Works on phones
 
 The look is plain for now: the components are built on [ui-sdk](https://ui-sdk.dev) with its default styles, and a proper design is next.
@@ -137,6 +138,31 @@ Register `APP_URL/api/auth/oidc/callback` as the redirect URI with your provider
 - **Unlinking:** the account settings show the linked provider. It can be unlinked only by someone who also has a password. People whose account was made through the provider have none yet, and can set one there or through a password reset.
 - Logins in progress are kept in memory, like the rate limits, so a restart cancels any that are half done.
 - Changing `OIDC_ISSUER_URL` to a different provider starts fresh. Existing links to the old one stop matching, and their owners can sign in with their password and link the new provider.
+
+## Using smelp from AI agents
+
+Agents like Claude Code and Cursor, or any other MCP client, can work in smelp as you: search, read, create and update work items, and comment. They see and change only what you can.
+
+Create a token on your account page under API tokens. The same section shows the MCP endpoint, which is your smelp address with `/mcp` added. In Claude Code:
+
+```sh
+claude mcp add --transport http smelp https://smelp.example.com/mcp --header "Authorization: Bearer smelp_..."
+```
+
+Other clients take a URL and headers, usually in a JSON file shaped like this:
+
+```json
+{
+  "mcpServers": {
+    "smelp": {
+      "url": "https://smelp.example.com/mcp",
+      "headers": { "Authorization": "Bearer smelp_..." }
+    }
+  }
+}
+```
+
+Agents name work items by their key, like `ABC-12`, and states and people by name. Set `APP_URL` so the links to work items they get use your public address. Revoking the token cuts the agent off right away.
 
 ## Backup
 
