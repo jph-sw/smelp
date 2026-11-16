@@ -1,30 +1,25 @@
 import { ORPCError } from "@orpc/server";
-import { getCookie } from "@orpc/server/helpers";
-import { Auth } from "@smelp/auth";
 import { DB, type tables } from "@smelp/db";
+import { requireUser } from "../../lib/access";
 import { isMailEnabled } from "../../lib/mail";
 import { base } from "../../orpc";
 
-const auth = new Auth();
 const sql = new DB().sqlite;
 
-export const me = base.handler(async ({ context }) => {
-	const token = getCookie(context.headers, "auth_session");
-	if (token == null) {
-		throw new ORPCError("UNAUTHORIZED", { message: "Not signed in" });
-	}
+const notSignedIn = () =>
+	new ORPCError("UNAUTHORIZED", { message: "Not signed in" });
 
-	const session = await auth.validateAuthSessionToken(token);
-	if (session == null) {
-		throw new ORPCError("UNAUTHORIZED", { message: "Not signed in" });
-	}
+export const me = base.handler(async ({ context }) => {
+	const caller = await requireUser(context.headers).catch((error) => {
+		throw error instanceof ORPCError && error.code === "UNAUTHORIZED"
+			? notSignedIn()
+			: error;
+	});
 
 	const users =
-		(await sql`SELECT * FROM auth_user WHERE id = ${session.userId}`) as tables["auth_user"][];
+		(await sql`SELECT * FROM auth_user WHERE id = ${caller.userId}`) as tables["auth_user"][];
 	const user = users[0];
-	if (user == null) {
-		throw new ORPCError("UNAUTHORIZED", { message: "Not signed in" });
-	}
+	if (user == null) throw notSignedIn();
 
 	// Without email there's no way to confirm, so nobody is held back for it.
 	return {
