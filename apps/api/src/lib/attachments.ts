@@ -204,6 +204,8 @@ export async function uploadAttachment(request: Request) {
 		const url = new URL(request.url);
 		const issueId = url.searchParams.get("issueId");
 		if (!issueId) return fail(400, "Missing work item");
+		// Before the lookup, so a visitor can't tell which work items exist.
+		await requireUser(request.headers);
 		const issue = (await sql`SELECT * FROM issue WHERE id = ${issueId}`)[0] as
 			| tables["issue"]
 			| undefined;

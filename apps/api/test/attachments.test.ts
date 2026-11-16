@@ -344,6 +344,9 @@ describe("uploading", () => {
 
 	test("needs a session, write access, and a project that isn't archived", async () => {
 		expect((await upload(null, text("x"), { issueId })).status).toBe(401);
+		expect((await upload(null, text("x"), { issueId: "NOPE-1" })).status).toBe(
+			401,
+		);
 		expect((await upload(guest, text("x"), { issueId })).status).toBe(403);
 		expect((await upload(outsider, text("x"), { issueId })).status).toBe(403);
 		expect(
