@@ -41,6 +41,8 @@ function RouteComponent() {
 		enabled: user != null,
 	});
 
+	const isGuest = user?.role === "guest";
+
 	const form = useAppForm({
 		defaultValues: {
 			name: "",
@@ -74,7 +76,9 @@ function RouteComponent() {
 				<div className="h-full w-full p-4 sm:p-12 xl:w-1/2">
 					<Card className="h-full justify-center bg-card/99 sm:px-8 xl:px-24">
 						<CardHeader>
-							<CardTitle>Create your workspace</CardTitle>
+							<CardTitle>
+								{isGuest ? "You have a guest account" : "Create your workspace"}
+							</CardTitle>
 						</CardHeader>
 						<CardContent>
 							{user?.emailVerificationPending && (
@@ -82,24 +86,31 @@ function RouteComponent() {
 									<VerifyEmailBanner user={user} />
 								</div>
 							)}
-							<form
-								onSubmit={(e) => {
-									e.preventDefault();
-									form.handleSubmit();
-								}}
-							>
-								<FieldGroup>
-									<form.AppField
-										name="name"
-										children={(field) => (
-											<field.TextField label="Your workspace name" />
-										)}
-									/>
-								</FieldGroup>
-								<form.AppForm>
-									<form.SubscribeButton label="Create" />
-								</form.AppForm>
-							</form>
+							{isGuest ? (
+								<p className="text-card-foreground/70">
+									Guest accounts can't create workspaces. Ask a workspace admin
+									for an invite link, and open it to join their workspace.
+								</p>
+							) : (
+								<form
+									onSubmit={(e) => {
+										e.preventDefault();
+										form.handleSubmit();
+									}}
+								>
+									<FieldGroup>
+										<form.AppField
+											name="name"
+											children={(field) => (
+												<field.TextField label="Your workspace name" />
+											)}
+										/>
+									</FieldGroup>
+									<form.AppForm>
+										<form.SubscribeButton label="Create" />
+									</form.AppForm>
+								</form>
+							)}
 						</CardContent>
 						{workspaces && workspaces.length > 0 && (
 							<CardFooter>

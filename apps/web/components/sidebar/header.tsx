@@ -142,15 +142,17 @@ export function SiteHeader({
 										))}
 								</div>
 							</div>
-							<div className="px-2">
-								<Button
-									variant="ghost"
-									className="w-full"
-									render={<Link to="/create-workspace" />}
-								>
-									New workspace
-								</Button>
-							</div>
+							{user.role !== "guest" && (
+								<div className="px-2">
+									<Button
+										variant="ghost"
+										className="w-full"
+										render={<Link to="/create-workspace" />}
+									>
+										New workspace
+									</Button>
+								</div>
+							)}
 						</PopoverContent>
 					</Popover>
 				</div>
