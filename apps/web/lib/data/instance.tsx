@@ -34,4 +34,9 @@ export const createPasswordReset = ({
 export const markEmailVerified = ({ userId }: { userId: string }) =>
 	orpc.instance.markEmailVerified({ userId });
 
+export const setUserRole = (input: {
+	userId: string;
+	role: "guest" | "user";
+}) => orpc.instance.setUserRole(input);
+
 export const sendTestEmail = () => orpc.instance.sendTestEmail();

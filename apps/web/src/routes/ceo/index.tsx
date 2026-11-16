@@ -4,7 +4,7 @@ import {
 	useSuspenseQuery,
 } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { type ComponentProps, useState } from "react";
 import { CopyLink } from "#/components/copy-link";
 import { Avatar, AvatarFallback, AvatarImage } from "#/components/ui/avatar";
 import { Button } from "#/components/ui/button";
@@ -19,6 +19,7 @@ import {
 	instanceVersionQueryOptions,
 	markEmailVerified,
 	sendTestEmail,
+	setUserRole,
 	updateInstance,
 } from "#/lib/data/instance";
 import { toastError } from "#/lib/errors";
@@ -33,6 +34,38 @@ export const Route = createFileRoute("/ceo/")({
 			queryClient.ensureQueryData(instanceVersionQueryOptions),
 		]),
 });
+
+const ROLE_LABELS = {
+	admin: "Instance admin",
+	user: "User",
+	guest: "Guest",
+} as const;
+
+function SignupSwitch({
+	id,
+	title,
+	description,
+	...props
+}: {
+	id: string;
+	title: string;
+	description: string;
+} & Pick<
+	ComponentProps<typeof Switch>,
+	"checked" | "disabled" | "onCheckedChange"
+>) {
+	return (
+		<div className="flex items-center justify-between gap-4">
+			<div>
+				<h2 id={id} className="text-sm font-semibold">
+					{title}
+				</h2>
+				<p className="text-card-foreground/70">{description}</p>
+			</div>
+			<Switch aria-labelledby={id} {...props} />
+		</div>
+	);
+}
 
 function RouteComponent() {
 	usePageTitle("Instance admin");
@@ -57,6 +90,15 @@ function RouteComponent() {
 
 	const { mutate: verifyByHand, isPending: isVerifying } = useMutation({
 		mutationFn: markEmailVerified,
+		onSuccess: () =>
+			queryClient.invalidateQueries({
+				queryKey: instanceUsersQueryOptions.queryKey,
+			}),
+		onError: (e) => toastError(e),
+	});
+
+	const { mutate: changeRole, isPending: isChangingRole } = useMutation({
+		mutationFn: setUserRole,
 		onSuccess: () =>
 			queryClient.invalidateQueries({
 				queryKey: instanceUsersQueryOptions.queryKey,
@@ -104,21 +146,24 @@ function RouteComponent() {
 				</Link>
 			</div>
 			<Card>
-				<CardContent className="flex items-center justify-between gap-4">
-					<div>
-						<h2 id="signup-label" className="text-sm font-semibold">
-							Public sign-up
-						</h2>
-						<p className="text-card-foreground/70">
-							When this is off, people can only join with an invite link from a
-							workspace admin.
-						</p>
-					</div>
-					<Switch
-						aria-labelledby="signup-label"
+				<CardContent className="flex flex-col gap-6">
+					<SignupSwitch
+						id="signup-label"
+						title="Public sign-up"
+						description="Anyone can sign up. When this and guest sign-up are off, people can only join with an invite link from a workspace admin."
 						checked={status.signup === "open"}
 						disabled={isPending}
 						onCheckedChange={(on) => update({ signup: on ? "open" : "closed" })}
+					/>
+					<SignupSwitch
+						id="guest-signup-label"
+						title="Allow guest sign-up"
+						description="Anyone can sign up, but new accounts are guests. Guests can't create workspaces and only see what they're invited to."
+						checked={status.signup === "guest"}
+						disabled={isPending}
+						onCheckedChange={(on) =>
+							update({ signup: on ? "guest" : "closed" })
+						}
 					/>
 				</CardContent>
 			</Card>
@@ -185,8 +230,25 @@ function RouteComponent() {
 							className="ml-auto shrink-0 text-xs text-muted-foreground"
 							title={`Joined ${formatDate(user.createdAt)}`}
 						>
-							{user.role === "admin" ? "Instance admin" : "User"}
+							{ROLE_LABELS[user.role ?? "user"]}
 						</span>
+						{user.role !== "admin" && (
+							<Button
+								variant="ghost"
+								size="sm"
+								className="shrink-0"
+								disabled={isChangingRole}
+								aria-label={`Make ${user.displayName} a ${user.role === "guest" ? "user" : "guest"}`}
+								onClick={() =>
+									changeRole({
+										userId: user.id,
+										role: user.role === "guest" ? "user" : "guest",
+									})
+								}
+							>
+								{user.role === "guest" ? "Make user" : "Make guest"}
+							</Button>
+						)}
 						{user.emailVerified !== 1 && (
 							<>
 								<span className="shrink-0 text-xs text-muted-foreground">
