@@ -341,7 +341,7 @@ function createServer(api: Api, appUrl: string) {
 		{
 			annotations: { readOnlyHint: true },
 			description:
-				"A work item with its Markdown description, related items and plain-text comments, oldest comment first.",
+				"A work item with its Markdown description, related items and Markdown comments, oldest comment first.",
 			inputSchema: { key: Key },
 		},
 		({ key }) => respond(() => workItem(key)),
@@ -427,7 +427,7 @@ function createServer(api: Api, appUrl: string) {
 		"add_comment",
 		{
 			description:
-				"Comment on a work item. Comments are plain text: the web app shows them as written, without rendering Markdown.",
+				"Comment on a work item. The body is Markdown, like a description.",
 			inputSchema: { key: Key, body: z.string() },
 		},
 		({ key, body }) =>
