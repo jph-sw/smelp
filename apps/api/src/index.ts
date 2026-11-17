@@ -40,17 +40,12 @@ sweepAttachments()
 
 function bunRequestHandler<T extends Context>(
 	handler: RPCHandler<T>,
-	options?:
-		| FriendlyStandardHandleOptions<T>
-		| ((request: Request) => FriendlyStandardHandleOptions<T>),
+	options: (request: Request) => FriendlyStandardHandleOptions<T>,
 ): (request: Request) => Promise<Response> {
 	return async (request: Request) => {
-		const resolvedOptions =
-			// biome-ignore lint/style/noNonNullAssertion: <No other way>
-			typeof options === "function" ? options(request) : options!;
 		const { matched, response } = await handler.handle(
 			request,
-			resolvedOptions,
+			options(request),
 		);
 
 		if (matched) {
