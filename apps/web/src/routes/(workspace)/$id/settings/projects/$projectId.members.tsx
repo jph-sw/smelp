@@ -46,33 +46,34 @@ function RouteComponent() {
 		!isArchived &&
 		(currentUser?.role === "admin" || currentMember?.role === "admin");
 
-	const handleRemove = async (member: ProjectMember) => {
-		try {
-			await removeProjectMember({ projectId, memberId: member.id });
-			await queryClient.invalidateQueries({
-				queryKey: ["project-members", projectId],
-			});
-			// A module's lead who was just removed no longer shows as the lead.
-			await queryClient.invalidateQueries({ queryKey: ["modules", projectId] });
-			await queryClient.invalidateQueries({ queryKey: ["module"] });
-			toast({
-				type: "success",
-				description: `Removed ${member.fullName} from the project.`,
-			});
-		} catch {
-			toast({
-				type: "error",
-				description: "Failed to remove member.",
-			});
-		}
-	};
-
-	// biome-ignore lint/correctness/useExhaustiveDependencies: <TODO>
-	const columns = useMemo(
-		() =>
-			createColumns({ canRemove: canManageMembers, onRemove: handleRemove }),
-		[canManageMembers],
-	);
+	const columns = useMemo(() => {
+		const handleRemove = async (member: ProjectMember) => {
+			try {
+				await removeProjectMember({ projectId, memberId: member.id });
+				await queryClient.invalidateQueries({
+					queryKey: ["project-members", projectId],
+				});
+				// A module's lead who was just removed no longer shows as the lead.
+				await queryClient.invalidateQueries({
+					queryKey: ["modules", projectId],
+				});
+				await queryClient.invalidateQueries({ queryKey: ["module"] });
+				toast({
+					type: "success",
+					description: `Removed ${member.fullName} from the project.`,
+				});
+			} catch {
+				toast({
+					type: "error",
+					description: "Failed to remove member.",
+				});
+			}
+		};
+		return createColumns({
+			canRemove: canManageMembers,
+			onRemove: handleRemove,
+		});
+	}, [canManageMembers, projectId, queryClient]);
 
 	return (
 		<div className="flex flex-col gap-1">
