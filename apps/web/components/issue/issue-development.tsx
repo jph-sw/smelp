@@ -65,14 +65,20 @@ function describe(ref: GithubRef) {
 	}
 }
 
-export function IssueDevelopment({ issueId }: { issueId: string }) {
+export function IssueDevelopment({
+	issueId,
+	className,
+}: {
+	issueId: string;
+	className?: string;
+}) {
 	const { data: refs } = useSuspenseQuery(githubRefsQueryOptions({ issueId }));
 
 	// Nothing to add by hand: links arrive from GitHub on their own.
 	if (refs.length === 0) return null;
 
 	return (
-		<section className="space-y-2" aria-label="Development">
+		<section className={cn("space-y-2", className)} aria-label="Development">
 			<h2 className="text-sm font-semibold">Development</h2>
 			<ul className="space-y-1">
 				{refs.map((ref) => {
