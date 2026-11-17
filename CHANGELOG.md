@@ -2,6 +2,22 @@
 
 Each release is a git tag. To upgrade, follow [Upgrade](README.md#upgrade) in the README.
 
+## 0.13.0 (2026-11-18)
+
+Work items get a priority, a due date and watchers.
+
+- **Priority:** each work item has a priority: none, low, medium, high or urgent. It shows on the item page, board cards and list rows, can be set when creating an item, and the board can be filtered by it. Jira imports map Jira priorities onto it.
+- **Due dates:** a work item can have a due date. The item page and the board card say "Overdue" once it has passed and the item isn't completed or cancelled, and the board can be filtered to overdue items or items due this week. Jira imports bring in the Due date column.
+- **Watching:** a Watch toggle on the item page, with the watcher count, lets you follow an item without commenting, or stop following it. Watchers hear about new comments and state changes, and the inbox now says when an item changed state. Creating an item, being assigned to it or commenting on it makes you a watcher, as before.
+- **MCP tools:** agents can read and set a work item's priority and due date.
+- **Theme:** the account menu lets you pick System, Light or Dark. The choice is saved in each browser.
+- **Image previews:** PNG, JPEG and WebP attachments show a thumbnail, and clicking one opens the full image.
+- **Parent search:** the Parent field on a work item lets you search by key or title instead of scrolling a list.
+- **Fixed:** the sidebar keeps the project highlighted while you're on one of its work items.
+- **Fixed:** confirm dialogs, like removing a member or deleting a project, stay open with a busy button until their action finishes, instead of closing at once.
+
+Upgrading runs three database changes automatically: they add a priority and a due date to work items and a table for watchers. Existing items start with no priority and no due date, and each item's creator, assignee and commenters become its watchers, so everyone who was notified before still is. Back up first, as the README describes.
+
 ## 0.12.0 (2026-11-17)
 
 AI agents sign in to smelp through the browser, with no token to copy.
