@@ -6,6 +6,8 @@ import { DEFAULTS, Utils } from "@smelp/db";
 import { z } from "zod";
 import { router } from "../router";
 import { requireUser } from "./access";
+import { appUrl } from "./app-url";
+import { protectedResourceMetadataUrl } from "./oauth";
 import { version } from "./version";
 
 const { logger } = new Utils();
@@ -17,10 +19,16 @@ type Api = ReturnType<typeof apiFor>;
 type State = Awaited<ReturnType<Api["states"]["find"]>>[number];
 type Member = Awaited<ReturnType<Api["projectMembers"]["find"]>>[number];
 
-const unauthorized = () =>
+// The header tells an MCP client where to start signing in with OAuth (RFC 9728).
+const unauthorized = (base: string, tokenSent: boolean) =>
 	new Response(
-		"Send an API token from your account page as Authorization: Bearer smelp_...",
-		{ status: 401, headers: { "WWW-Authenticate": "Bearer" } },
+		"Sign in through your MCP client, which opens a browser, or send an API token from your account page as Authorization: Bearer smelp_...",
+		{
+			status: 401,
+			headers: {
+				"WWW-Authenticate": `Bearer ${tokenSent ? 'error="invalid_token", ' : ""}resource_metadata="${protectedResourceMetadataUrl(base)}"`,
+			},
+		},
 	);
 
 // Only a bearer token is accepted, so a browser's cookie can never make these calls.
@@ -28,14 +36,15 @@ export async function mcpResponse(
 	request: Request,
 	ip: string,
 ): Promise<Response> {
+	const base = appUrl(new URL(request.url).origin);
 	const authorization = request.headers.get("authorization");
-	if (authorization === null) return unauthorized();
+	if (authorization === null) return unauthorized(base, false);
 	const headers = new Headers({ authorization });
 	try {
 		await requireUser(headers);
 	} catch (error) {
 		if (error instanceof ORPCError && error.code === "UNAUTHORIZED") {
-			return unauthorized();
+			return unauthorized(base, true);
 		}
 		throw error;
 	}
@@ -52,11 +61,7 @@ export async function mcpResponse(
 		);
 	}
 
-	const appUrl = (process.env.APP_URL ?? new URL(request.url).origin).replace(
-		/\/+$/,
-		"",
-	);
-	const server = createServer(apiFor(headers, ip), appUrl);
+	const server = createServer(apiFor(headers, ip), base);
 	const transport = new WebStandardStreamableHTTPServerTransport({
 		sessionIdGenerator: undefined,
 		enableJsonResponse: true,

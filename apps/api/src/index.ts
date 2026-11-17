@@ -17,6 +17,7 @@ import { githubWebhookResponse } from "./lib/github-webhook";
 import { statusResponse } from "./lib/health";
 import { logMailStatus } from "./lib/mail";
 import { mcpResponse } from "./lib/mcp";
+import { oauthRoutes } from "./lib/oauth";
 import { logOidcStatus } from "./lib/oidc";
 import { projectBackgroundResponse } from "./lib/project-backgrounds";
 import { version } from "./lib/version";
@@ -98,6 +99,12 @@ const server = Bun.serve({
 		"/rpc": rpcRouteHandler,
 		"/rpc/*": rpcRouteHandler,
 		"/mcp": (request) => mcpResponse(request, clientIp(request)),
+		...Object.fromEntries(
+			Object.entries(oauthRoutes).map(([path, respond]) => [
+				path,
+				(request: Request) => respond(request, clientIp(request)),
+			]),
+		),
 		"/api/status": () => statusResponse(),
 		"/api/auth/oidc/start": (request) => oidcStart(request, clientIp(request)),
 		"/api/auth/oidc/callback": (request) =>
