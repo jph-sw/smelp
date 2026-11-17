@@ -5,7 +5,6 @@ import {
 	useSuspenseQuery,
 } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
 import * as v from "valibot";
 import { DynamicIcon } from "#/components/dynamic-icon";
 import {
@@ -58,11 +57,8 @@ function RouteComponent() {
 	const workspaceQuery = workspaceQueryOptions({ workspaceId });
 	const { data: workspace } = useSuspenseQuery(workspaceQuery);
 	const { canManage } = useWorkspaceAccess();
-	const [isDeleteOpen, setIsDeleteOpen] = useState(false);
-	const [isDeleting, setIsDeleting] = useState(false);
 
 	const handleDelete = async () => {
-		setIsDeleting(true);
 		try {
 			await deleteWorkspace({ workspaceId });
 			await queryClient.invalidateQueries({ queryKey: ["workspaces"] });
@@ -73,9 +69,6 @@ function RouteComponent() {
 			navigate({ to: "/" });
 		} catch (e) {
 			toastError(e);
-		} finally {
-			setIsDeleting(false);
-			setIsDeleteOpen(false);
 		}
 	};
 
@@ -143,7 +136,7 @@ function RouteComponent() {
 							</p>
 						</div>
 						<div className="shrink-0">
-							<AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+							<AlertDialog pendingAnnouncement="Deleting workspace">
 								<AlertDialogTrigger render={<Button variant={"destructive"} />}>
 									Delete
 								</AlertDialogTrigger>
@@ -158,13 +151,10 @@ function RouteComponent() {
 										</AlertDialogDescription>
 									</AlertDialogHeader>
 									<AlertDialogFooter>
-										<AlertDialogCancel disabled={isDeleting}>
-											Cancel
-										</AlertDialogCancel>
+										<AlertDialogCancel>Cancel</AlertDialogCancel>
 										<AlertDialogAction
 											variant={"destructive"}
-											disabled={isDeleting}
-											onClick={handleDelete}
+											action={handleDelete}
 										>
 											Delete workspace
 										</AlertDialogAction>
