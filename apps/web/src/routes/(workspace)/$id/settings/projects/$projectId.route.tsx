@@ -1,4 +1,9 @@
-import { LayerIcon, People, Setting07Icon } from "@hugeicons/core-free-icons";
+import {
+	GithubIcon,
+	LayerIcon,
+	People,
+	Setting07Icon,
+} from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
 import {
@@ -50,6 +55,15 @@ function RouteComponent() {
 					>
 						<HugeiconsIcon icon={LayerIcon} className="size-3.5" />
 						States
+					</Link>
+					<Link
+						to="/$id/settings/projects/$projectId/github"
+						params={params}
+						activeOptions={{ exact: true }}
+						className={settingsNavLinkClassName}
+					>
+						<HugeiconsIcon icon={GithubIcon} className="size-3.5" />
+						GitHub
 					</Link>
 				</SettingsNavGroup>
 			</SettingsNav>

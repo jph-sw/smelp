@@ -220,6 +220,18 @@ export function ActivitySentence({
 			) : (
 				<>removed a link from {issue}</>
 			);
+		case "issue.pull_request_linked":
+			return (
+				<>
+					linked pull request <Strong>#{d.name}</Strong> from GitHub to {issue}
+				</>
+			);
+		case "issue.pull_request_merged":
+			return (
+				<>
+					merged pull request <Strong>#{d.name}</Strong> for {issue} on GitHub
+				</>
+			);
 		case "comment.created":
 			return <>commented on {issue}</>;
 		case "comment.updated":
