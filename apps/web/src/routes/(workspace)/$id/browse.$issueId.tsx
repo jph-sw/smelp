@@ -276,7 +276,7 @@ function RouteComponent() {
 			</div>
 			{isArchived && <ArchivedBanner className="mx-4 mt-3 sm:mx-5" />}
 			<div className="flex min-h-0 flex-1 flex-col overflow-y-auto lg:flex-row lg:overflow-hidden">
-				<div className="min-w-0 flex-1 space-y-6 px-4 py-5 sm:px-9 lg:overflow-y-auto">
+				<div className="relative min-w-0 flex-1 space-y-6 px-4 py-5 sm:px-9 lg:overflow-y-auto">
 					<div className="space-y-3">
 						<div className="flex items-center gap-1.5 text-sm font-medium text-foreground/60">
 							<IssueTypeIcon type={issue.type} />
@@ -349,7 +349,7 @@ function RouteComponent() {
 						showHistory={!isPublic}
 					/>
 				</div>
-				<aside className="hidden w-80 shrink-0 overflow-y-auto border-l lg:block xl:w-96">
+				<aside className="relative hidden w-80 shrink-0 overflow-y-auto border-l lg:block xl:w-96">
 					<IssueProperties
 						issue={issue}
 						workspaceId={workspaceId}
