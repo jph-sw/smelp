@@ -21,6 +21,7 @@ import { Route as workspaceCreateWorkspaceRouteImport } from './routes/(workspac
 import { Route as CeoIndexRouteImport } from './routes/ceo/index'
 import { Route as CeoUiRouteImport } from './routes/ceo/ui'
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
+import { Route as OauthAuthorizeRouteImport } from './routes/oauth.authorize'
 import { Route as ResetPasswordTokenRouteImport } from './routes/reset-password.$token'
 import { Route as VerifyEmailTokenRouteImport } from './routes/verify-email.$token'
 import { Route as workspaceIdIndexRouteImport } from './routes/(workspace)/$id/index'
@@ -101,6 +102,11 @@ const CeoUiRoute = CeoUiRouteImport.update({
 const InviteTokenRoute = InviteTokenRouteImport.update({
   id: '/invite/$token',
   path: '/invite/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OauthAuthorizeRoute = OauthAuthorizeRouteImport.update({
+  id: '/oauth/authorize',
+  path: '/oauth/authorize',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ResetPasswordTokenRoute = ResetPasswordTokenRouteImport.update({
@@ -238,6 +244,7 @@ export interface FileRoutesByFullPath {
   '/create-workspace': typeof workspaceCreateWorkspaceRoute
   '/ceo/ui': typeof CeoUiRoute
   '/invite/$token': typeof InviteTokenRoute
+  '/oauth/authorize': typeof OauthAuthorizeRoute
   '/reset-password/$token': typeof ResetPasswordTokenRoute
   '/verify-email/$token': typeof VerifyEmailTokenRoute
   '/ceo/': typeof CeoIndexRoute
@@ -270,6 +277,7 @@ export interface FileRoutesByTo {
   '/create-workspace': typeof workspaceCreateWorkspaceRoute
   '/ceo/ui': typeof CeoUiRoute
   '/invite/$token': typeof InviteTokenRoute
+  '/oauth/authorize': typeof OauthAuthorizeRoute
   '/reset-password/$token': typeof ResetPasswordTokenRoute
   '/verify-email/$token': typeof VerifyEmailTokenRoute
   '/ceo': typeof CeoIndexRoute
@@ -303,6 +311,7 @@ export interface FileRoutesById {
   '/(workspace)/create-workspace': typeof workspaceCreateWorkspaceRoute
   '/ceo/ui': typeof CeoUiRoute
   '/invite/$token': typeof InviteTokenRoute
+  '/oauth/authorize': typeof OauthAuthorizeRoute
   '/reset-password/$token': typeof ResetPasswordTokenRoute
   '/verify-email/$token': typeof VerifyEmailTokenRoute
   '/ceo/': typeof CeoIndexRoute
@@ -339,6 +348,7 @@ export interface FileRouteTypes {
     | '/create-workspace'
     | '/ceo/ui'
     | '/invite/$token'
+    | '/oauth/authorize'
     | '/reset-password/$token'
     | '/verify-email/$token'
     | '/ceo/'
@@ -371,6 +381,7 @@ export interface FileRouteTypes {
     | '/create-workspace'
     | '/ceo/ui'
     | '/invite/$token'
+    | '/oauth/authorize'
     | '/reset-password/$token'
     | '/verify-email/$token'
     | '/ceo'
@@ -403,6 +414,7 @@ export interface FileRouteTypes {
     | '/(workspace)/create-workspace'
     | '/ceo/ui'
     | '/invite/$token'
+    | '/oauth/authorize'
     | '/reset-password/$token'
     | '/verify-email/$token'
     | '/ceo/'
@@ -436,6 +448,7 @@ export interface RootRouteChildren {
   SigninRoute: typeof SigninRoute
   SignupRoute: typeof SignupRoute
   InviteTokenRoute: typeof InviteTokenRoute
+  OauthAuthorizeRoute: typeof OauthAuthorizeRoute
   ResetPasswordTokenRoute: typeof ResetPasswordTokenRoute
   VerifyEmailTokenRoute: typeof VerifyEmailTokenRoute
 }
@@ -524,6 +537,13 @@ declare module '@tanstack/react-router' {
       path: '/invite/$token'
       fullPath: '/invite/$token'
       preLoaderRoute: typeof InviteTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/oauth/authorize': {
+      id: '/oauth/authorize'
+      path: '/oauth/authorize'
+      fullPath: '/oauth/authorize'
+      preLoaderRoute: typeof OauthAuthorizeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/reset-password/$token': {
@@ -811,6 +831,7 @@ const rootRouteChildren: RootRouteChildren = {
   SigninRoute: SigninRoute,
   SignupRoute: SignupRoute,
   InviteTokenRoute: InviteTokenRoute,
+  OauthAuthorizeRoute: OauthAuthorizeRoute,
   ResetPasswordTokenRoute: ResetPasswordTokenRoute,
   VerifyEmailTokenRoute: VerifyEmailTokenRoute,
 }

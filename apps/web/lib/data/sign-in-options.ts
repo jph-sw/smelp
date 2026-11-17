@@ -44,7 +44,11 @@ export const OIDC_LINK_MESSAGES: Record<string, string> = {
 	failed: "Linking didn't work. Please try again.",
 };
 
-export const oidcStartUrl = (invite?: string) =>
-	invite
-		? `/api/auth/oidc/start?invite=${encodeURIComponent(invite)}`
+export function oidcStartUrl(invite?: string, next?: string) {
+	const search = new URLSearchParams();
+	if (invite) search.set("invite", invite);
+	if (next) search.set("next", next);
+	return search.size > 0
+		? `/api/auth/oidc/start?${search}`
 		: "/api/auth/oidc/start";
+}

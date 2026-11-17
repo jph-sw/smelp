@@ -17,6 +17,10 @@ export default defineConfig({
 		proxy: {
 			"/api": "http://localhost:3000",
 			"/rpc": "http://localhost:3000",
+			"/mcp": "http://localhost:3000",
+			"/.well-known/oauth-": "http://localhost:3000",
+			"/oauth/register": "http://localhost:3000",
+			"/oauth/token": "http://localhost:3000",
 		},
 	},
 });

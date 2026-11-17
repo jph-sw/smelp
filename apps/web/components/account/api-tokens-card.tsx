@@ -98,7 +98,7 @@ export function ApiTokensCard() {
 		>
 			<CopyLink
 				title="MCP endpoint"
-				hint="AI agents like Claude Code and Cursor connect to it as an MCP server, with a token."
+				hint="Add it as an MCP server in AI agents like Claude Code and Cursor, and they open a browser for you to sign in. Agents without that can use a token."
 				link={`${window.location.origin}/mcp`}
 				copiedMessage="Address copied."
 			/>
@@ -148,7 +148,8 @@ export function ApiTokensCard() {
 									{token.name}
 								</span>
 								<span className="text-xs text-muted-foreground">
-									Created {formatDate(token.createdAt)},{" "}
+									{token.oauth ? "Signed in through OAuth" : "Created"}{" "}
+									{formatDate(token.createdAt)},{" "}
 									{token.lastUsedAt === null
 										? "never used"
 										: `last used ${formatRelativeTime(token.lastUsedAt)}`}

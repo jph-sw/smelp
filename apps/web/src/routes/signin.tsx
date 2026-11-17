@@ -149,7 +149,7 @@ function SignIn() {
 							<form.SubscribeButton label="Sign in" className="w-full" />
 						</form.AppForm>
 					</form>
-					<OidcButton invite={invite} />
+					<OidcButton invite={invite} next={returnTo} />
 				</CardContent>
 				{(status.signupOpen || invite || status.emailEnabled || canBrowse) && (
 					<CardFooter className="flex-col items-start gap-2">
