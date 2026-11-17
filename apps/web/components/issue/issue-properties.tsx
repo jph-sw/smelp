@@ -31,8 +31,8 @@ import {
 import { toast } from "../ui/toast";
 import { AssigneeSelect } from "./assignee-select";
 import { ISSUE_TYPE_ITEMS } from "./issue-type-icon";
+import { type ParentOption, ParentSelect } from "./parent-select";
 
-const NO_PARENT = "none";
 const NO_MODULE = "none";
 const NO_CYCLE = "none";
 
@@ -121,7 +121,7 @@ export function IssueProperties({
 	members: ProjectMember[];
 	canWrite: boolean;
 	/** Work items this one may sit under: same project, never itself or its own sub-items. */
-	parentOptions: { id: string; title: string }[];
+	parentOptions: ParentOption[];
 	modules: { id: string; name: string }[];
 	/** The project's cycles, for the Cycle selector. */
 	cycles: { id: string; name: string }[];
@@ -202,21 +202,16 @@ export function IssueProperties({
 					...cycles.map((cycle) => ({ label: cycle.name, value: cycle.id })),
 				]}
 			/>
-			<PropertySelect
-				label="Parent"
-				value={issue.parentId ?? NO_PARENT}
-				disabled={!canWrite}
-				onChange={(parentId) =>
-					onUpdate({ parentId: parentId === NO_PARENT ? null : parentId })
-				}
-				items={[
-					{ label: "No parent", value: NO_PARENT },
-					...parentOptions.map((option) => ({
-						label: `${option.id} ${option.title}`,
-						value: option.id,
-					})),
-				]}
-			/>
+			<div className="grid grid-cols-[5.5rem_1fr] items-center gap-2">
+				<span className="text-muted-foreground">Parent</span>
+				<ParentSelect
+					value={issue.parentId}
+					options={parentOptions}
+					disabled={!canWrite}
+					className="w-full border-transparent bg-transparent px-2 font-normal hover:border-transparent hover:bg-accent disabled:after:hidden"
+					onChange={(parentId) => onUpdate({ parentId })}
+				/>
+			</div>
 			<PropertySelect
 				label="Module"
 				value={issue.moduleId ?? NO_MODULE}
