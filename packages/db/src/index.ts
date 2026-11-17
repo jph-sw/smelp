@@ -29,7 +29,11 @@ import type {
 	project_github_repo,
 } from "../types/tables/github";
 import type { import_record } from "../types/tables/import_record";
-import { ISSUE_TYPES, type issue } from "../types/tables/issue";
+import {
+	ISSUE_PRIORITIES,
+	ISSUE_TYPES,
+	type issue,
+} from "../types/tables/issue";
 import type { issue_link } from "../types/tables/issue_link";
 import type { issue_relation } from "../types/tables/issue_relation";
 import type { schema_migrations } from "../types/tables/migration";
@@ -200,10 +204,11 @@ export const DEFAULTS = {
 	STATE_GROUPS: STATE_GROUPS,
 	REACTION_EMOJIS: REACTION_EMOJIS,
 	ISSUE_TYPES: ISSUE_TYPES,
+	ISSUE_PRIORITIES: ISSUE_PRIORITIES,
 };
 
 export type { PullRequestState } from "../types/tables/github";
-export type { IssueType } from "../types/tables/issue";
+export type { IssuePriority, IssueType } from "../types/tables/issue";
 
 export type ProjectMember = tables["auth_space_member"] &
 	Pick<tables["auth_user"], "fullName" | "displayName" | "image"> & {
