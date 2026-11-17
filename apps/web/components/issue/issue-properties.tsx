@@ -1,7 +1,7 @@
 import type { ProjectMember, tables } from "@smelp/db";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { type ReactNode, useState } from "react";
+import type { ReactNode } from "react";
 import { invalidateCycles } from "#/lib/data/cycle";
 import { deleteIssue } from "#/lib/data/issue";
 import { moduleQueryKeys } from "#/lib/data/module";
@@ -136,9 +136,8 @@ export function IssueProperties({
 }) {
 	const navigate = useNavigate();
 	const queryClient = useQueryClient();
-	const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 
-	const { mutate: remove, isPending: isDeleting } = useMutation({
+	const { mutateAsync: remove } = useMutation({
 		mutationFn: deleteIssue,
 		onSuccess: async () => {
 			await Promise.all([
@@ -159,7 +158,6 @@ export function IssueProperties({
 		},
 		onError: (e) => {
 			toastError(e);
-			setIsDeleteOpen(false);
 		},
 	});
 
@@ -242,7 +240,7 @@ export function IssueProperties({
 				time={issue.updatedAt}
 			/>
 			{canWrite && (
-				<AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+				<AlertDialog pendingAnnouncement="Deleting work item">
 					<AlertDialogTrigger
 						render={
 							<Button
@@ -263,13 +261,11 @@ export function IssueProperties({
 							</AlertDialogDescription>
 						</AlertDialogHeader>
 						<AlertDialogFooter>
-							<AlertDialogCancel disabled={isDeleting}>
-								Cancel
-							</AlertDialogCancel>
+							<AlertDialogCancel>Cancel</AlertDialogCancel>
 							<AlertDialogAction
 								variant="destructive"
-								disabled={isDeleting}
-								onClick={() => remove({ id: issue.id })}
+								// onError already reports the failure.
+								action={() => remove({ id: issue.id }).catch(() => {})}
 							>
 								Delete work item
 							</AlertDialogAction>

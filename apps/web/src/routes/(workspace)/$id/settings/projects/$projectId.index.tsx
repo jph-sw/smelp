@@ -269,14 +269,9 @@ function RouteComponent() {
 	const projectQuery = projectQueryOptions({ projectId });
 	const { data: project } = useSuspenseQuery(projectQuery);
 	const { canManage } = useProjectAccess(projectId);
-	const [isDeleteOpen, setIsDeleteOpen] = useState(false);
-	const [isDeleting, setIsDeleting] = useState(false);
-	const [isArchiveOpen, setIsArchiveOpen] = useState(false);
-	const [isArchiving, setIsArchiving] = useState(false);
 	const isArchived = project.archivedAt !== null;
 
 	const handleArchive = async () => {
-		setIsArchiving(true);
 		try {
 			if (isArchived) {
 				await unarchiveProject({ projectId });
@@ -294,14 +289,10 @@ function RouteComponent() {
 			});
 		} catch (e) {
 			toastError(e);
-		} finally {
-			setIsArchiving(false);
-			setIsArchiveOpen(false);
 		}
 	};
 
 	const handleDelete = async () => {
-		setIsDeleting(true);
 		try {
 			await deleteProject({ projectId });
 			await queryClient.invalidateQueries({
@@ -314,9 +305,6 @@ function RouteComponent() {
 			navigate({ to: "/$id", params: { id: workspaceId } });
 		} catch (e) {
 			toastError(e);
-		} finally {
-			setIsDeleting(false);
-			setIsDeleteOpen(false);
 		}
 	};
 
@@ -351,7 +339,11 @@ function RouteComponent() {
 							</p>
 						</div>
 						<div className="shrink-0">
-							<AlertDialog open={isArchiveOpen} onOpenChange={setIsArchiveOpen}>
+							<AlertDialog
+								pendingAnnouncement={
+									isArchived ? "Unarchiving project" : "Archiving project"
+								}
+							>
 								<AlertDialogTrigger render={<Button variant={"outline"} />}>
 									{isArchived ? "Unarchive" : "Archive"}
 								</AlertDialogTrigger>
@@ -367,13 +359,8 @@ function RouteComponent() {
 										</AlertDialogDescription>
 									</AlertDialogHeader>
 									<AlertDialogFooter>
-										<AlertDialogCancel disabled={isArchiving}>
-											Cancel
-										</AlertDialogCancel>
-										<AlertDialogAction
-											disabled={isArchiving}
-											onClick={handleArchive}
-										>
+										<AlertDialogCancel>Cancel</AlertDialogCancel>
+										<AlertDialogAction action={handleArchive}>
 											{isArchived ? "Unarchive project" : "Archive project"}
 										</AlertDialogAction>
 									</AlertDialogFooter>
@@ -395,7 +382,7 @@ function RouteComponent() {
 							</p>
 						</div>
 						<div className="shrink-0">
-							<AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+							<AlertDialog pendingAnnouncement="Deleting project">
 								<AlertDialogTrigger render={<Button variant={"destructive"} />}>
 									Delete
 								</AlertDialogTrigger>
@@ -410,13 +397,10 @@ function RouteComponent() {
 										</AlertDialogDescription>
 									</AlertDialogHeader>
 									<AlertDialogFooter>
-										<AlertDialogCancel disabled={isDeleting}>
-											Cancel
-										</AlertDialogCancel>
+										<AlertDialogCancel>Cancel</AlertDialogCancel>
 										<AlertDialogAction
 											variant={"destructive"}
-											disabled={isDeleting}
-											onClick={handleDelete}
+											action={handleDelete}
 										>
 											Delete project
 										</AlertDialogAction>

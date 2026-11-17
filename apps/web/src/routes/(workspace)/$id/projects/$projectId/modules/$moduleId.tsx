@@ -6,7 +6,6 @@ import {
 	useSuspenseQuery,
 } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
 import { ModuleDialog } from "#/components/module/module-dialog";
 import {
 	formatTargetDate,
@@ -95,7 +94,6 @@ function RouteComponent() {
 	const { data: issues } = useSuspenseQuery(issuesQueryOptions({ projectId }));
 	const { members, canWrite, canManage, isArchived } =
 		useProjectAccess(projectId);
-	const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 
 	const items = issues.filter((issue) => issue.moduleId === found.id);
 	const candidates = issues.filter((issue) => issue.moduleId !== found.id);
@@ -119,7 +117,7 @@ function RouteComponent() {
 		onSettled: refresh,
 	});
 
-	const { mutate: remove, isPending: isDeleting } = useMutation({
+	const { mutateAsync: remove } = useMutation({
 		mutationFn: deleteModule,
 		onSuccess: async () => {
 			toast({ type: "success", description: `Deleted ${found.name}.` });
@@ -132,7 +130,6 @@ function RouteComponent() {
 		},
 		onError: (e) => {
 			toastError(e);
-			setIsDeleteOpen(false);
 		},
 	});
 
@@ -192,7 +189,7 @@ function RouteComponent() {
 									existing={found}
 									trigger={<Button variant="outline">Edit</Button>}
 								/>
-								<AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+								<AlertDialog pendingAnnouncement="Deleting module">
 									<AlertDialogTrigger render={<Button variant="destructive" />}>
 										Delete
 									</AlertDialogTrigger>
@@ -205,13 +202,11 @@ function RouteComponent() {
 											</AlertDialogDescription>
 										</AlertDialogHeader>
 										<AlertDialogFooter>
-											<AlertDialogCancel disabled={isDeleting}>
-												Cancel
-											</AlertDialogCancel>
+											<AlertDialogCancel>Cancel</AlertDialogCancel>
 											<AlertDialogAction
 												variant="destructive"
-												disabled={isDeleting}
-												onClick={() => remove({ id: found.id })}
+												// onError already reports the failure.
+												action={() => remove({ id: found.id }).catch(() => {})}
 											>
 												Delete module
 											</AlertDialogAction>

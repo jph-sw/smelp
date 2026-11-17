@@ -180,7 +180,6 @@ function RouteComponent() {
 	const { members, canWrite, canManage, isArchived } =
 		useProjectAccess(projectId);
 	const [isEditOpen, setIsEditOpen] = useState(false);
-	const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 
 	const items = issues.filter((issue) => issue.cycleId === cycleId);
 	const unfinishedCount =
@@ -195,7 +194,7 @@ function RouteComponent() {
 		onError: (error) => toastError(error, "Couldn't save the cycle."),
 	});
 
-	const { mutate: remove, isPending: isDeleting } = useMutation({
+	const { mutateAsync: remove } = useMutation({
 		mutationFn: deleteCycle,
 		onSuccess: async () => {
 			toast({ type: "success", description: `Deleted ${cycle.name}.` });
@@ -218,7 +217,6 @@ function RouteComponent() {
 		},
 		onError: (error) => {
 			toastError(error, "Couldn't delete the cycle.");
-			setIsDeleteOpen(false);
 		},
 	});
 
@@ -263,7 +261,7 @@ function RouteComponent() {
 									/>
 								</DialogContent>
 							</Dialog>
-							<AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+							<AlertDialog pendingAnnouncement="Deleting cycle">
 								<AlertDialogTrigger render={<Button variant="destructive" />}>
 									Delete
 								</AlertDialogTrigger>
@@ -276,13 +274,11 @@ function RouteComponent() {
 										</AlertDialogDescription>
 									</AlertDialogHeader>
 									<AlertDialogFooter>
-										<AlertDialogCancel disabled={isDeleting}>
-											Cancel
-										</AlertDialogCancel>
+										<AlertDialogCancel>Cancel</AlertDialogCancel>
 										<AlertDialogAction
 											variant="destructive"
-											disabled={isDeleting}
-											onClick={() => remove({ id: cycle.id })}
+											// onError already reports the failure.
+											action={() => remove({ id: cycle.id }).catch(() => {})}
 										>
 											Delete cycle
 										</AlertDialogAction>

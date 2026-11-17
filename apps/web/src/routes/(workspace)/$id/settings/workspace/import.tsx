@@ -599,7 +599,7 @@ function RouteComponent() {
 						{isWorking && <Spinner />}
 						Check again
 					</Button>
-					<AlertDialog>
+					<AlertDialog pendingAnnouncement="Importing">
 						<AlertDialogTrigger
 							render={
 								<Button
@@ -626,9 +626,7 @@ function RouteComponent() {
 							</AlertDialogHeader>
 							<AlertDialogFooter>
 								<AlertDialogCancel>Cancel</AlertDialogCancel>
-								<AlertDialogAction onClick={runImport}>
-									Import
-								</AlertDialogAction>
+								<AlertDialogAction action={runImport}>Import</AlertDialogAction>
 							</AlertDialogFooter>
 						</AlertDialogContent>
 					</AlertDialog>
