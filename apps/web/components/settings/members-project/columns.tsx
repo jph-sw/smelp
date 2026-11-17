@@ -2,7 +2,6 @@ import { Delete02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { ProjectMember } from "@smelp/db";
 import { createColumnHelper } from "@tanstack/react-table";
-import { useState } from "react";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -28,21 +27,8 @@ function RemoveMemberCell({
 	member: ProjectMember;
 	onRemove: (member: ProjectMember) => Promise<void>;
 }) {
-	const [isOpen, setIsOpen] = useState(false);
-	const [isRemoving, setIsRemoving] = useState(false);
-
-	const handleRemove = async () => {
-		setIsRemoving(true);
-		try {
-			await onRemove(member);
-			setIsOpen(false);
-		} finally {
-			setIsRemoving(false);
-		}
-	};
-
 	return (
-		<AlertDialog open={isOpen} onOpenChange={setIsOpen}>
+		<AlertDialog pendingAnnouncement={`Removing ${member.fullName}`}>
 			<AlertDialogTrigger
 				render={<Button variant="ghost" size="icon" />}
 				aria-label="Remove member"
@@ -58,11 +44,10 @@ function RemoveMemberCell({
 					</AlertDialogDescription>
 				</AlertDialogHeader>
 				<AlertDialogFooter>
-					<AlertDialogCancel disabled={isRemoving}>Cancel</AlertDialogCancel>
+					<AlertDialogCancel>Cancel</AlertDialogCancel>
 					<AlertDialogAction
 						variant="destructive"
-						disabled={isRemoving}
-						onClick={handleRemove}
+						action={() => onRemove(member)}
 					>
 						Remove member
 					</AlertDialogAction>
