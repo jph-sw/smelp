@@ -24,7 +24,7 @@ export const isActivityFilter = (value: unknown): value is ActivityFilter =>
 export const isActivitySort = (value: unknown): value is ActivitySort =>
 	typeof value === "string" && Object.hasOwn(ACTIVITY_SORTS, value);
 
-function readView(): ActivityView {
+export function readActivityView(): ActivityView {
 	try {
 		const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "{}");
 		return {
@@ -57,7 +57,7 @@ export function arrangeTimeline<T extends { kind: string; createdAt: number }>(
 
 /** The viewer's last choice, kept in this browser for every work item. */
 export function useActivityView() {
-	const [view, setView] = useState(readView);
+	const [view, setView] = useState(readActivityView);
 	const update = (next: Partial<ActivityView>) => {
 		const merged = { ...view, ...next };
 		setView(merged);
