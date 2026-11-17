@@ -175,6 +175,14 @@ try {
 	});
 	const hasComments = comment.status === 200;
 	console.log(hasComments ? "  + comment" : "  - no comments in this version");
+	const apiToken = await rpc<{ token: string }>("apiTokens/create", {
+		name: "Upgrade agent",
+		expiresInDays: null,
+	});
+	const hasApiTokens = apiToken.status === 200;
+	console.log(
+		hasApiTokens ? "  + API token" : "  - no API tokens in this version",
+	);
 
 	await before.stop();
 	cleanups.pop();
@@ -196,6 +204,18 @@ try {
 	);
 	const found = await ok("issue/find", { issueId: issue.id });
 	check(found.title === issueTitle, "keeps the work item");
+	if (hasApiTokens) {
+		const mcp = await fetch(`${base}/mcp`, {
+			method: "POST",
+			headers: {
+				authorization: `Bearer ${apiToken.data.token}`,
+				"content-type": "application/json",
+				accept: "application/json, text/event-stream",
+			},
+			body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list" }),
+		});
+		check(mcp.status === 200, "the old API token still works over MCP");
+	}
 	if (hasComments) {
 		const comments = await ok<{ body: string }[]>("comments/find", {
 			issueId: issue.id,
