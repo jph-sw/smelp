@@ -1,6 +1,6 @@
 ---
 name: smelp-ticket
-description: Turn a feature idea, bug report or chore the user has in mind into a work item in the SMELP project on the production smelp instance (smelp.philipps.io), through the smelp MCP tools. Use whenever the user says "create a ticket/item/issue for…", "add this to smelp", "track this", "put it on the board", "file a bug", describes something smelp should do or a defect they noticed and wants it remembered, or when you discover follow-up work mid-task that should be tracked instead of done now. Not for doing the work (that is smelp-work) or for syncing states with merged PRs (that is smelp-sync).
+description: Turn a feature idea, bug report or chore the user has in mind into a work item in the SMELP project on the production smelp instance (smelp.philipps.io), through the smelp MCP tools. Use whenever the user says "create a ticket/item/issue for…", "add this to smelp", "track this", "put it on the board", "file a bug", describes something smelp should do or a defect they noticed and wants it remembered, or when you discover follow-up work mid-task that should be tracked instead of done now. Not for doing the work (that is smelp-work, or smelp-do to file and build in one go) or for syncing states with merged PRs (that is smelp-sync).
 ---
 
 # Create a SMELP work item
