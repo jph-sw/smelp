@@ -14,6 +14,11 @@ import { type AuthUser, endSession, signOut } from "#/lib/auth";
 import { instanceStatusQueryOptions } from "#/lib/data/instance";
 import { workspacesQueryOptions } from "#/lib/data/workspace";
 import { toastError } from "#/lib/errors";
+import {
+	isThemePreference,
+	THEME_PREFERENCES,
+	useThemePreference,
+} from "#/lib/theme";
 import { initials } from "#/lib/utils";
 import { useWorkspaceAccess } from "#/lib/workspace-viewer";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
@@ -23,6 +28,8 @@ import {
 	DropdownMenuGroup,
 	DropdownMenuItem,
 	DropdownMenuLabel,
+	DropdownMenuRadioGroup,
+	DropdownMenuRadioItem,
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
@@ -190,6 +197,7 @@ function WorkspaceSwitcher({
 function UserMenu({ user }: { user: AuthUser }) {
 	const navigate = useNavigate();
 	const queryClient = useQueryClient();
+	const [theme, setTheme] = useThemePreference();
 
 	const handleSignOut = async () => {
 		try {
@@ -224,6 +232,22 @@ function UserMenu({ user }: { user: AuthUser }) {
 							Instance settings
 						</DropdownMenuItem>
 					)}
+				</DropdownMenuGroup>
+				<DropdownMenuSeparator />
+				<DropdownMenuGroup>
+					<DropdownMenuLabel>Theme</DropdownMenuLabel>
+					<DropdownMenuRadioGroup
+						value={theme}
+						onValueChange={(value) => {
+							if (isThemePreference(value)) setTheme(value);
+						}}
+					>
+						{Object.entries(THEME_PREFERENCES).map(([value, label]) => (
+							<DropdownMenuRadioItem key={value} value={value}>
+								{label}
+							</DropdownMenuRadioItem>
+						))}
+					</DropdownMenuRadioGroup>
 				</DropdownMenuGroup>
 				<DropdownMenuSeparator />
 				<DropdownMenuGroup>

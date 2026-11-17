@@ -9,7 +9,15 @@
 		<title>smelp</title>
 		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 		<script>
-			if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
+			let theme;
+			try {
+				theme = localStorage.getItem("smelp.theme");
+			} catch {}
+			if (
+				theme === "dark" ||
+				(theme !== "light" &&
+					window.matchMedia("(prefers-color-scheme: dark)").matches)
+			) {
 				document.documentElement.classList.add("dark");
 			}
 		</script>
