@@ -1,8 +1,10 @@
 import { describe, expect, mock, test } from "bun:test";
 import type { ProjectMember } from "@smelp/db";
-import { act, render, screen, userEvent, within } from "#/test/dom";
+import { act, render, screen, setupDom, userEvent, within } from "#/test/dom";
 import { canManageMembers, createColumns } from "./columns";
 import { DataTable } from "./data-table";
+
+setupDom();
 
 const member = (id: string, fullName: string) =>
 	({
