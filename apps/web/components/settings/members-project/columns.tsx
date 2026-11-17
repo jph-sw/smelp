@@ -72,6 +72,19 @@ function RemoveMemberCell({
 	);
 }
 
+// Members of an archived project can't be added or removed until it is unarchived.
+export function canManageMembers({
+	isArchived,
+	instanceRole,
+	projectRole,
+}: {
+	isArchived: boolean;
+	instanceRole: string | null | undefined;
+	projectRole: ProjectMember["role"] | undefined;
+}) {
+	return !isArchived && (instanceRole === "admin" || projectRole === "admin");
+}
+
 export function createColumns({
 	canRemove,
 	onRemove,

@@ -4,7 +4,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { ArchivedBanner } from "#/components/project/archived-banner";
 import { AddMemberDialog } from "#/components/settings/members-project/add-member-dialog";
-import { createColumns } from "#/components/settings/members-project/columns";
+import {
+	canManageMembers,
+	createColumns,
+} from "#/components/settings/members-project/columns";
 import { DataTable } from "#/components/settings/members-project/data-table";
 import { toast } from "#/components/ui/toast";
 import { usePageTitle } from "#/hooks/use-page-title";
@@ -40,11 +43,11 @@ function RouteComponent() {
 	);
 	const isArchived = project.archivedAt !== null;
 
-	const currentMember = members.find((m) => m.userId === currentUser?.id);
-	// Members of an archived project can't be added or removed until it is unarchived.
-	const canManageMembers =
-		!isArchived &&
-		(currentUser?.role === "admin" || currentMember?.role === "admin");
+	const canManage = canManageMembers({
+		isArchived,
+		instanceRole: currentUser?.role,
+		projectRole: members.find((m) => m.userId === currentUser?.id)?.role,
+	});
 
 	const columns = useMemo(() => {
 		const handleRemove = async (member: ProjectMember) => {
@@ -70,16 +73,16 @@ function RouteComponent() {
 			}
 		};
 		return createColumns({
-			canRemove: canManageMembers,
+			canRemove: canManage,
 			onRemove: handleRemove,
 		});
-	}, [canManageMembers, projectId, queryClient]);
+	}, [canManage, projectId, queryClient]);
 
 	return (
 		<div className="flex flex-col gap-1">
 			<div className="mb-4 flex items-center justify-between">
 				<h1 className="text-lg font-medium">Members</h1>
-				{canManageMembers && <AddMemberDialog projectId={projectId} />}
+				{canManage && <AddMemberDialog projectId={projectId} />}
 			</div>
 			{isArchived && <ArchivedBanner className="mb-4" />}
 			<DataTable columns={columns} data={members} />
