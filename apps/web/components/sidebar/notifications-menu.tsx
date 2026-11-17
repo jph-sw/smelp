@@ -34,6 +34,8 @@ function describe(item: InboxItem) {
 			return "mentioned you on";
 		case "comment":
 			return "commented on";
+		case "status_changed":
+			return "changed the state of";
 	}
 }
 
@@ -127,8 +129,9 @@ function InboxList({
 					<p className="p-3 text-sm text-muted-foreground">Loading…</p>
 				) : items.length === 0 ? (
 					<p className="p-3 text-sm text-muted-foreground">
-						Nothing needs you right now. You'll hear about work assigned to you,
-						comments on your work and mentions here.
+						Nothing needs you right now. You'll hear here when you're assigned
+						or mentioned, and about comments and state changes on items you
+						watch.
 					</p>
 				) : (
 					<ol className="space-y-1">

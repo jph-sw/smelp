@@ -13,6 +13,7 @@ import {
 	removeAttachmentFiles,
 } from "../lib/attachments";
 import { displayNameOf } from "../lib/names";
+import { watch } from "../lib/watchers";
 import { base } from "../orpc";
 
 const sql = new DB().sqlite;
@@ -338,6 +339,7 @@ export const updateIssue = base
 		const issue = (
 			await sql`SELECT * FROM issue WHERE id = ${input.id}`
 		)[0] as tables["issue"];
+		if (assigneeChanged) await watch(issue.id, [issue.assignee]);
 
 		const event = {
 			entityId: issue.id,
@@ -591,6 +593,7 @@ export const createIssue = base
 		}
 
 		await sql`UPDATE project_counter SET lastNumber = lastNumber + 1 WHERE projectId = ${project.id}`;
+		await watch(issue.id, [issue.createdBy, issue.assignee]);
 
 		eventBus.emit({
 			type: "issue.created",

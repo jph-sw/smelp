@@ -117,6 +117,11 @@ export async function removeFromWorkspace(
 			UPDATE issue SET assignee = NULL
 			WHERE workspaceId = ${workspace.id} AND assignee = ${member.userId}
 		`;
+		await tx`
+			DELETE FROM issue_watcher
+			WHERE userId = ${member.userId}
+				AND issueId IN (SELECT id FROM issue WHERE workspaceId = ${workspace.id})
+		`;
 
 		// Links they created shouldn't keep letting people in after they're gone.
 		await tx`

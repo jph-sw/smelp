@@ -39,6 +39,15 @@ export const issueQueryOptions = ({ issueId }: { issueId: string }) =>
 		queryFn: () => orpc.issue.find({ issueId }),
 	});
 
+export const watchersQueryOptions = ({ issueId }: { issueId: string }) =>
+	queryOptions({
+		queryKey: ["watchers", issueId],
+		queryFn: () => orpc.issue.watchers({ issueId }),
+	});
+
+export const setWatching = (input: { issueId: string; watching: boolean }) =>
+	orpc.issue.setWatching(input);
+
 export const commentsQueryOptions = ({ issueId }: { issueId: string }) =>
 	queryOptions({
 		queryKey: ["comments", issueId],

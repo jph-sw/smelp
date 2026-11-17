@@ -12,6 +12,7 @@ import {
 	attachmentKeysOfComment,
 	removeAttachmentFiles,
 } from "../lib/attachments";
+import { watch } from "../lib/watchers";
 import { base } from "../orpc";
 
 const sql = new DB().sqlite;
@@ -173,6 +174,7 @@ export const createComment = base
 			editedAt: null,
 		};
 		await sql`INSERT INTO comment ${sql(comment)}`;
+		await watch(issue.id, [caller.userId]);
 
 		eventBus.emit({
 			type: "comment.created",

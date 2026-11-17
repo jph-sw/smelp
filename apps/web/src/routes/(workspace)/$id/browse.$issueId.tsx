@@ -16,6 +16,7 @@ import { IssueProperties } from "#/components/issue/issue-properties";
 import { IssueRelations } from "#/components/issue/issue-relations";
 import { IssueTypeIcon } from "#/components/issue/issue-type-icon";
 import { SubItems } from "#/components/issue/sub-items";
+import { WatchToggle } from "#/components/issue/watch-toggle";
 import { ArchivedBanner } from "#/components/project/archived-banner";
 import { ProjectHeader } from "#/components/project/project-header";
 import {
@@ -199,6 +200,7 @@ function RouteComponent() {
 				...[
 					["issue", issue.id],
 					["activity", issue.id],
+					["watchers", issue.id],
 					["issues", issue.projectId],
 					["my-issues"],
 					...moduleQueryKeys(issue.projectId),
@@ -281,6 +283,7 @@ function RouteComponent() {
 						<div className="flex items-center gap-1.5 text-sm font-medium text-foreground/60">
 							<IssueTypeIcon type={issue.type} />
 							{issue.id}
+							{!isPublic && <WatchToggle issueId={issue.id} />}
 						</div>
 						{canWrite ? (
 							<EditableText

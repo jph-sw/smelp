@@ -76,7 +76,10 @@ export function IssueActivity({
 		onSuccess: async () => {
 			setDraft("");
 			setComposer((n) => n + 1);
-			await refreshComments();
+			await Promise.all([
+				refreshComments(),
+				queryClient.invalidateQueries({ queryKey: ["watchers", issueId] }),
+			]);
 		},
 		onError: (e) => toastError(e),
 	});
