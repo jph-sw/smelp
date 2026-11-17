@@ -2,6 +2,19 @@
 
 Each release is a git tag. To upgrade, follow [Upgrade](README.md#upgrade) in the README.
 
+## 0.12.0 (2026-11-17)
+
+AI agents sign in to smelp through the browser, with no token to copy.
+
+- **MCP sign-in:** an MCP client like Claude Code or Cursor needs only your smelp address with `/mcp` added. The first time it connects, it opens a browser, where you sign in and allow it to work as you. Each agent you allow shows on your account page under API tokens, marked "Signed in through OAuth", and revoking it signs the agent out right away. Its access lasts an hour at a time and renews by itself while the grant stands. API tokens work as before. Behind a reverse proxy that handles HTTPS, set `APP_URL`, or agents are sent to `http://` addresses.
+- **MCP tools:** agents can create workspaces and projects too, with the same checks as the web app.
+- **Development in the sidebar:** a work item's GitHub branches, commits and pull requests now show in the right sidebar, under its properties.
+- **Fixed:** the window no longer scrolls on a long work item page, which moved the header and sidebar off screen. Only the item's panes scroll.
+- **Fixed:** a work item's description uses the full width of its column instead of stopping at about 65 characters per line.
+- **Fixed:** creating a project with a key that's taken now says the key is taken, instead of the name.
+
+Upgrading runs one database change automatically, which adds the tables for MCP sign-in. Existing data and API tokens aren't touched. Back up first, as the README describes.
+
 ## 0.11.0 (2026-11-17)
 
 Work items show the GitHub branches, commits and pull requests that mention them.

@@ -26,19 +26,19 @@ The look is plain for now: the components are built on [ui-sdk](https://ui-sdk.d
 
 ## Install
 
-You need Docker with Compose 2.24 or newer. Each release is published as an image at `ghcr.io/jph-sw/smelp`. You only need its compose file. Make a folder for it, download the file, pick a version and start it. Use the newest version from [CHANGELOG.md](CHANGELOG.md) in place of `v0.11.0`.
+You need Docker with Compose 2.24 or newer. Each release is published as an image at `ghcr.io/jph-sw/smelp`. You only need its compose file. Make a folder for it, download the file, pick a version and start it. Use the newest version from [CHANGELOG.md](CHANGELOG.md) in place of `v0.12.0`.
 
 ```sh
 mkdir smelp && cd smelp
-curl -fsSLO https://raw.githubusercontent.com/jph-sw/smelp/v0.11.0/compose.yaml
-echo SMELP_VERSION=0.11.0 >> .env
+curl -fsSLO https://raw.githubusercontent.com/jph-sw/smelp/v0.12.0/compose.yaml
+echo SMELP_VERSION=0.12.0 >> .env
 docker compose pull
 docker compose up -d
 ```
 
 Run the other `docker compose` commands in this README from that folder. Your data isn't in it, it's in the `smelp-data` Docker volume.
 
-To build from source instead, clone the repository at the release tag with `git clone --branch v0.11.0 https://github.com/jph-sw/smelp.git`, and run `docker compose up -d --build` in the checkout.
+To build from source instead, clone the repository at the release tag with `git clone --branch v0.12.0 https://github.com/jph-sw/smelp.git`, and run `docker compose up -d --build` in the checkout.
 
 Open <http://localhost:3000> and create your account. The first account becomes the instance admin. After that, people join through invite links from a workspace's member settings, unless you open public sign-up at `/ceo`.
 
@@ -98,7 +98,7 @@ All of these are optional. Put them in `.env`, which [`.env.example`](.env.examp
 
 | Setting | What it does |
 | --- | --- |
-| `SMELP_VERSION` | The image version to run, like `0.11.0`. Defaults to `latest`, the newest release. |
+| `SMELP_VERSION` | The image version to run, like `0.12.0`. Defaults to `latest`, the newest release. |
 | `SMELP_PORT` | Port on this machine, optionally with an address. Defaults to `3000`. |
 | `SECURE_COOKIES` | `false` allows signing in over plain HTTP. |
 | `TRUST_PROXY` | `true` when behind a reverse proxy. See above. |
@@ -230,19 +230,19 @@ Back up, set `SMELP_VERSION` in `.env` to the new version, download that version
 
 ```sh
 docker compose exec smelp bun run backup
-curl -fsSLO https://raw.githubusercontent.com/jph-sw/smelp/v0.11.0/compose.yaml
+curl -fsSLO https://raw.githubusercontent.com/jph-sw/smelp/v0.12.0/compose.yaml
 docker compose pull
 docker compose up -d
 ```
 
-Replace `v0.11.0` with the version you're upgrading to, and read its entry in [CHANGELOG.md](CHANGELOG.md) first. Each release is tested by upgrading a database from the release before it. You can skip versions.
+Replace `v0.12.0` with the version you're upgrading to, and read its entry in [CHANGELOG.md](CHANGELOG.md) first. Each release is tested by upgrading a database from the release before it. You can skip versions.
 
 If you build from source, check out the new version and build it instead of pulling:
 
 ```sh
 docker compose exec smelp bun run backup
 git fetch --tags
-git checkout v0.11.0
+git checkout v0.12.0
 docker compose up -d --build
 ```
 
@@ -296,17 +296,17 @@ Without Docker, `PORT`, `DATABASE_PATH` and `WEB_DIST` set the port, the databas
 ### Releasing
 
 1. Set the new version in `package.json`, and move the changes under it in `CHANGELOG.md`, with the date.
-2. Run `bun run test:upgrade v0.11.0`, using the previous release's tag. It builds that version and this one in Docker, adds data to the old one, upgrades the same volume and checks nothing was lost. Add `--bun` to run them without Docker.
+2. Run `bun run test:upgrade v0.12.0`, using the previous release's tag. It builds that version and this one in Docker, adds data to the old one, upgrades the same volume and checks nothing was lost. Add `--bun` to run them without Docker.
 3. Merge to `main`, then tag that commit and publish the release notes:
 
 ```sh
-git tag -a v0.11.0 -m "smelp 0.11.0"
-git push origin v0.11.0
-awk '/^## 0.11.0/{found=1; next} /^## /{found=0} found' CHANGELOG.md > notes.md
-gh release create v0.11.0 --title "smelp 0.11.0" --notes-file notes.md
+git tag -a v0.12.0 -m "smelp 0.12.0"
+git push origin v0.12.0
+awk '/^## 0.12.0/{found=1; next} /^## /{found=0} found' CHANGELOG.md > notes.md
+gh release create v0.12.0 --title "smelp 0.12.0" --notes-file notes.md
 ```
 
-4. Pushing the tag runs the Release workflow, which publishes the image as `0.11.0`, `0.11` and `latest`. Run `gh run watch` and pick it to follow it until it's done. To publish an existing tag again, run `gh workflow run release.yml -f tag=v0.11.0`. That only moves `latest` when the tag is the newest release.
+4. Pushing the tag runs the Release workflow, which publishes the image as `0.12.0`, `0.12` and `latest`. Run `gh run watch` and pick it to follow it until it's done. To publish an existing tag again, run `gh workflow run release.yml -f tag=v0.12.0`. That only moves `latest` when the tag is the newest release.
 
 ## License
 
