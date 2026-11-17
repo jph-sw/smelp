@@ -406,14 +406,15 @@ describe("setting up a workspace", () => {
 		);
 	});
 
-	test("a taken project key says it exists", async () => {
+	test("a taken project key says the key is taken", async () => {
 		const result = await call(agent, "create_project", {
 			workspace: workspaceId,
 			key: HIDDEN_PROJECT,
 			name: "Copycat",
 		});
 		expect(result.isError).toBe(true);
-		expect(result.text).toContain("already exists");
+		expect(result.text).toContain(`The project key ${HIDDEN_PROJECT} is taken`);
+		expect(result.text).not.toContain("name");
 	});
 
 	test("needs a confirmed email while email is on", async () => {
