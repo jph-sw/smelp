@@ -115,8 +115,7 @@ describe("members table", () => {
 		expect(screen.queryByRole("alertdialog")).toBeNull();
 	});
 
-	// The confirm button closes the dialog on click instead of waiting for onRemove (SMELP-24).
-	test.failing("keeps the dialog open while the removal runs", async () => {
+	test("keeps the dialog open while the removal runs", async () => {
 		let finish = () => {};
 		const onRemove = () =>
 			new Promise<void>((resolve) => {
@@ -124,11 +123,16 @@ describe("members table", () => {
 			});
 		const user = renderMembers({ canRemove: true, onRemove });
 		const dialog = await openRemoveDialog(user, 0);
-		await user.click(dialog.getByRole("button", { name: "Remove member" }));
+		const confirm = dialog.getByRole("button", { name: "Remove member" });
+		await user.click(confirm);
 		try {
+			expect(screen.queryByRole("alertdialog")).not.toBeNull();
+			expect(confirm.getAttribute("aria-busy")).toBe("true");
+			await user.click(dialog.getByRole("button", { name: "Cancel" }));
 			expect(screen.queryByRole("alertdialog")).not.toBeNull();
 		} finally {
 			await act(async () => finish());
 		}
+		expect(screen.queryByRole("alertdialog")).toBeNull();
 	});
 });
