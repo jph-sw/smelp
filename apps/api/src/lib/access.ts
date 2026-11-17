@@ -44,6 +44,7 @@ async function userOfApiToken(authorization: string): Promise<Caller> {
 			SELECT id, userId, lastUsedAt FROM api_token
 			WHERE secretHash = ${hashSecretToken(token)}
 			  AND (expiresAt IS NULL OR expiresAt > ${now})
+			  AND (secretExpiresAt IS NULL OR secretExpiresAt > ${now})
 		`
 	)[0] as Pick<tables["api_token"], "id" | "userId" | "lastUsedAt"> | undefined;
 	if (!row) throw new ORPCError("UNAUTHORIZED");

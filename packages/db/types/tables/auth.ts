@@ -104,4 +104,28 @@ export type api_token = {
 	lastUsedAt: number | null;
 	/** null for a token that never expires. */
 	expiresAt: number | null;
+	/** The OAuth client this grant belongs to; null for a personal token. */
+	clientId: string | null;
+	/** Hash of an OAuth grant's refresh token; null for a personal token. */
+	refreshHash: string | null;
+	/** When an OAuth grant's access token stops working; null for a personal token. */
+	secretExpiresAt: number | null;
+};
+
+export type oauth_client = {
+	id: string;
+	name: string;
+	/** JSON array of the exact addresses the client may send people back to. */
+	redirectUris: string;
+	createdAt: number;
+};
+
+export type oauth_code = {
+	codeHash: string;
+	clientId: string;
+	userId: string;
+	redirectUri: string;
+	/** PKCE S256 challenge: BASE64URL(SHA256(code_verifier)). */
+	codeChallenge: string;
+	expiresAt: number;
 };

@@ -15,6 +15,8 @@ import type {
 	auth_space_member,
 	auth_user,
 	auth_user_avatar,
+	oauth_client,
+	oauth_code,
 } from "../types/tables/auth";
 import type { comment } from "../types/tables/comment";
 import {
@@ -172,6 +174,8 @@ export type tables = {
 	auth_email_verification: auth_email_verification;
 	auth_user_avatar: auth_user_avatar;
 	api_token: api_token;
+	oauth_client: oauth_client;
+	oauth_code: oauth_code;
 	activity_logs: activity_logs;
 	workspace: workspace;
 	project: project;
