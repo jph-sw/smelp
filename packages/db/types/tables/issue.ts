@@ -21,6 +21,8 @@ export type issue = {
 	parentId: string | null;
 	moduleId: string | null;
 	cycleId: string | null;
+	/** A whole day as YYYY-MM-DD. */
+	dueDate: string | null;
 	workspaceId: string;
 	projectId: string;
 	createdAt: number;

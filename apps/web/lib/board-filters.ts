@@ -1,4 +1,5 @@
 import type { tables } from "@smelp/db";
+import { isDueThisWeek, isOverdue } from "./due-date";
 import { type IssuePriority, isIssuePriority } from "./issue-priorities";
 import { type IssueType, isIssueType } from "./issue-types";
 
@@ -10,7 +11,14 @@ export type BoardFilters = {
 	priority?: IssuePriority;
 	cycle?: string;
 	module?: string;
+	due?: DueFilter;
 };
+
+export const DUE_FILTERS = ["overdue", "week"] as const;
+export type DueFilter = (typeof DUE_FILTERS)[number];
+
+const isDueFilter = (value: unknown): value is DueFilter =>
+	DUE_FILTERS.includes(value as DueFilter);
 
 export const UNASSIGNED = "unassigned";
 export const NO_CYCLE = "none";
@@ -26,7 +34,13 @@ type FilterableIssue = Pick<
 	| "priority"
 	| "cycleId"
 	| "moduleId"
+	| "dueDate"
 >;
+
+type FilterContext = {
+	today: string;
+	states: Pick<tables["state"], "id" | "group">[];
+};
 
 const asString = (value: unknown) =>
 	typeof value === "string" || typeof value === "number"
@@ -52,6 +66,7 @@ export function parseBoardFilters(
 		priority: isIssuePriority(search.priority) ? search.priority : undefined,
 		module: asString(search.module),
 		cycle: asString(search.cycle),
+		due: isDueFilter(search.due) ? search.due : undefined,
 	};
 }
 
@@ -61,7 +76,11 @@ const matchesRef = (
 	actual: string | null,
 ) => !wanted || (wanted === none ? !actual : actual === wanted);
 
-export function matchesFilters(issue: FilterableIssue, filters: BoardFilters) {
+export function matchesFilters(
+	issue: FilterableIssue,
+	filters: BoardFilters,
+	{ today, states }: FilterContext,
+) {
 	if (filters.q) {
 		const query = filters.q.toLowerCase();
 		const matches =
@@ -76,6 +95,11 @@ export function matchesFilters(issue: FilterableIssue, filters: BoardFilters) {
 		)
 	) {
 		return false;
+	}
+	if (filters.due) {
+		const group = states.find((state) => state.id === issue.state)?.group;
+		const isDue = filters.due === "overdue" ? isOverdue : isDueThisWeek;
+		if (!isDue(issue.dueDate, group, today)) return false;
 	}
 	return (
 		(!filters.state || issue.state === filters.state) &&
@@ -94,6 +118,7 @@ export function isFiltered(filters: BoardFilters) {
 			filters.type ||
 			filters.priority ||
 			filters.cycle ||
-			filters.module,
+			filters.module ||
+			filters.due,
 	);
 }

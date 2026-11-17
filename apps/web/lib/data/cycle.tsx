@@ -1,4 +1,5 @@
 import { type QueryClient, queryOptions } from "@tanstack/react-query";
+import { formatDay } from "../day";
 import { orpc } from "../orpc";
 
 export const cyclesQueryOptions = ({ projectId }: { projectId: string }) =>
@@ -41,19 +42,6 @@ export const invalidateCycles = (queryClient: QueryClient, projectId: string) =>
 		queryClient.invalidateQueries({ queryKey: ["cycles", projectId] }),
 		queryClient.invalidateQueries({ queryKey: ["cycle"] }),
 	]);
-
-// Dates are whole days. Reading one as local midnight keeps it on the same day
-// for everyone, where a timestamp would shift with the time zone.
-export function formatDay(day: string) {
-	const [year, month, date] = day.split("-").map(Number) as [
-		number,
-		number,
-		number,
-	];
-	return new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(
-		new Date(year, month - 1, date),
-	);
-}
 
 export const formatRange = (cycle: { startDate: string; endDate: string }) =>
 	`${formatDay(cycle.startDate)} – ${formatDay(cycle.endDate)}`;

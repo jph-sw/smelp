@@ -1,3 +1,5 @@
+import { Cancel01Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import type { ProjectMember, tables } from "@smelp/db";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
@@ -5,6 +7,7 @@ import type { ReactNode } from "react";
 import { invalidateCycles } from "#/lib/data/cycle";
 import { deleteIssue } from "#/lib/data/issue";
 import { moduleQueryKeys } from "#/lib/data/module";
+import { isOverdue, localDay } from "#/lib/due-date";
 import { toastError } from "#/lib/errors";
 import { type IssuePriority, isIssuePriority } from "#/lib/issue-priorities";
 import { type IssueType, isIssueType } from "#/lib/issue-types";
@@ -21,6 +24,7 @@ import {
 	AlertDialogTrigger,
 } from "../ui/alert-dialog";
 import { Button } from "../ui/button";
+import { Input } from "../ui/input";
 import {
 	Select,
 	SelectContent,
@@ -86,6 +90,57 @@ function PropertySelect({
 	);
 }
 
+function DueDateProperty({
+	dueDate,
+	overdue,
+	disabled,
+	onChange,
+}: {
+	dueDate: string | null;
+	overdue: boolean;
+	disabled: boolean;
+	onChange: (dueDate: string | null) => void;
+}) {
+	return (
+		<div className="grid grid-cols-[5.5rem_1fr] items-center gap-2">
+			<span className="text-muted-foreground">Due date</span>
+			<div className="flex min-w-0 items-center gap-1">
+				{/* Saved on blur: a date input changes with every digit typed. */}
+				<Input
+					key={dueDate ?? ""}
+					type="date"
+					aria-label="Due date"
+					defaultValue={dueDate ?? ""}
+					disabled={disabled}
+					className="w-auto border-transparent bg-transparent px-2 hover:bg-accent"
+					onBlur={(event) => {
+						const next = event.currentTarget.value || null;
+						if (next !== dueDate) onChange(next);
+					}}
+					onKeyDown={(event) => {
+						if (event.key === "Enter") event.currentTarget.blur();
+					}}
+				/>
+				{overdue && (
+					<span className="shrink-0 text-xs font-medium text-destructive">
+						Overdue
+					</span>
+				)}
+				{dueDate && !disabled && (
+					<Button
+						variant="ghost"
+						size="icon-sm"
+						aria-label="Clear due date"
+						onClick={() => onChange(null)}
+					>
+						<HugeiconsIcon icon={Cancel01Icon} />
+					</Button>
+				)}
+			</div>
+		</div>
+	);
+}
+
 function PersonAndTime({
 	label,
 	name,
@@ -135,6 +190,7 @@ export function IssueProperties({
 		parentId?: string | null;
 		moduleId?: string | null;
 		cycleId?: string | null;
+		dueDate?: string | null;
 	}) => void;
 }) {
 	const navigate = useNavigate();
@@ -213,6 +269,16 @@ export function IssueProperties({
 					{ label: "No cycle", value: NO_CYCLE },
 					...cycles.map((cycle) => ({ label: cycle.name, value: cycle.id })),
 				]}
+			/>
+			<DueDateProperty
+				dueDate={issue.dueDate}
+				overdue={isOverdue(
+					issue.dueDate,
+					states.find((state) => state.id === issue.state)?.group,
+					localDay(),
+				)}
+				disabled={!canWrite}
+				onChange={(dueDate) => onUpdate({ dueDate })}
 			/>
 			<div className="grid grid-cols-[5.5rem_1fr] items-center gap-2">
 				<span className="text-muted-foreground">Parent</span>

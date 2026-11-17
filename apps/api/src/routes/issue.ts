@@ -12,6 +12,7 @@ import {
 	attachmentKeysOfIssue,
 	removeAttachmentFiles,
 } from "../lib/attachments";
+import { Day } from "../lib/day";
 import { displayNameOf } from "../lib/names";
 import { watch } from "../lib/watchers";
 import { base } from "../orpc";
@@ -174,6 +175,7 @@ export const updateIssue = base
 			parentId: v.optional(v.nullable(NonEmpty)),
 			moduleId: v.optional(v.nullable(NonEmpty)),
 			cycleId: v.optional(v.nullable(NonEmpty)),
+			dueDate: v.optional(v.nullable(Day)),
 		}),
 	)
 	.handler(async ({ input, context }) => {
@@ -203,6 +205,7 @@ export const updateIssue = base
 			moduleId:
 				input.moduleId === undefined ? oldIssue.moduleId : input.moduleId,
 			cycleId: input.cycleId === undefined ? oldIssue.cycleId : input.cycleId,
+			dueDate: input.dueDate === undefined ? oldIssue.dueDate : input.dueDate,
 		};
 
 		const stateChanged = next.state !== oldIssue.state;
@@ -214,6 +217,7 @@ export const updateIssue = base
 		const parentChanged = next.parentId !== oldIssue.parentId;
 		const moduleChanged = next.moduleId !== oldIssue.moduleId;
 		const cycleChanged = next.cycleId !== oldIssue.cycleId;
+		const dueDateChanged = next.dueDate !== oldIssue.dueDate;
 
 		if (
 			!stateChanged &&
@@ -224,7 +228,8 @@ export const updateIssue = base
 			!assigneeChanged &&
 			!parentChanged &&
 			!moduleChanged &&
-			!cycleChanged
+			!cycleChanged &&
+			!dueDateChanged
 		) {
 			return oldIssue;
 		}
@@ -273,6 +278,7 @@ export const updateIssue = base
 				parentId = CASE WHEN ${setParent} = 1 THEN ${next.parentId} ELSE parentId END,
 				moduleId = CASE WHEN ${setModule} = 1 THEN ${next.moduleId} ELSE moduleId END,
 				cycleId = CASE WHEN ${setCycle} = 1 THEN ${next.cycleId} ELSE cycleId END,
+				dueDate = ${next.dueDate},
 				updatedAt = ${Date.now()},
 				updatedBy = ${caller.userId}
 			WHERE id = ${input.id}
@@ -465,6 +471,19 @@ export const updateIssue = base
 			});
 		}
 
+		if (dueDateChanged) {
+			eventBus.emit({
+				...event,
+				type: "issue.updated",
+				payload: {
+					...ref,
+					field: "dueDate",
+					oldValue: oldIssue.dueDate,
+					newValue: issue.dueDate,
+				},
+			});
+		}
+
 		return issue;
 	});
 
@@ -538,6 +557,7 @@ export const createIssue = base
 			priority: v.optional(IssuePriority, "none"),
 			assignee: v.optional(v.string()),
 			parentId: v.optional(v.string()),
+			dueDate: v.optional(Day),
 			workspaceId: v.string(),
 			projectId: v.string(),
 		}),
@@ -571,6 +591,7 @@ export const createIssue = base
 			parentId: input.parentId || null,
 			moduleId: null,
 			cycleId: null,
+			dueDate: input.dueDate ?? null,
 			workspaceId: project.workspaceId,
 			projectId: project.id,
 			createdAt: Date.now(),
@@ -632,6 +653,21 @@ export const createIssue = base
 					newValue: issue.assignee,
 					oldName: null,
 					newName: await displayNameOf(issue.assignee),
+				},
+			});
+		}
+		if (issue.dueDate) {
+			eventBus.emit({
+				type: "issue.updated",
+				entityId: issue.id,
+				actorId: caller.userId,
+				workspaceId: issue.workspaceId,
+				payload: {
+					title: issue.title,
+					projectId: issue.projectId,
+					field: "dueDate",
+					oldValue: null,
+					newValue: issue.dueDate,
 				},
 			});
 		}

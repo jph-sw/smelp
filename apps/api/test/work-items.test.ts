@@ -301,6 +301,89 @@ describe("work item priority", () => {
 	});
 });
 
+describe("due dates", () => {
+	test("a work item can be created with a due date", async () => {
+		const created = await member.client.issue.create({
+			...newIssue(),
+			dueDate: "2026-11-20",
+		});
+		expect(created.dueDate).toBe("2026-11-20");
+		expect(
+			(await member.client.issue.find({ issueId: created.id })).dueDate,
+		).toBe("2026-11-20");
+		await Bun.sleep(30);
+
+		const activity = await guest.client.activity.findForIssue({
+			issueId: created.id,
+		});
+		expect(activity.map((entry) => entry.action)).toEqual([
+			"created",
+			"issue.updated",
+		]);
+		expect(activity[1]).toMatchObject({
+			field: "dueDate",
+			oldValue: null,
+			newValue: "2026-11-20",
+		});
+	});
+
+	test("without a due date it has none", async () => {
+		const created = await member.client.issue.create(newIssue());
+		expect(
+			(await member.client.issue.find({ issueId: created.id })).dueDate,
+		).toBeNull();
+	});
+
+	test("changing and clearing the due date is saved and shows in the timeline", async () => {
+		const { id } = await member.client.issue.create(newIssue());
+		const set = await member.client.issue.update({ id, dueDate: "2026-11-20" });
+		expect(set.dueDate).toBe("2026-11-20");
+		const moved = await member.client.issue.update({
+			id,
+			dueDate: "2026-12-01",
+		});
+		expect(moved.dueDate).toBe("2026-12-01");
+		const untouched = await member.client.issue.update({
+			id,
+			title: "Renamed",
+		});
+		expect(untouched.dueDate).toBe("2026-12-01");
+		const cleared = await member.client.issue.update({ id, dueDate: null });
+		expect(cleared.dueDate).toBeNull();
+		await Bun.sleep(30);
+
+		const activity = await guest.client.activity.findForIssue({ issueId: id });
+		const dueDates = activity
+			.filter((entry) => entry.field === "dueDate")
+			.map((entry) => [entry.oldValue, entry.newValue]);
+		expect(dueDates).toEqual([
+			[null, "2026-11-20"],
+			["2026-11-20", "2026-12-01"],
+			["2026-12-01", null],
+		]);
+	});
+
+	test("rejects a due date that isn't a real day", async () => {
+		for (const dueDate of ["2026-02-30", "20/Nov/26", "2026-11-20T10:00", ""]) {
+			await expectCode(
+				member.client.issue.create({ ...newIssue(), dueDate }),
+				"BAD_REQUEST",
+			);
+		}
+		const { id } = await member.client.issue.create({
+			...newIssue(),
+			dueDate: "2026-11-20",
+		});
+		await expectCode(
+			member.client.issue.update({ id, dueDate: "2026-13-01" }),
+			"BAD_REQUEST",
+		);
+		expect((await member.client.issue.find({ issueId: id })).dueDate).toBe(
+			"2026-11-20",
+		);
+	});
+});
+
 describe("assigning on create", () => {
 	test("a project member can be assigned right away", async () => {
 		const created = await member.client.issue.create({

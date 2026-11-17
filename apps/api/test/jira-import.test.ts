@@ -78,6 +78,7 @@ const HEADER = [
 	"Reporter Id",
 	"Created",
 	"Updated",
+	"Due date",
 	"Labels",
 	"Labels",
 	"Description",
@@ -846,6 +847,30 @@ describe("jira import: mapping", () => {
 		expect(
 			await count("import_record", "projectId = 'KK5' AND sourceKey = 'ZQK'"),
 		).toBe(1);
+	});
+
+	test("keeps the day of the due date, and none when it can't be read", async () => {
+		const csv = jiraCsv([
+			{
+				summary: "Named",
+				key: "ZQD-1",
+				cells: { "Due date": "20/Nov/26 5:00 PM" },
+			},
+			{ summary: "Iso", key: "ZQD-2", cells: { "Due date": "2026-11-21" } },
+			{ summary: "Empty", key: "ZQD-3" },
+			{ summary: "Garbled", key: "ZQD-4", cells: { "Due date": "soon" } },
+		]);
+		await admin.client.jiraImport.apply({
+			workspaceId: WORKSPACE,
+			csv,
+			mapping: {},
+		});
+		const dueDates = await Promise.all(
+			["ZQD-1", "ZQD-2", "ZQD-3", "ZQD-4"].map(
+				async (issueId) => (await admin.client.issue.find({ issueId })).dueDate,
+			),
+		);
+		expect(dueDates).toEqual(["2026-11-20", "2026-11-21", null, null]);
 	});
 
 	test("an unmatched user can be left alone on purpose", async () => {

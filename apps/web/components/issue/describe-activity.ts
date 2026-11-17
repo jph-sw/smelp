@@ -1,4 +1,5 @@
 import type { ProjectMember, tables } from "@smelp/db";
+import { formatDay } from "#/lib/day";
 import { issuePriorityLabel } from "#/lib/issue-priorities";
 import { issueTypeLabel } from "#/lib/issue-types";
 import { RELATION_PHRASES } from "#/lib/relations";
@@ -56,6 +57,11 @@ export function describeActivity(
 				return entry.oldValue
 					? `removed this from the cycle ${entry.oldValue}`
 					: "removed this from its cycle";
+			}
+			if (entry.field === "dueDate") {
+				return entry.newValue
+					? `set the due date to ${formatDay(entry.newValue)}`
+					: "removed the due date";
 			}
 			return entry.field === "title"
 				? `renamed this to "${entry.newValue}"`

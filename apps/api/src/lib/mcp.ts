@@ -135,6 +135,12 @@ const AssigneeName = z
 	.string()
 	.describe("A project member's display name, full name or email");
 const Markdown = z.string().describe("Markdown");
+const DueDate = z
+	.string()
+	.regex(/^\d{4}-\d{2}-\d{2}$/)
+	.describe(
+		'The day the work item should be done by, as YYYY-MM-DD, like "2026-11-20"',
+	);
 const IssueType = z
 	.enum(DEFAULTS.ISSUE_TYPES)
 	.describe(
@@ -181,6 +187,7 @@ function createServer(api: Api, appUrl: string) {
 			assignee: nameOf(issue.assignee),
 			project: issue.projectId,
 			parent: issue.parentId,
+			dueDate: issue.dueDate,
 			url: itemUrl(issue.workspaceId, issue.id),
 			createdBy: issue.createdByName,
 			createdAt: date(issue.createdAt),
@@ -430,6 +437,7 @@ function createServer(api: Api, appUrl: string) {
 				priority: IssuePriority.optional(),
 				state: StateName.optional(),
 				assignee: AssigneeName.optional(),
+				dueDate: DueDate.optional(),
 			},
 		},
 		({
@@ -440,6 +448,7 @@ function createServer(api: Api, appUrl: string) {
 			priority,
 			state,
 			assignee,
+			dueDate,
 		}) =>
 			respond(async () => {
 				const { project, states, members } = await projectContext(projectKey);
@@ -458,6 +467,7 @@ function createServer(api: Api, appUrl: string) {
 					assignee: assignee
 						? memberNamed(members, assignee, project.id).userId
 						: undefined,
+					dueDate,
 				});
 				return workItem(created.id);
 			}),
@@ -480,9 +490,14 @@ function createServer(api: Api, appUrl: string) {
 					.describe(
 						"A project member's display name, full name or email, or null to unassign",
 					),
+				dueDate: DueDate.nullable()
+					.optional()
+					.describe(
+						'The day the work item should be done by, as YYYY-MM-DD, like "2026-11-20", or null to remove it',
+					),
 			},
 		},
-		({ key, title, description, type, priority, state, assignee }) =>
+		({ key, title, description, type, priority, state, assignee, dueDate }) =>
 			respond(async () => {
 				const issue = await api.issue.find({ issueId: key });
 				const { states, members } = await projectContext(issue.projectId);
@@ -500,6 +515,7 @@ function createServer(api: Api, appUrl: string) {
 						assignee === undefined || assignee === null
 							? assignee
 							: memberNamed(members, assignee, issue.projectId).userId,
+					dueDate,
 				});
 				return workItem(issue.id);
 			}),

@@ -3,6 +3,7 @@ import { MoreHorizontal } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { ProjectMember, tables } from "@smelp/db";
 import { Link } from "@tanstack/react-router";
+import { formatShortDay } from "#/lib/day";
 import { cn, initials } from "#/lib/utils";
 import { IssuePriorityIcon } from "../issue/issue-priority-icon";
 import { IssueTypeIcon } from "../issue/issue-type-icon";
@@ -23,6 +24,7 @@ export function IssueItem({
 	workspaceId,
 	assignee,
 	draggable = true,
+	overdue = false,
 	states,
 	onMove,
 }: {
@@ -30,6 +32,7 @@ export function IssueItem({
 	workspaceId: string;
 	assignee?: ProjectMember;
 	draggable?: boolean;
+	overdue?: boolean;
 	/** With onMove, touch screens get a menu to change the state without dragging. */
 	states?: tables["state"][];
 	onMove?: (stateId: string) => void;
@@ -74,6 +77,17 @@ export function IssueItem({
 					</span>
 				</div>
 				<div className="text-sm [overflow-wrap:anywhere]">{issue.title}</div>
+				{issue.dueDate && (
+					<div
+						className={cn(
+							"mt-1.5 text-xs text-muted-foreground",
+							overdue && "font-medium text-destructive",
+						)}
+					>
+						Due {formatShortDay(issue.dueDate)}
+						{overdue && " · Overdue"}
+					</div>
+				)}
 			</Link>
 			{canMove && states && onMove && (
 				<DropdownMenu>

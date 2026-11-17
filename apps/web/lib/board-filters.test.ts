@@ -18,6 +18,7 @@ const issue = (
 		priority: IssuePriority;
 		cycleId: string | null;
 		moduleId: string | null;
+		dueDate: string | null;
 	}> = {},
 ) => ({
 	id,
@@ -28,6 +29,7 @@ const issue = (
 	priority: "none" as IssuePriority,
 	cycleId: null,
 	moduleId: null,
+	dueDate: null,
 	...fields,
 });
 
@@ -39,10 +41,18 @@ const issues = [
 	issue("WEB-5", { assignee: "ana", moduleId: "mod-1" }),
 ];
 
-const shown = (search: Record<string, unknown>) => {
+const TODAY = "2026-11-17";
+const states = [
+	{ id: "todo", group: "unstared" },
+	{ id: "doing", group: "started" },
+	{ id: "done", group: "completed" },
+	{ id: "dropped", group: "cancelled" },
+];
+
+const shown = (search: Record<string, unknown>, items = issues) => {
 	const filters = parseBoardFilters(search);
-	return issues
-		.filter((item) => matchesFilters(item, filters))
+	return items
+		.filter((item) => matchesFilters(item, filters, { today: TODAY, states }))
 		.map((item) => item.id);
 };
 
@@ -130,5 +140,33 @@ describe("matchesFilters", () => {
 		expect(shown({ q: "FIX LOG" })).toEqual(["WEB-1"]);
 		expect(shown({ q: "web-3" })).toEqual(["WEB-3"]);
 		expect(isFiltered(parseBoardFilters({ q: "web-3" }))).toBe(true);
+	});
+});
+
+describe("due date filters", () => {
+	const dated = [
+		issue("DUE-1", { state: "doing", dueDate: "2026-11-16" }),
+		issue("DUE-2", { state: "done", dueDate: "2026-11-16" }),
+		issue("DUE-3", { state: "doing", dueDate: TODAY }),
+		issue("DUE-4", { state: "doing" }),
+		issue("DUE-5", { state: "todo", dueDate: "2026-11-23" }),
+		issue("DUE-6", { state: "todo", dueDate: "2026-11-24" }),
+		issue("DUE-7", { state: "dropped", dueDate: "2026-11-01" }),
+		issue("DUE-8", { state: "dropped", dueDate: "2026-11-20" }),
+		issue("DUE-9", { state: "todo", dueDate: "2025-12-31" }),
+	];
+
+	test("overdue shows unfinished items whose day has passed", () => {
+		expect(shown({ due: "overdue" }, dated)).toEqual(["DUE-1", "DUE-9"]);
+		expect(isFiltered(parseBoardFilters({ due: "overdue" }))).toBe(true);
+	});
+
+	test("this week shows unfinished items due today through six days from now", () => {
+		expect(shown({ due: "week" }, dated)).toEqual(["DUE-3", "DUE-5"]);
+	});
+
+	test("ignores a due filter it doesn't know", () => {
+		expect(parseBoardFilters({ due: "soon" }).due).toBeUndefined();
+		expect(shown({ due: "soon" }, dated)).toHaveLength(dated.length);
 	});
 });
