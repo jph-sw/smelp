@@ -408,6 +408,19 @@ describe("changing the type", () => {
 	});
 });
 
+describe("changing the priority", () => {
+	test("shows the new priority", async () => {
+		const issue = await issueIn(PUBLIC_PROJECT, "Suddenly urgent");
+		await owner.client.issue.update({ id: issue.id, priority: "high" });
+		await settle();
+
+		const changed = (await feedTypes(member)).find(
+			(event) => event.type === "issue.updated" && event.issue?.id === issue.id,
+		);
+		expect(changed?.details).toMatchObject({ field: "priority", to: "high" });
+	});
+});
+
 describe("archiving", () => {
 	test("shows like other project changes, and a private one only to its members", async () => {
 		await owner.client.project.archive({ projectId: PUBLIC_PROJECT });

@@ -1,6 +1,7 @@
 import type { ProjectMember, tables } from "@smelp/db";
 import { Link } from "@tanstack/react-router";
 import { initials } from "#/lib/utils";
+import { IssuePriorityIcon } from "../issue/issue-priority-icon";
 import { IssueTypeIcon } from "../issue/issue-type-icon";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 
@@ -55,7 +56,12 @@ export function IssueList({
 										{issue.id}
 									</span>
 								</span>
-								<span className="truncate">{issue.title}</span>
+								<span className="flex min-w-0 items-center gap-1.5">
+									{issue.priority !== "none" && (
+										<IssuePriorityIcon priority={issue.priority} />
+									)}
+									<span className="truncate">{issue.title}</span>
+								</span>
 								<span
 									className="flex min-w-0 items-center gap-2"
 									title={state?.name}

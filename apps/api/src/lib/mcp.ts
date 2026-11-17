@@ -140,6 +140,11 @@ const IssueType = z
 	.describe(
 		"The kind of work item. New items are tasks unless you say otherwise.",
 	);
+const IssuePriority = z
+	.enum(DEFAULTS.ISSUE_PRIORITIES)
+	.describe(
+		"How urgent the work is. New items have none unless you say otherwise.",
+	);
 
 function createServer(api: Api, appUrl: string) {
 	const server = new McpServer({ name: "smelp", version });
@@ -171,6 +176,7 @@ function createServer(api: Api, appUrl: string) {
 			key: issue.id,
 			title: issue.title,
 			type: issue.type,
+			priority: issue.priority,
 			state: states.find((state) => state.id === issue.state)?.name ?? null,
 			assignee: nameOf(issue.assignee),
 			project: issue.projectId,
@@ -421,11 +427,20 @@ function createServer(api: Api, appUrl: string) {
 				title: z.string(),
 				description: Markdown.optional(),
 				type: IssueType.optional(),
+				priority: IssuePriority.optional(),
 				state: StateName.optional(),
 				assignee: AssigneeName.optional(),
 			},
 		},
-		({ project: projectKey, title, description, type, state, assignee }) =>
+		({
+			project: projectKey,
+			title,
+			description,
+			type,
+			priority,
+			state,
+			assignee,
+		}) =>
 			respond(async () => {
 				const { project, states, members } = await projectContext(projectKey);
 				const initial = state
@@ -439,6 +454,7 @@ function createServer(api: Api, appUrl: string) {
 					description: description ?? "",
 					state: initial.id,
 					type,
+					priority,
 					assignee: assignee
 						? memberNamed(members, assignee, project.id).userId
 						: undefined,
@@ -457,6 +473,7 @@ function createServer(api: Api, appUrl: string) {
 				title: z.string().optional(),
 				description: Markdown.optional(),
 				type: IssueType.optional(),
+				priority: IssuePriority.optional(),
 				state: StateName.optional(),
 				assignee: AssigneeName.nullable()
 					.optional()
@@ -465,7 +482,7 @@ function createServer(api: Api, appUrl: string) {
 					),
 			},
 		},
-		({ key, title, description, type, state, assignee }) =>
+		({ key, title, description, type, priority, state, assignee }) =>
 			respond(async () => {
 				const issue = await api.issue.find({ issueId: key });
 				const { states, members } = await projectContext(issue.projectId);
@@ -474,6 +491,7 @@ function createServer(api: Api, appUrl: string) {
 					title,
 					description,
 					type,
+					priority,
 					state:
 						state === undefined
 							? undefined

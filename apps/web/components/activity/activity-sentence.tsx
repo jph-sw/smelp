@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import type { FeedEvent } from "#/lib/data/activity";
+import { issuePriorityLabel } from "#/lib/issue-priorities";
 import { issueTypeLabel } from "#/lib/issue-types";
 import { RELATION_PHRASES } from "#/lib/relations";
 
@@ -146,6 +147,14 @@ export function ActivitySentence({
 					</>
 				) : (
 					<>removed {issue} from its cycle</>
+				);
+			}
+			if (d.field === "priority") {
+				return (
+					<>
+						changed the priority of {issue} to{" "}
+						<Strong>{issuePriorityLabel(d.to)}</Strong>
+					</>
 				);
 			}
 			if (d.field === "type") {
