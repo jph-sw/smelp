@@ -429,6 +429,25 @@ describe("webhook deliveries", () => {
 		expect(await refs(otherIssueId, admin.client)).toEqual([]);
 	});
 
+	test("an archived project links nothing until it is unarchived", async () => {
+		const before = await refs();
+		const branch = {
+			ref: "GHB-1-archived",
+			ref_type: "branch",
+			repository,
+			sender,
+		};
+		await admin.client.project.archive({ projectId: PROJECT });
+		try {
+			expect((await deliver("create", branch)).status).toBe(200);
+			expect(await refs()).toEqual(before);
+		} finally {
+			await admin.client.project.unarchive({ projectId: PROJECT });
+		}
+		await deliver("create", branch);
+		expect((await refs()).map((ref) => ref.ref)).toContain("GHB-1-archived");
+	});
+
 	test("an unknown connection is not found", async () => {
 		const response = await deliver("ping", {}, { id: crypto.randomUUID() });
 		expect(response.status).toBe(404);

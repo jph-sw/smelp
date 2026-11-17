@@ -148,11 +148,13 @@ export async function githubWebhookResponse(
 
 	const connection = (
 		await sql`
-		SELECT projectId, repo, secret FROM project_github_repo
-		WHERE id = ${connectionId}
+		SELECT c.projectId, c.repo, c.secret, p.archivedAt
+		FROM project_github_repo c JOIN project p ON p.id = c.projectId
+		WHERE c.id = ${connectionId}
 	`
 	)[0] as
-		| Pick<tables["project_github_repo"], "projectId" | "repo" | "secret">
+		| (Pick<tables["project_github_repo"], "projectId" | "repo" | "secret"> &
+				Pick<tables["project"], "archivedAt">)
 		| undefined;
 	if (!connection) return reply(404, "Not found");
 
@@ -179,6 +181,11 @@ export async function githubWebhookResponse(
 			200,
 			"Ignored: the project is connected to another repository",
 		);
+	}
+
+	// An archived project is read-only, and GitHub would retry a refusal.
+	if (connection.archivedAt !== null) {
+		return reply(200, "Ignored: the project is archived");
 	}
 
 	await linkRefs(connection.projectId, delivery);
