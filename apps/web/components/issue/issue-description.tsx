@@ -15,19 +15,14 @@ export function IssueDescription({
 }) {
 	if (!canWrite) {
 		return value ? (
-			<RichTextEditor
-				value={value}
-				editable={false}
-				aria-label="Description"
-				className="max-w-prose"
-			/>
+			<RichTextEditor value={value} editable={false} aria-label="Description" />
 		) : (
 			<p className="text-sm text-muted-foreground">No description.</p>
 		);
 	}
 
 	return (
-		<div className="-ml-1 max-w-prose space-y-1">
+		<div className="-ml-1 space-y-1">
 			<RichTextEditor
 				value={value}
 				issueId={issueId}
