@@ -1,4 +1,4 @@
-import type { IssueType, tables } from "@smelp/db";
+import type { IssuePriority, IssueType, tables } from "@smelp/db";
 import { queryOptions } from "@tanstack/react-query";
 import { orpc } from "../orpc";
 import type { ReactionEmoji } from "../reactions";
@@ -57,6 +57,7 @@ export const updateIssue = (input: {
 	title?: string;
 	description?: string;
 	type?: IssueType;
+	priority?: IssuePriority;
 	assignee?: string | null;
 	parentId?: string | null;
 	moduleId?: string | null;

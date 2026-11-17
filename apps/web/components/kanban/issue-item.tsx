@@ -4,6 +4,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import type { ProjectMember, tables } from "@smelp/db";
 import { Link } from "@tanstack/react-router";
 import { cn, initials } from "#/lib/utils";
+import { IssuePriorityIcon } from "../issue/issue-priority-icon";
 import { IssueTypeIcon } from "../issue/issue-type-icon";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Button } from "../ui/button";
@@ -53,16 +54,24 @@ export function IssueItem({
 						<IssueTypeIcon type={issue.type} />
 						{issue.id}
 					</span>
-					{assignee && (
-						<Avatar
-							size="sm"
-							title={`Assigned to ${assignee.displayName}`}
-							className={cn(canMove && "pointer-coarse:me-9")}
-						>
-							<AvatarImage src={assignee.image ?? undefined} alt="" />
-							<AvatarFallback>{initials(assignee.displayName)}</AvatarFallback>
-						</Avatar>
-					)}
+					<span
+						className={cn(
+							"flex items-center gap-1.5",
+							canMove && "pointer-coarse:me-9",
+						)}
+					>
+						{issue.priority !== "none" && (
+							<IssuePriorityIcon priority={issue.priority} />
+						)}
+						{assignee && (
+							<Avatar size="sm" title={`Assigned to ${assignee.displayName}`}>
+								<AvatarImage src={assignee.image ?? undefined} alt="" />
+								<AvatarFallback>
+									{initials(assignee.displayName)}
+								</AvatarFallback>
+							</Avatar>
+						)}
+					</span>
 				</div>
 				<div className="text-sm [overflow-wrap:anywhere]">{issue.title}</div>
 			</Link>

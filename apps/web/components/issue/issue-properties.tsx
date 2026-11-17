@@ -6,6 +6,7 @@ import { invalidateCycles } from "#/lib/data/cycle";
 import { deleteIssue } from "#/lib/data/issue";
 import { moduleQueryKeys } from "#/lib/data/module";
 import { toastError } from "#/lib/errors";
+import { type IssuePriority, isIssuePriority } from "#/lib/issue-priorities";
 import { type IssueType, isIssueType } from "#/lib/issue-types";
 import { formatDate, formatRelativeTime } from "#/lib/utils";
 import {
@@ -30,6 +31,7 @@ import {
 } from "../ui/select";
 import { toast } from "../ui/toast";
 import { AssigneeSelect } from "./assignee-select";
+import { ISSUE_PRIORITY_ITEMS } from "./issue-priority-icon";
 import { ISSUE_TYPE_ITEMS } from "./issue-type-icon";
 
 const NO_PARENT = "none";
@@ -127,6 +129,7 @@ export function IssueProperties({
 	cycles: { id: string; name: string }[];
 	onUpdate: (changes: {
 		type?: IssueType;
+		priority?: IssuePriority;
 		state?: string;
 		assignee?: string | null;
 		parentId?: string | null;
@@ -169,6 +172,15 @@ export function IssueProperties({
 				disabled={!canWrite}
 				onChange={(type) => isIssueType(type) && onUpdate({ type })}
 				items={ISSUE_TYPE_ITEMS}
+			/>
+			<PropertySelect
+				label="Priority"
+				value={issue.priority}
+				disabled={!canWrite}
+				onChange={(priority) =>
+					isIssuePriority(priority) && onUpdate({ priority })
+				}
+				items={ISSUE_PRIORITY_ITEMS}
 			/>
 			<PropertySelect
 				label="State"

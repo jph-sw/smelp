@@ -5,6 +5,7 @@ import { useAppForm } from "#/hooks/form";
 import { projectMembersQueryOptions } from "#/lib/data/project-members";
 import { statesQueryOptions } from "#/lib/data/state";
 import { toastError } from "#/lib/errors";
+import { ISSUE_PRIORITIES, type IssuePriority } from "#/lib/issue-priorities";
 import { ISSUE_TYPES, type IssueType } from "#/lib/issue-types";
 import { orpc } from "#/lib/orpc";
 import { RichTextEditor } from "../rich-text/rich-text-editor";
@@ -12,6 +13,7 @@ import { Field, FieldGroup } from "../ui/field";
 import { toast } from "../ui/toast";
 import { AssigneeSelect } from "./assignee-select";
 import type { CreateIssueDialogParams } from "./create-issue-dialog-store";
+import { ISSUE_PRIORITY_ITEMS } from "./issue-priority-icon";
 import { ISSUE_TYPE_ITEMS } from "./issue-type-icon";
 
 const CreateIssueSchema = v.object({
@@ -22,6 +24,7 @@ const CreateIssueSchema = v.object({
 	),
 	description: v.string(),
 	type: v.picklist(ISSUE_TYPES),
+	priority: v.picklist(ISSUE_PRIORITIES),
 	assignee: v.nullable(v.string()),
 });
 
@@ -48,6 +51,7 @@ export function CreateIssueForm({
 			title: "",
 			description: "",
 			type: "task" as IssueType,
+			priority: "none" as IssuePriority,
 			assignee: null as string | null,
 		},
 		validators: {
@@ -68,6 +72,7 @@ export function CreateIssueForm({
 					description: value.description,
 					state: defaultState.id,
 					type: value.type,
+					priority: value.priority,
 					assignee: value.assignee ?? undefined,
 					parentId: params.parentId,
 					workspaceId: params.workspaceId,
@@ -124,6 +129,12 @@ export function CreateIssueForm({
 					name="type"
 					children={(field) => (
 						<field.SelectField label="Type" items={ISSUE_TYPE_ITEMS} />
+					)}
+				/>
+				<form.AppField
+					name="priority"
+					children={(field) => (
+						<field.SelectField label="Priority" items={ISSUE_PRIORITY_ITEMS} />
 					)}
 				/>
 				<form.AppField

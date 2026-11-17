@@ -7,8 +7,10 @@ import {
 	NO_CYCLE,
 	NO_MODULE,
 } from "#/lib/board-filters";
+import { isIssuePriority } from "#/lib/issue-priorities";
 import { isIssueType } from "#/lib/issue-types";
 import { cn } from "#/lib/utils";
+import { ISSUE_PRIORITY_ITEMS } from "../issue/issue-priority-icon";
 import { ISSUE_TYPE_ITEMS } from "../issue/issue-type-icon";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -136,6 +138,20 @@ export function BoardFilterBar({
 						})
 					}
 					items={[{ label: "All types", value: ALL }, ...ISSUE_TYPE_ITEMS]}
+				/>
+				<FilterSelect
+					label="Filter by priority"
+					value={filters.priority}
+					onChange={(priority) =>
+						onChange({
+							...filters,
+							priority: isIssuePriority(priority) ? priority : undefined,
+						})
+					}
+					items={[
+						{ label: "All priorities", value: ALL },
+						...ISSUE_PRIORITY_ITEMS,
+					]}
 				/>
 				<FilterSelect
 					label="Filter by module"

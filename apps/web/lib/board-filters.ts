@@ -1,4 +1,5 @@
 import type { tables } from "@smelp/db";
+import { type IssuePriority, isIssuePriority } from "./issue-priorities";
 import { type IssueType, isIssueType } from "./issue-types";
 
 export type BoardFilters = {
@@ -6,6 +7,7 @@ export type BoardFilters = {
 	assignee?: string[];
 	state?: string;
 	type?: IssueType;
+	priority?: IssuePriority;
 	cycle?: string;
 	module?: string;
 };
@@ -16,7 +18,14 @@ export const NO_MODULE = "none";
 
 type FilterableIssue = Pick<
 	tables["issue"],
-	"id" | "title" | "assignee" | "state" | "type" | "cycleId" | "moduleId"
+	| "id"
+	| "title"
+	| "assignee"
+	| "state"
+	| "type"
+	| "priority"
+	| "cycleId"
+	| "moduleId"
 >;
 
 const asString = (value: unknown) =>
@@ -40,6 +49,7 @@ export function parseBoardFilters(
 		assignee: asIdList(search.assignee),
 		state: asString(search.state),
 		type: isIssueType(search.type) ? search.type : undefined,
+		priority: isIssuePriority(search.priority) ? search.priority : undefined,
 		module: asString(search.module),
 		cycle: asString(search.cycle),
 	};
@@ -70,6 +80,7 @@ export function matchesFilters(issue: FilterableIssue, filters: BoardFilters) {
 	return (
 		(!filters.state || issue.state === filters.state) &&
 		(!filters.type || issue.type === filters.type) &&
+		(!filters.priority || issue.priority === filters.priority) &&
 		matchesRef(filters.cycle, NO_CYCLE, issue.cycleId) &&
 		matchesRef(filters.module, NO_MODULE, issue.moduleId)
 	);
@@ -81,6 +92,7 @@ export function isFiltered(filters: BoardFilters) {
 			filters.assignee ||
 			filters.state ||
 			filters.type ||
+			filters.priority ||
 			filters.cycle ||
 			filters.module,
 	);

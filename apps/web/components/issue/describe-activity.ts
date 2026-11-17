@@ -1,4 +1,5 @@
 import type { ProjectMember, tables } from "@smelp/db";
+import { issuePriorityLabel } from "#/lib/issue-priorities";
 import { issueTypeLabel } from "#/lib/issue-types";
 import { RELATION_PHRASES } from "#/lib/relations";
 
@@ -43,6 +44,9 @@ export function describeActivity(
 				return entry.newValue
 					? `added this to the module ${entry.newValue}`
 					: `removed this from the module ${entry.oldValue ?? "a deleted module"}`;
+			}
+			if (entry.field === "priority") {
+				return `changed the priority to ${issuePriorityLabel(entry.newValue)}`;
 			}
 			if (entry.field === "type") {
 				return `changed the type to ${issueTypeLabel(entry.newValue)}`;

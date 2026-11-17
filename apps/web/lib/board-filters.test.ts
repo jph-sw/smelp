@@ -5,6 +5,7 @@ import {
 	parseBoardFilters,
 	UNASSIGNED,
 } from "./board-filters";
+import type { IssuePriority } from "./issue-priorities";
 import type { IssueType } from "./issue-types";
 
 const issue = (
@@ -14,6 +15,7 @@ const issue = (
 		assignee: string | null;
 		state: string;
 		type: IssueType;
+		priority: IssuePriority;
 		cycleId: string | null;
 		moduleId: string | null;
 	}> = {},
@@ -23,15 +25,16 @@ const issue = (
 	assignee: null,
 	state: "todo",
 	type: "task" as IssueType,
+	priority: "none" as IssuePriority,
 	cycleId: null,
 	moduleId: null,
 	...fields,
 });
 
 const issues = [
-	issue("WEB-1", { assignee: "ana", title: "Fix login" }),
-	issue("WEB-2", { assignee: "ben", state: "done" }),
-	issue("WEB-3", { assignee: "cleo", type: "bug" }),
+	issue("WEB-1", { assignee: "ana", title: "Fix login", priority: "high" }),
+	issue("WEB-2", { assignee: "ben", state: "done", priority: "urgent" }),
+	issue("WEB-3", { assignee: "cleo", type: "bug", priority: "high" }),
 	issue("WEB-4", { type: "bug" }),
 	issue("WEB-5", { assignee: "ana", moduleId: "mod-1" }),
 ];
@@ -108,6 +111,19 @@ describe("matchesFilters", () => {
 		expect(parseBoardFilters({ type: "Bug" }).type).toBeUndefined();
 		expect(parseBoardFilters({ type: ["bug"] }).type).toBeUndefined();
 		expect(shown({ type: "incident" })).toHaveLength(issues.length);
+	});
+
+	test("shows only items of the chosen priority", () => {
+		expect(shown({ priority: "high" })).toEqual(["WEB-1", "WEB-3"]);
+		expect(shown({ priority: "high", type: "bug" })).toEqual(["WEB-3"]);
+		expect(shown({ priority: "none" })).toEqual(["WEB-4", "WEB-5"]);
+		expect(isFiltered(parseBoardFilters({ priority: "high" }))).toBe(true);
+	});
+
+	test("ignores a priority that isn't one of the known ones", () => {
+		expect(parseBoardFilters({ priority: "High" }).priority).toBeUndefined();
+		expect(parseBoardFilters({ priority: ["high"] }).priority).toBeUndefined();
+		expect(shown({ priority: "blocker" })).toHaveLength(issues.length);
 	});
 
 	test("searches title and id without regard to case", () => {
