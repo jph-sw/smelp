@@ -10,15 +10,28 @@ const sql = new DB().sqlite;
 const MAX_TOKENS_PER_USER = 50;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-type ApiTokenSummary = Omit<tables["api_token"], "userId" | "secretHash">;
+type ApiTokenSummary = Pick<
+	tables["api_token"],
+	"id" | "name" | "createdAt" | "lastUsedAt" | "expiresAt"
+> & {
+	/** Made by signing an MCP client in through OAuth, not on the account page. */
+	oauth: boolean;
+};
 
 export const findApiTokens = base.handler(async ({ context }) => {
 	const session = await requireSession(context.headers);
-	return (await sql`
-		SELECT id, name, createdAt, lastUsedAt, expiresAt FROM api_token
+	const rows = (await sql`
+		SELECT id, name, createdAt, lastUsedAt, expiresAt, clientId FROM api_token
 		WHERE userId = ${session.userId}
 		ORDER BY createdAt DESC, id
-	`) as ApiTokenSummary[];
+	`) as (Omit<ApiTokenSummary, "oauth"> &
+		Pick<tables["api_token"], "clientId">)[];
+	return rows.map(
+		({ clientId, ...token }): ApiTokenSummary => ({
+			...token,
+			oauth: clientId !== null,
+		}),
+	);
 });
 
 export const createApiToken = base
@@ -44,11 +57,15 @@ export const createApiToken = base
 				input.expiresInDays === null
 					? null
 					: now + input.expiresInDays * DAY_MS,
+			clientId: null,
+			refreshHash: null,
+			secretExpiresAt: null,
 		};
 
 		await sql.begin(async (tx) => {
 			const [{ count }] = (await tx`
-				SELECT COUNT(*) AS count FROM api_token WHERE userId = ${session.userId}
+				SELECT COUNT(*) AS count FROM api_token
+				WHERE userId = ${session.userId} AND clientId IS NULL
 			`) as [{ count: number }];
 			if (count >= MAX_TOKENS_PER_USER) {
 				throw new ORPCError("BAD_REQUEST", {
@@ -64,6 +81,7 @@ export const createApiToken = base
 			createdAt: row.createdAt,
 			lastUsedAt: row.lastUsedAt,
 			expiresAt: row.expiresAt,
+			oauth: false,
 		};
 		return { ...summary, token };
 	});

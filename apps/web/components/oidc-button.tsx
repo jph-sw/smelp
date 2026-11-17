@@ -7,7 +7,13 @@ import {
 
 // Shows only when the server has single sign-on set up. A plain link, since the
 // whole page leaves for the provider and comes back signed in.
-export function OidcButton({ invite }: { invite?: string }) {
+export function OidcButton({
+	invite,
+	next,
+}: {
+	invite?: string;
+	next?: string;
+}) {
 	const { data } = useSuspenseQuery(signInOptionsQueryOptions);
 	if (!data.oidc) return null;
 
@@ -15,7 +21,7 @@ export function OidcButton({ invite }: { invite?: string }) {
 		<Button
 			variant="outline"
 			className="w-full"
-			render={<a href={oidcStartUrl(invite)} />}
+			render={<a href={oidcStartUrl(invite, next)} />}
 		>
 			{data.oidc.label}
 		</Button>

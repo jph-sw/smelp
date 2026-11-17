@@ -102,6 +102,7 @@ import {
 	markIssueNotificationRead,
 	markNotificationRead,
 } from "./routes/notifications";
+import { approveAuthorization, describeAuthorization } from "./routes/oauth";
 import {
 	archiveProject,
 	createProject,
@@ -185,6 +186,10 @@ export const router = {
 		find: findApiTokens,
 		create: createApiToken,
 		revoke: revokeApiToken,
+	},
+	oauth: {
+		describe: describeAuthorization,
+		approve: approveAuthorization,
 	},
 	workspace: {
 		find: findWorkspace,

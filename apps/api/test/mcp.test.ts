@@ -146,7 +146,9 @@ describe("signing in", () => {
 		]) {
 			const response = await post(headers);
 			expect(response.status).toBe(401);
-			expect(response.headers.get("www-authenticate")).toBe("Bearer");
+			expect(response.headers.get("www-authenticate")).toContain(
+				'resource_metadata="http://smelp.test/.well-known/oauth-protected-resource/mcp"',
+			);
 		}
 
 		const response = await post({ authorization: `Bearer ${ada.token}` });

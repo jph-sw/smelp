@@ -118,6 +118,7 @@ describe("creating and listing tokens", () => {
 				createdAt: created.createdAt,
 				lastUsedAt: null,
 				expiresAt: created.expiresAt,
+				oauth: false,
 			},
 		]);
 		expect(JSON.stringify(listed)).not.toContain(created.token);
