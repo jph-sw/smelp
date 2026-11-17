@@ -145,7 +145,19 @@ Register `APP_URL/api/auth/oidc/callback` as the redirect URI with your provider
 
 Agents like Claude Code and Cursor, or any other MCP client, can work in smelp as you: search, read, create and update work items, and comment. They see and change only what you can.
 
-Create a token on your account page under API tokens. The same section shows the MCP endpoint, which is your smelp address with `/mcp` added. In Claude Code:
+Add your smelp address with `/mcp` added as an MCP server. Your account page shows it under API tokens. In Claude Code:
+
+```sh
+claude mcp add --transport http smelp https://smelp.example.com/mcp
+```
+
+The first time the agent connects, it opens a browser. Sign in to smelp if you aren't already, and allow the agent to work as you. It signs in with OAuth 2.1, so no token goes into a config file. Other clients that support MCP sign-in need only the URL too.
+
+Set `APP_URL` to your public address, like `https://smelp.example.com`. Agents learn where to sign in from it, and the links to work items they get use it. Without it, smelp behind a proxy that handles HTTPS would send agents to a plain `http://` address.
+
+Each agent you allow shows up in the API tokens list on your account page, marked "Signed in through OAuth". Revoking it signs the agent out right away. Its access lasts an hour at a time and renews by itself while the grant stands.
+
+For a client without MCP sign-in, or a script, create a token on your account page under API tokens and send it as a header:
 
 ```sh
 claude mcp add --transport http smelp https://smelp.example.com/mcp --header "Authorization: Bearer smelp_..."
@@ -164,7 +176,7 @@ Other clients take a URL and headers, usually in a JSON file shaped like this:
 }
 ```
 
-Agents name work items by their key, like `ABC-12`, and states and people by name. Set `APP_URL` so the links to work items they get use your public address. Revoking the token cuts the agent off right away.
+Agents name work items by their key, like `ABC-12`, and states and people by name. Revoking a token cuts its agent off right away.
 
 ## Backup
 
