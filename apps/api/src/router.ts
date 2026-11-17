@@ -58,6 +58,13 @@ import {
 	updateCycle,
 } from "./routes/cycle";
 import {
+	connectGithubRepo,
+	disconnectGithubRepo,
+	findGithubRefs,
+	findGithubRepo,
+	regenerateGithubSecret,
+} from "./routes/github";
+import {
 	createPasswordReset,
 	findInstanceStatus,
 	findInstanceUsers,
@@ -246,6 +253,15 @@ export const router = {
 		create: createLink,
 		update: updateLink,
 		delete: deleteLink,
+	},
+	githubRepo: {
+		find: findGithubRepo,
+		connect: connectGithubRepo,
+		regenerateSecret: regenerateGithubSecret,
+		disconnect: disconnectGithubRepo,
+	},
+	githubRefs: {
+		find: findGithubRefs,
 	},
 	modules: {
 		find: findModules,

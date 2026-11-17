@@ -13,6 +13,7 @@ import {
 } from "./lib/attachments";
 import { avatarResponse } from "./lib/avatars";
 import { markServerRunning } from "./lib/backup";
+import { githubWebhookResponse } from "./lib/github-webhook";
 import { statusResponse } from "./lib/health";
 import { logMailStatus } from "./lib/mail";
 import { mcpResponse } from "./lib/mcp";
@@ -111,6 +112,8 @@ const server = Bun.serve({
 			attachmentResponse(request.headers, request.params.id, request.method),
 		"/api/avatars/:userId": (request) =>
 			avatarResponse(request.headers, request.params.userId),
+		"/api/github/webhook/:connectionId": (request) =>
+			githubWebhookResponse(request, request.params.connectionId),
 		"/api/project-backgrounds/:projectId": (request) =>
 			projectBackgroundResponse(request.headers, request.params.projectId),
 	},

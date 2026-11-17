@@ -158,6 +158,11 @@ function toFeedEvent(row: FeedRow, canSeeInviteEmails: boolean): FeedEvent {
 			// The file name or the link's title; untitled links have none.
 			details = { name: row.newValue ?? row.oldValue };
 			break;
+		case "issue.pull_request_linked":
+		case "issue.pull_request_merged":
+			// The pull request's number.
+			details = { name: row.newValue };
+			break;
 		case "project.created":
 			details = {
 				name: text("name"),
@@ -296,7 +301,10 @@ export const findWorkspaceActivity = base
 				SELECT
 					a.id, a.entityType, a.entityId, a.action, a.actorId,
 					a.field, a.oldValue, a.newValue, a.metadata, a.createdAt,
-					actor.displayName AS actorName,
+					COALESCE(
+						actor.displayName,
+						json_extract(a.metadata, '$.githubLogin')
+					) AS actorName,
 					actor.image AS actorImage,
 					COALESCE(i.title, ci.title) AS issueTitle,
 					(i.id IS NOT NULL OR ci.id IS NOT NULL) AS issueExists,

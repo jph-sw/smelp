@@ -38,7 +38,11 @@ export const findIssueActivity = base
 					WHERE ri.id = json_extract(activity_logs.metadata, '$.relatedId')
 						AND rm.userId = ${caller.userId}
 				) THEN json_extract(activity_logs.metadata, '$.relatedId') END AS relatedId,
-				auth_user.displayName AS actorName
+				-- Events from GitHub have no smelp actor, only the GitHub login.
+				COALESCE(
+					auth_user.displayName,
+					json_extract(activity_logs.metadata, '$.githubLogin')
+				) AS actorName
 			FROM activity_logs
 			LEFT JOIN auth_user ON auth_user.id = activity_logs.actorId
 			WHERE activity_logs.entityType = 'issue'

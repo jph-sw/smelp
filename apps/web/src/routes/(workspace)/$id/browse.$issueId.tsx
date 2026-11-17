@@ -10,6 +10,7 @@ import { useEffect, useRef } from "react";
 import { IssueAttachments } from "#/components/issue/attachments";
 import { IssueActivity } from "#/components/issue/issue-activity";
 import { IssueDescription } from "#/components/issue/issue-description";
+import { IssueDevelopment } from "#/components/issue/issue-development";
 import { IssueLinks } from "#/components/issue/issue-links";
 import { IssueProperties } from "#/components/issue/issue-properties";
 import { IssueRelations } from "#/components/issue/issue-relations";
@@ -28,6 +29,7 @@ import {
 import { Textarea } from "#/components/ui/textarea";
 import { usePageTitle } from "#/hooks/use-page-title";
 import { cyclesQueryOptions, invalidateCycles } from "#/lib/data/cycle";
+import { githubRefsQueryOptions } from "#/lib/data/github";
 import {
 	attachmentsQueryOptions,
 	commentsQueryOptions,
@@ -56,6 +58,7 @@ export const Route = createFileRoute("/(workspace)/$id/browse/$issueId")({
 			queryClient.ensureQueryData(issueQueryOptions({ issueId })),
 			queryClient.ensureQueryData(commentsQueryOptions({ issueId })),
 			queryClient.ensureQueryData(linksQueryOptions({ issueId })),
+			queryClient.ensureQueryData(githubRefsQueryOptions({ issueId })),
 			viewer.mode !== "public" &&
 				queryClient.ensureQueryData(issueActivityQueryOptions({ issueId })),
 			queryClient.ensureQueryData(attachmentsQueryOptions({ issueId })),
@@ -328,6 +331,7 @@ function RouteComponent() {
 						canWrite={canWrite}
 					/>
 					<IssueLinks issueId={issue.id} canWrite={canWrite} />
+					<IssueDevelopment issueId={issue.id} />
 					<IssueAttachments
 						issueId={issue.id}
 						userId={user?.id}

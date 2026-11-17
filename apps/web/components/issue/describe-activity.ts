@@ -76,6 +76,10 @@ export function describeActivity(
 			return entry.oldValue
 				? `removed the link "${entry.oldValue}"`
 				: "removed a link";
+		case "issue.pull_request_linked":
+			return `linked pull request #${entry.newValue} from GitHub`;
+		case "issue.pull_request_merged":
+			return `merged pull request #${entry.newValue} on GitHub`;
 		default:
 			return "changed this work item";
 	}
