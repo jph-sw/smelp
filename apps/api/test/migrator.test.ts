@@ -78,4 +78,12 @@ describe("Migrator", () => {
 
 		expect(await tableExists("only_once")).toBe(true);
 	});
+
+	test("a missing folder fails with the path it looked for", async () => {
+		const folder = path.join(tmpdir(), "smelp-migrations-missing");
+
+		await expect(new Migrator(folder).up()).rejects.toThrow(
+			`Migrations folder not found at ${folder}`,
+		);
+	});
 });

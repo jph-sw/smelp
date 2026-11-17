@@ -56,8 +56,7 @@ export class Migrator {
       execution_ms  INTEGER
     );`;
 
-		// TODO: handle no folder found
-		let files = await readdir(this.migrations_folder);
+		let files = await this.migrationFiles();
 
 		files = files
 			.filter((f) => /^\d+_/.test(f))
@@ -91,6 +90,19 @@ export class Migrator {
 			};
 
 			await this.apply(file, schemaMigration);
+		}
+	}
+
+	// Resolved against the working directory, so the message names the exact
+	// place a relative folder like "./migrations/" was looked for.
+	private async migrationFiles() {
+		try {
+			return await readdir(this.migrations_folder);
+		} catch (error) {
+			if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+			throw new Error(
+				`Migrations folder not found at ${path.resolve(this.migrations_folder)}. Start smelp from the directory that contains it.`,
+			);
 		}
 	}
 
