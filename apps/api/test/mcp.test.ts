@@ -191,7 +191,9 @@ test("lists the tools an agent works with", async () => {
 	const { tools } = await agent.listTools();
 	expect(tools.map((tool) => tool.name).sort()).toEqual([
 		"add_comment",
+		"create_project",
 		"create_work_item",
+		"create_workspace",
 		"get_work_item",
 		"list_my_work_items",
 		"list_projects",
@@ -335,6 +337,105 @@ describe("working on an item", () => {
 			project: PROJECT,
 		});
 		expect(byKey[0].title).toBe("Searchable needle");
+	});
+});
+
+describe("setting up a workspace", () => {
+	let founder: User;
+	let founderAgent: Client;
+
+	beforeAll(async () => {
+		founder = await createUser("Founder");
+		founderAgent = await connect(founder.token);
+	});
+
+	test("creates a workspace and a project to work in", async () => {
+		const workspace = await value(founderAgent, "create_workspace", {
+			name: "Fresh Start",
+		});
+		expect(workspace).toEqual({ id: "fresh_start", name: "Fresh Start" });
+		expect(await value(founderAgent, "list_workspaces")).toEqual([workspace]);
+
+		const project = await value(founderAgent, "create_project", {
+			workspace: workspace.id,
+			key: "NEW",
+			name: "Brand new",
+		});
+		expect(project).toEqual({
+			key: "NEW",
+			name: "Brand new",
+			description: "",
+			workspace: workspace.id,
+			archived: false,
+			member: true,
+		});
+		expect(
+			await value(founderAgent, "list_projects", { workspace: workspace.id }),
+		).toEqual([project]);
+		expect(
+			(await founder.client.project.find({ projectId: "NEW" })).access,
+		).toBe("public");
+
+		const states = await value(founderAgent, "list_states", { project: "NEW" });
+		expect(states.map((state: { name: string }) => state.name)).toEqual([
+			"Backlog",
+			"Todo",
+			"In Progress",
+			"Done",
+		]);
+
+		const item = await value(founderAgent, "create_work_item", {
+			project: "NEW",
+			title: "First thing",
+		});
+		expect(item).toMatchObject({ key: "NEW-1", state: "Backlog" });
+	});
+
+	test("a project only goes in a workspace the caller can write to", async () => {
+		const result = await call(founderAgent, "create_project", {
+			workspace: workspaceId,
+			key: "SNK",
+			name: "Sneaky",
+		});
+		expect(result.isError).toBe(true);
+		expect(result.text).toMatch(/Forbidden|Not Found/);
+		expect(await ada.client.projects.find({ workspaceId })).not.toContainEqual(
+			expect.objectContaining({ id: "SNK" }),
+		);
+	});
+
+	test("a taken project key says it exists", async () => {
+		const result = await call(agent, "create_project", {
+			workspace: workspaceId,
+			key: HIDDEN_PROJECT,
+			name: "Copycat",
+		});
+		expect(result.isError).toBe(true);
+		expect(result.text).toContain("already exists");
+	});
+
+	test("needs a confirmed email while email is on", async () => {
+		const user = await createUser("Unverified");
+		await sql`UPDATE auth_user SET emailVerified = 0 WHERE id = ${user.id}`;
+		const unverified = await connect(user.token);
+		const saved = { ...process.env };
+		Object.assign(process.env, {
+			SMTP_HOST: "127.0.0.1",
+			SMTP_FROM: "smelp <smelp@example.test>",
+			APP_URL: "http://smelp.test",
+		});
+		try {
+			const result = await call(unverified, "create_workspace", {
+				name: "Not yet",
+			});
+			expect(result.isError).toBe(true);
+			expect(result.text).toContain("Confirm your email address");
+		} finally {
+			for (const name of ["SMTP_HOST", "SMTP_FROM", "APP_URL"]) {
+				if (saved[name] === undefined) delete process.env[name];
+				else process.env[name] = saved[name];
+			}
+		}
 	});
 });
 

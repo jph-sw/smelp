@@ -227,6 +227,22 @@ function createServer(api: Api, appUrl: string) {
 	);
 
 	server.registerTool(
+		"create_workspace",
+		{
+			description:
+				"Create a workspace and become its admin. Its id is made from the name, and is what list_projects and create_project take as workspace.",
+			inputSchema: {
+				name: z.string().describe("2 to 32 characters"),
+			},
+		},
+		({ name }) =>
+			respond(async () => {
+				const workspace = await api.workspace.create({ name });
+				return { id: workspace.id, name: workspace.name };
+			}),
+	);
+
+	server.registerTool(
 		"list_projects",
 		{
 			annotations: { readOnlyHint: true },
@@ -253,6 +269,49 @@ function createServer(api: Api, appUrl: string) {
 					archived: project.isArchived,
 					member: project.isMember,
 				}));
+			}),
+	);
+
+	server.registerTool(
+		"create_project",
+		{
+			description:
+				"Create a project in a workspace and become its admin. It starts with the states Backlog, Todo, In Progress and Done.",
+			inputSchema: {
+				workspace: z.string().describe("A workspace id"),
+				key: z
+					.string()
+					.describe(
+						'The project key that prefixes its work item keys, 2 to 5 characters like "ABC". No other project on this smelp can have it.',
+					),
+				name: z.string().describe("2 to 32 characters"),
+				description: z.string().optional(),
+				access: z
+					.enum(["public", "private"])
+					.optional()
+					.describe(
+						"Defaults to public. A public project lets people outside it read it, but only while its workspace and this smelp are public too.",
+					),
+			},
+		},
+		({ workspace, key, name, description, access }) =>
+			respond(async () => {
+				const project = await api.project.create({
+					id: key,
+					name,
+					description: description ?? "",
+					access: access ?? "public",
+					icon: "AppWindowIcon",
+					workspaceId: workspace,
+				});
+				return {
+					key: project.id,
+					name: project.name,
+					description: project.description,
+					workspace: project.workspaceId,
+					archived: false,
+					member: true,
+				};
 			}),
 	);
 
