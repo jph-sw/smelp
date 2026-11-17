@@ -136,7 +136,7 @@ export const createProject = base
 			if (e instanceof SQL.SQLiteError) {
 				if (e.code === "SQLITE_CONSTRAINT_PRIMARYKEY") {
 					throw new ORPCError("CONFLICT", {
-						message: "A project with this name already exists",
+						message: `The project key ${input.id} is taken. Choose another key.`,
 					});
 				}
 			}
