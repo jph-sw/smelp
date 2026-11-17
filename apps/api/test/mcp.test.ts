@@ -353,6 +353,30 @@ describe("working on an item", () => {
 		expect(refused.isError).toBe(true);
 	});
 
+	test("sets, shows and clears the due date", async () => {
+		const created = await value(agent, "create_work_item", {
+			project: PROJECT,
+			title: "Ship by Friday",
+			dueDate: "2026-11-20",
+		});
+		expect(created.dueDate).toBe("2026-11-20");
+		expect(
+			(await value(agent, "get_work_item", { key: created.key })).dueDate,
+		).toBe("2026-11-20");
+
+		const cleared = await value(agent, "update_work_item", {
+			key: created.key,
+			dueDate: null,
+		});
+		expect(cleared.dueDate).toBeNull();
+
+		const refused = await call(agent, "update_work_item", {
+			key: created.key,
+			dueDate: "2026-02-30",
+		});
+		expect(refused.isError).toBe(true);
+	});
+
 	test("search finds items by title or key", async () => {
 		const created = await value(agent, "create_work_item", {
 			project: PROJECT,
