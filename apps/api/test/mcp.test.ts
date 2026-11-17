@@ -323,6 +323,36 @@ describe("working on an item", () => {
 		expect(refused.isError).toBe(true);
 	});
 
+	test("sets and changes the priority", async () => {
+		const plain = await value(agent, "create_work_item", {
+			project: PROJECT,
+			title: "Whenever",
+		});
+		expect(plain.priority).toBe("none");
+
+		const high = await value(agent, "create_work_item", {
+			project: PROJECT,
+			title: "Soon please",
+			priority: "high",
+		});
+		expect(high.priority).toBe("high");
+
+		const urgent = await value(agent, "update_work_item", {
+			key: high.key,
+			priority: "urgent",
+		});
+		expect(urgent.priority).toBe("urgent");
+		expect((await ada.client.issue.find({ issueId: high.key })).priority).toBe(
+			"urgent",
+		);
+
+		const refused = await call(agent, "update_work_item", {
+			key: high.key,
+			priority: "p0",
+		});
+		expect(refused.isError).toBe(true);
+	});
+
 	test("search finds items by title or key", async () => {
 		const created = await value(agent, "create_work_item", {
 			project: PROJECT,

@@ -1,4 +1,4 @@
-import type { IssueType, tables } from "@smelp/db";
+import type { IssuePriority, IssueType, tables } from "@smelp/db";
 import type { JiraIssue, JiraLink, ParsedJira } from "./jira-csv";
 
 // Turns parsed Jira data plus the importer's choices into (a) the dry run shown before
@@ -620,6 +620,7 @@ export function buildPlan(
 				title: longTitle ? `${clip(title, TITLE_MAX - 1)}…` : title,
 				description,
 				type: typeOf(issue.type),
+				priority: priorityOf(issue.priority),
 				parentId: parentOf.has(issue.key)
 					? issueId(byKey.get(parentOf.get(issue.key) as string) as JiraIssue)
 					: null,
@@ -827,6 +828,26 @@ function typeOf(jiraType: string): IssueType {
 	return JIRA_TYPES.get(jiraType.trim().toLowerCase()) ?? "task";
 }
 
+const JIRA_PRIORITIES = new Map<string, IssuePriority>([
+	["highest", "urgent"],
+	["blocker", "urgent"],
+	["critical", "urgent"],
+	["high", "high"],
+	["major", "high"],
+	["medium", "medium"],
+	["normal", "medium"],
+	["low", "low"],
+	["lowest", "low"],
+	["minor", "low"],
+	["trivial", "low"],
+]);
+
+function priorityOf(jiraPriority: string | null): IssuePriority {
+	return (
+		JIRA_PRIORITIES.get(jiraPriority?.trim().toLowerCase() ?? "") ?? "none"
+	);
+}
+
 function footerOf(
 	issue: JiraIssue,
 	extra: {
@@ -842,7 +863,12 @@ function footerOf(
 	if (issue.type && issue.type.trim().toLowerCase() !== typeOf(issue.type)) {
 		lines.push(`Jira type: ${clip(issue.type, 100)}`);
 	}
-	if (issue.priority) lines.push(`Priority: ${clip(issue.priority, 100)}`);
+	if (
+		issue.priority &&
+		issue.priority.trim().toLowerCase() !== priorityOf(issue.priority)
+	) {
+		lines.push(`Priority: ${clip(issue.priority, 100)}`);
+	}
 	if (issue.resolution)
 		lines.push(`Resolution: ${clip(issue.resolution, 100)}`);
 	if (extra.reporter) lines.push(`Reporter: ${clip(extra.reporter.name, 100)}`);

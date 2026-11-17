@@ -246,6 +246,61 @@ describe("work item types", () => {
 	});
 });
 
+describe("work item priority", () => {
+	test("a new work item has no priority unless it says otherwise", async () => {
+		const plain = await member.client.issue.create(newIssue());
+		const high = await member.client.issue.create({
+			...newIssue(),
+			priority: "high",
+		});
+
+		expect(
+			(await member.client.issue.find({ issueId: plain.id })).priority,
+		).toBe("none");
+		expect(
+			(await member.client.issue.find({ issueId: high.id })).priority,
+		).toBe("high");
+	});
+
+	test("rejects a priority that isn't one of the known ones", async () => {
+		await expectCode(
+			member.client.issue.create({
+				...newIssue(),
+				priority: "High" as "high",
+			}),
+			"BAD_REQUEST",
+		);
+		const { id } = await member.client.issue.create(newIssue());
+		await expectCode(
+			member.client.issue.update({ id, priority: "p1" as "high" }),
+			"BAD_REQUEST",
+		);
+		expect((await member.client.issue.find({ issueId: id })).priority).toBe(
+			"none",
+		);
+	});
+
+	test("changing the priority is saved and shows in the timeline", async () => {
+		const { id } = await member.client.issue.create(newIssue());
+		await member.client.issue.update({ id, priority: "urgent" });
+		await Bun.sleep(30);
+
+		expect((await guest.client.issue.find({ issueId: id })).priority).toBe(
+			"urgent",
+		);
+		const activity = await guest.client.activity.findForIssue({ issueId: id });
+		expect(activity.map((entry) => entry.action)).toEqual([
+			"created",
+			"issue.updated",
+		]);
+		expect(activity[1]).toMatchObject({
+			field: "priority",
+			oldValue: "none",
+			newValue: "urgent",
+		});
+	});
+});
+
 describe("assigning on create", () => {
 	test("a project member can be assigned right away", async () => {
 		const created = await member.client.issue.create({

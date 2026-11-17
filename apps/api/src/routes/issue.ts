@@ -117,6 +117,7 @@ const NonEmpty = v.pipe(v.string(), v.minLength(1));
 const Title = v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(120));
 const Description = v.pipe(v.string(), v.maxLength(20_000));
 const IssueType = v.picklist(DEFAULTS.ISSUE_TYPES);
+const IssuePriority = v.picklist(DEFAULTS.ISSUE_PRIORITIES);
 
 async function requireAssigneeInProject(
 	assignee: string,
@@ -167,6 +168,7 @@ export const updateIssue = base
 			title: v.optional(Title),
 			description: v.optional(Description),
 			type: v.optional(IssueType),
+			priority: v.optional(IssuePriority),
 			assignee: v.optional(v.nullable(NonEmpty)),
 			parentId: v.optional(v.nullable(NonEmpty)),
 			moduleId: v.optional(v.nullable(NonEmpty)),
@@ -192,6 +194,7 @@ export const updateIssue = base
 			title: input.title ?? oldIssue.title,
 			description: input.description ?? oldIssue.description,
 			type: input.type ?? oldIssue.type,
+			priority: input.priority ?? oldIssue.priority,
 			assignee:
 				input.assignee === undefined ? oldIssue.assignee : input.assignee,
 			parentId:
@@ -205,6 +208,7 @@ export const updateIssue = base
 		const titleChanged = next.title !== oldIssue.title;
 		const descriptionChanged = next.description !== oldIssue.description;
 		const typeChanged = next.type !== oldIssue.type;
+		const priorityChanged = next.priority !== oldIssue.priority;
 		const assigneeChanged = next.assignee !== oldIssue.assignee;
 		const parentChanged = next.parentId !== oldIssue.parentId;
 		const moduleChanged = next.moduleId !== oldIssue.moduleId;
@@ -215,6 +219,7 @@ export const updateIssue = base
 			!titleChanged &&
 			!descriptionChanged &&
 			!typeChanged &&
+			!priorityChanged &&
 			!assigneeChanged &&
 			!parentChanged &&
 			!moduleChanged &&
@@ -262,6 +267,7 @@ export const updateIssue = base
 				title = ${next.title},
 				description = ${next.description},
 				type = ${next.type},
+				priority = ${next.priority},
 				assignee = ${next.assignee},
 				parentId = CASE WHEN ${setParent} = 1 THEN ${next.parentId} ELSE parentId END,
 				moduleId = CASE WHEN ${setModule} = 1 THEN ${next.moduleId} ELSE moduleId END,
@@ -390,6 +396,18 @@ export const updateIssue = base
 				},
 			});
 		}
+		if (priorityChanged) {
+			eventBus.emit({
+				...event,
+				type: "issue.updated",
+				payload: {
+					...ref,
+					field: "priority",
+					oldValue: oldIssue.priority,
+					newValue: issue.priority,
+				},
+			});
+		}
 		if (assigneeChanged) {
 			eventBus.emit({
 				...event,
@@ -515,6 +533,7 @@ export const createIssue = base
 			description: Description,
 			state: v.string(),
 			type: v.optional(IssueType, "task"),
+			priority: v.optional(IssuePriority, "none"),
 			assignee: v.optional(v.string()),
 			parentId: v.optional(v.string()),
 			workspaceId: v.string(),
@@ -546,6 +565,7 @@ export const createIssue = base
 			title: input.title,
 			description: input.description,
 			type: input.type,
+			priority: input.priority,
 			parentId: input.parentId || null,
 			moduleId: null,
 			cycleId: null,

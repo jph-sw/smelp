@@ -22,6 +22,7 @@ const LEGACY_ACTIONS: Record<string, string> = {
 const FIELDS_WITH_VALUE = new Set([
 	"title",
 	"type",
+	"priority",
 	"parent",
 	"cycle",
 	"module",

@@ -1084,6 +1084,50 @@ describe("jira import: awkward exports", () => {
 		expect(items.get("ZQJ-4")?.description).toContain("Jira type: Improvement");
 	});
 
+	test("Jira priorities become work item priorities", async () => {
+		const csv = jiraCsv([
+			{
+				summary: "Hot",
+				key: "ZQG-1",
+				projectName: "Priorities",
+				priority: "High",
+			},
+			{ summary: "On fire", key: "ZQG-2", priority: " Blocker " },
+			{ summary: "Someday", key: "ZQG-3", priority: "trivial" },
+			{ summary: "Plain", key: "ZQG-4", priority: "Medium" },
+			{ summary: "Unsorted", key: "ZQG-5", priority: "" },
+			{ summary: "Custom", key: "ZQG-6", priority: "P2 - Soon" },
+		]);
+		await admin.client.jiraImport.apply({
+			workspaceId: WORKSPACE,
+			csv,
+			mapping: {},
+		});
+		const items = new Map(
+			(
+				(await sql`
+					SELECT id, priority, description FROM issue WHERE projectId = 'ZQG'
+				`) as { id: string; priority: string; description: string }[]
+			).map((item) => [item.id, item]),
+		);
+
+		expect([...items.values()].map((item) => [item.id, item.priority])).toEqual(
+			expect.arrayContaining([
+				["ZQG-1", "high"],
+				["ZQG-2", "urgent"],
+				["ZQG-3", "low"],
+				["ZQG-4", "medium"],
+				["ZQG-5", "none"],
+				["ZQG-6", "none"],
+			]),
+		);
+		expect(items.get("ZQG-1")?.description).not.toContain("Priority:");
+		expect(items.get("ZQG-4")?.description).not.toContain("Priority:");
+		expect(items.get("ZQG-5")?.description).not.toContain("Priority:");
+		expect(items.get("ZQG-2")?.description).toContain("Priority: Blocker");
+		expect(items.get("ZQG-6")?.description).toContain("Priority: P2 - Soon");
+	});
+
 	test("very long status names still import", async () => {
 		const status = "S".repeat(400);
 		const csv = jiraCsv([
