@@ -2,6 +2,7 @@
   this was inspired by https://raw.githubusercontent.com/lucia-auth/lucia
 */
 
+import { timingSafeEqual } from "node:crypto";
 import { DB, type tables } from "@smelp/db";
 import { eventBus } from "@smelp/events";
 import type { SQL } from "bun";
@@ -273,23 +274,14 @@ export class Auth {
 		crypto.getRandomValues(bytes);
 
 		let id = "";
-		for (let i = 0; i < bytes.length; i++) {
-			// biome-ignore lint/style/noNonNullAssertion: <TODO>
-			id += alphabet[bytes[i]! >> 3];
+		for (const byte of bytes) {
+			id += alphabet[byte >> 3];
 		}
 		return id;
 	}
 
 	constantTimeEqual(a: Uint8Array, b: Uint8Array): boolean {
-		if (a.byteLength !== b.byteLength) {
-			return false;
-		}
-		let c = 0;
-		for (let i = 0; i < a.byteLength; i++) {
-			// biome-ignore lint/style/noNonNullAssertion: <TODO>
-			c |= a[i]! ^ b[i]!;
-		}
-		return c === 0;
+		return a.byteLength === b.byteLength && timingSafeEqual(a, b);
 	}
 }
 
