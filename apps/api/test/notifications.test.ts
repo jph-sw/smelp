@@ -465,6 +465,187 @@ describe("who can read the item", () => {
 	});
 });
 
+describe("watching", () => {
+	const otherState = async () => {
+		const states = await owner.client.states.find({ projectId: PROJECT });
+		return states[states.length - 1]?.id ?? "";
+	};
+	const watchers = (user: User, issueId: string) =>
+		user.client.issue.watchers({ issueId });
+
+	test("a member who watches an item they never touched hears about it until they unwatch", async () => {
+		const watcher = await createUser("watcher");
+		await addMember(WORKSPACE, watcher.id, "member");
+		await addMember(PROJECT, watcher.id, "member");
+		const issue = await alice.client.issue.create(newIssue("Watch me"));
+
+		await watcher.client.issue.setWatching({
+			issueId: issue.id,
+			watching: true,
+		});
+		await bob.client.comments.create({ issueId: issue.id, body: "news" });
+		await settle();
+		const [onComment] = await forIssue(watcher, issue.id);
+		expect(onComment).toMatchObject({ type: "comment", actorId: bob.id });
+
+		await watcher.client.notifications.markRead({ id: onComment?.id ?? "" });
+		await bob.client.issue.update({ id: issue.id, state: await otherState() });
+		await settle();
+		const afterMove = await forIssue(watcher, issue.id);
+		expect(afterMove).toHaveLength(1);
+		expect(afterMove[0]).toMatchObject({
+			type: "status_changed",
+			actorId: bob.id,
+			readAt: null,
+		});
+
+		await watcher.client.notifications.markRead({ id: afterMove[0]?.id ?? "" });
+		await watcher.client.issue.setWatching({
+			issueId: issue.id,
+			watching: false,
+		});
+		await bob.client.comments.create({ issueId: issue.id, body: "more" });
+		await bob.client.issue.update({ id: issue.id, state: stateIds[PROJECT] });
+		await settle();
+		const afterUnwatch = await forIssue(watcher, issue.id);
+		expect(afterUnwatch).toHaveLength(1);
+		expect(afterUnwatch[0]?.readAt).not.toBeNull();
+		expect(afterUnwatch[0]?.type).toBe("status_changed");
+	});
+
+	test("a state change tells the creator, the assignee and commenters, never the mover", async () => {
+		const issue = await alice.client.issue.create(
+			newIssue("Moved", PROJECT, bob.id),
+		);
+		await carol.client.comments.create({ issueId: issue.id, body: "hi" });
+		await settle();
+		for (const user of [alice, bob]) {
+			const [note] = await forIssue(user, issue.id);
+			if (note) await user.client.notifications.markRead({ id: note.id });
+		}
+
+		await owner.client.issue.update({
+			id: issue.id,
+			state: await otherState(),
+		});
+		await settle();
+		for (const user of [alice, bob, carol]) {
+			const [note] = await forIssue(user, issue.id);
+			expect(note).toMatchObject({
+				type: "status_changed",
+				actorId: owner.id,
+				readAt: null,
+			});
+		}
+		expect(await forIssue(owner, issue.id)).toHaveLength(0);
+	});
+
+	test("an unread assignment outranks a later state change", async () => {
+		const issue = await owner.client.issue.create(
+			newIssue("Assigned then moved", PROJECT, carol.id),
+		);
+		await alice.client.issue.update({
+			id: issue.id,
+			state: await otherState(),
+		});
+		await settle();
+		const notes = await forIssue(carol, issue.id);
+		expect(notes).toHaveLength(1);
+		expect(notes[0]).toMatchObject({ type: "assigned", actorId: alice.id });
+	});
+
+	test("lists who watches, and setting the same state twice changes nothing", async () => {
+		const issue = await alice.client.issue.create(
+			newIssue("Watched by", PROJECT, bob.id),
+		);
+		expect(await watchers(carol, issue.id)).toMatchObject({
+			watching: false,
+			canWatch: true,
+			count: 2,
+		});
+
+		for (let i = 0; i < 2; i++) {
+			const result = await carol.client.issue.setWatching({
+				issueId: issue.id,
+				watching: true,
+			});
+			expect(result).toMatchObject({ watching: true, count: 3 });
+		}
+		const { watchers: list } = await watchers(alice, issue.id);
+		expect(list.map((watcher) => watcher.id).sort()).toEqual(
+			[alice.id, bob.id, carol.id].sort(),
+		);
+		expect(list.find((watcher) => watcher.id === carol.id)?.name).toBe(
+			carol.displayName,
+		);
+
+		for (let i = 0; i < 2; i++) {
+			await carol.client.issue.setWatching({
+				issueId: issue.id,
+				watching: false,
+			});
+		}
+		expect(await watchers(carol, issue.id)).toMatchObject({
+			watching: false,
+			count: 2,
+		});
+	});
+
+	test("commenting or being assigned again starts watching again", async () => {
+		const issue = await alice.client.issue.create(newIssue("Back again"));
+		await alice.client.issue.setWatching({
+			issueId: issue.id,
+			watching: false,
+		});
+		await alice.client.comments.create({ issueId: issue.id, body: "me" });
+		expect((await watchers(alice, issue.id)).watching).toBe(true);
+
+		await bob.client.issue.setWatching({ issueId: issue.id, watching: false });
+		await alice.client.issue.update({ id: issue.id, assignee: bob.id });
+		expect((await watchers(bob, issue.id)).watching).toBe(true);
+	});
+
+	test("only people in the workspace can watch", async () => {
+		const issue = await alice.client.issue.create(newIssue("Members only"));
+		const admin = await createUser("watching-admin");
+		await sql`UPDATE auth_user SET role = 'admin' WHERE id = ${admin.id}`;
+
+		expect((await watchers(admin, issue.id)).canWatch).toBe(false);
+		expect(
+			admin.client.issue.setWatching({ issueId: issue.id, watching: true }),
+		).rejects.toMatchObject({ code: "FORBIDDEN" });
+
+		const anonymous = createRouterClient(router, {
+			context: { headers: new Headers(), ip: "198.51.100.22" },
+		});
+		expect(
+			anonymous.issue.setWatching({ issueId: issue.id, watching: true }),
+		).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+		expect((await watchers(alice, issue.id)).count).toBe(1);
+	});
+
+	test("leaving the workspace stops watching its items", async () => {
+		const leaver = await createUser("leaver");
+		await addMember(WORKSPACE, leaver.id, "member");
+		await addMember(PROJECT, leaver.id, "member");
+		const issue = await alice.client.issue.create(newIssue("Left behind"));
+		await leaver.client.issue.setWatching({
+			issueId: issue.id,
+			watching: true,
+		});
+		expect((await watchers(alice, issue.id)).count).toBe(2);
+
+		const [membership] = (await sql`
+			SELECT id FROM auth_space_member WHERE spaceId = ${WORKSPACE} AND userId = ${leaver.id}
+		`) as { id: string }[];
+		await owner.client.workspaceMembers.remove({
+			workspaceId: WORKSPACE,
+			memberId: membership?.id ?? "",
+		});
+		expect((await watchers(alice, issue.id)).count).toBe(1);
+	});
+});
+
 describe("read and unread", () => {
 	test("newest first, with a count that follows reading", async () => {
 		const reader = await createUser("reader");

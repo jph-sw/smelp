@@ -617,6 +617,15 @@ describe("jira import: apply", () => {
 		expect(long[0]?.body.length).toBeLessThanOrEqual(10_000);
 	});
 
+	test("the people on an imported item watch it, like on a new one", async () => {
+		const { watchers } = await admin.client.issue.watchers({
+			issueId: "ZQA-1",
+		});
+		expect(watchers.map((watcher) => watcher.id).sort()).toEqual(
+			[ada.id, grace.id].sort(),
+		);
+	});
+
 	test("unmatched people leave items unassigned, with their name kept", async () => {
 		const item = await admin.client.issue.find({ issueId: "ZQB-1" });
 		expect(item.assignee).toBeNull();

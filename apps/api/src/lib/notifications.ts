@@ -5,6 +5,7 @@ import { eventBus } from "@smelp/events";
 import { isMailEnabled, sendNotificationEmail } from "./mail";
 import { mentionedUserIds, plainMentions } from "./mentions";
 import { RateLimiter } from "./rate-limit";
+import { watcherIds } from "./watchers";
 
 const sql = new DB().sqlite;
 const auth = new Auth();
@@ -56,17 +57,6 @@ const RULES: { [T in DomainEventType]?: Rule<T> } = {
 			| undefined;
 		if (!comment || !issue) return [];
 
-		const earlier = (await sql`
-			SELECT DISTINCT authorId FROM comment
-			WHERE issueId = ${issueId} AND authorId IS NOT NULL
-		`) as { authorId: string }[];
-
-		const followers = [
-			issue.createdBy,
-			issue.assignee,
-			...earlier.map((row) => row.authorId),
-		].filter((id): id is string => id !== null);
-
 		const draft = {
 			issueId,
 			projectId: issue.projectId,
@@ -75,9 +65,20 @@ const RULES: { [T in DomainEventType]?: Rule<T> } = {
 		};
 		return [
 			{ ...draft, type: "mention", userIds: mentionedUserIds(comment.body) },
-			{ ...draft, type: "comment", userIds: followers },
+			{ ...draft, type: "comment", userIds: await watcherIds(issueId) },
 		];
 	},
+
+	"issue.status_changed": async (event) => [
+		{
+			type: "status_changed",
+			userIds: await watcherIds(event.entityId),
+			issueId: event.entityId,
+			projectId: event.payload.projectId,
+			commentId: null,
+			title: event.payload.title,
+		},
+	],
 };
 
 // Needs a place in the workspace as well as in the project, so an instance admin
@@ -106,6 +107,8 @@ function describe(type: NotificationType, actorName: string, title: string) {
 			return `${actorName} mentioned you on "${title}"`;
 		case "comment":
 			return `${actorName} commented on "${title}"`;
+		case "status_changed":
+			return `${actorName} changed the state of "${title}"`;
 	}
 }
 
@@ -155,9 +158,9 @@ async function notify(event: DomainEvent) {
 				ON CONFLICT (userId, issueId) DO UPDATE SET
 					type = CASE
 						WHEN notification.readAt IS NULL AND (
-							CASE notification.type WHEN 'mention' THEN 3 WHEN 'assigned' THEN 2 ELSE 1 END
+							CASE notification.type WHEN 'mention' THEN 3 WHEN 'assigned' THEN 2 WHEN 'comment' THEN 1 WHEN 'status_changed' THEN 1 END
 						) > (
-							CASE excluded.type WHEN 'mention' THEN 3 WHEN 'assigned' THEN 2 ELSE 1 END
+							CASE excluded.type WHEN 'mention' THEN 3 WHEN 'assigned' THEN 2 WHEN 'comment' THEN 1 WHEN 'status_changed' THEN 1 END
 						) THEN notification.type
 						ELSE excluded.type
 					END,

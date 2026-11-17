@@ -1,4 +1,8 @@
-export type NotificationType = "assigned" | "comment" | "mention";
+export type NotificationType =
+	| "assigned"
+	| "comment"
+	| "mention"
+	| "status_changed";
 
 export type notification = {
 	id: string;

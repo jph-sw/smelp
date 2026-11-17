@@ -128,6 +128,7 @@ import {
 	updateState,
 } from "./routes/state";
 import { findStates } from "./routes/states";
+import { findWatchers, setWatching } from "./routes/watchers";
 import {
 	createWorkspace,
 	deleteWorkspace,
@@ -238,6 +239,8 @@ export const router = {
 		create: createIssue,
 		update: updateIssue,
 		delete: deleteIssue,
+		watchers: findWatchers,
+		setWatching,
 	},
 	issueRelations: {
 		find: findIssueRelations,

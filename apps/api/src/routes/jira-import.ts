@@ -11,6 +11,7 @@ import {
 	type Plan,
 	STATE_TARGETS,
 } from "../lib/jira-plan";
+import { watch } from "../lib/watchers";
 import { base } from "../orpc";
 
 const sql = new DB().sqlite;
@@ -166,6 +167,23 @@ export const applyJiraImport = base
 					}
 					for (const rows of chunks(write.webLinks, 400)) {
 						await tx`INSERT INTO issue_link ${tx(rows)}`;
+					}
+					const commenters = new Map<string, (string | null)[]>();
+					for (const comment of write.comments) {
+						const authors = commenters.get(comment.issueId) ?? [];
+						authors.push(comment.authorId);
+						commenters.set(comment.issueId, authors);
+					}
+					for (const issue of write.issues) {
+						await watch(
+							issue.id,
+							[
+								issue.createdBy,
+								issue.assignee,
+								...(commenters.get(issue.id) ?? []),
+							],
+							tx,
+						);
 					}
 				}
 				for (const rows of chunks(plan.relations, 500)) {
