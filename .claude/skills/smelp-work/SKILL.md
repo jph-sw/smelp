@@ -1,6 +1,6 @@
 ---
 name: smelp-work
-description: Take a SMELP work item from the production smelp board and carry it through to an open PR in poteto-mode style (restate the goal, pick the pstack playbook, delegate, verify on the real surface, small commits, clean PR), with smelp's own conventions layered on top and the ticket kept current. Use whenever the user hands you a ticket key or link ("do SMELP-12", "work on smelp.philipps.io/smelp/browse/SMELP-10", "pick up the next ticket", "implement this item"), even if they don't mention poteto-mode.
+description: Take a SMELP work item from the production smelp board and carry it through to an open PR in poteto-mode style (restate the goal, pick the pstack playbook, delegate, verify on the real surface, small commits, clean PR), with smelp's own conventions layered on top and the ticket kept current. Use whenever the user hands you a ticket key or link ("do SMELP-12", "work on smelp.philipps.io/smelp/browse/SMELP-10", "pick up the next ticket", "implement this item"), even if they don't mention poteto-mode. When there is no ticket yet and the user wants one filed and built, use smelp-do.
 ---
 
 # Work a SMELP ticket
