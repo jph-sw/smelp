@@ -36,6 +36,12 @@ export function AppSidebar({
 	const myProjects = projects.filter(
 		(project) => (isPublic || project.isMember) && !project.isArchived,
 	);
+	// Project settings carry a projectId too, but they aren't the project's own screens.
+	const activeProjectId =
+		params.issueId ||
+		matchRoute({ to: "/$id/projects/$projectId", fuzzy: true })
+			? currentProjectId
+			: undefined;
 	const isOnArchivedProject = projects.some(
 		(project) => project.id === currentProjectId && project.isArchived,
 	);
@@ -93,7 +99,11 @@ export function AppSidebar({
 					</SidebarGroupContent>
 				</SidebarGroup>
 				<NavWorkspaces workspace={workspace} />
-				<NavProjects workspace={workspace} projects={myProjects} />
+				<NavProjects
+					workspace={workspace}
+					projects={myProjects}
+					activeProjectId={activeProjectId}
+				/>
 			</SidebarContent>
 		</Sidebar>
 	);

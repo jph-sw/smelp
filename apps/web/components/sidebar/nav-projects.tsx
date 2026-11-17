@@ -5,7 +5,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { tables } from "@smelp/db";
-import { Link, useMatchRoute } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import {
 	SidebarGroup,
@@ -31,12 +31,13 @@ import {
 export function NavProjects({
 	workspace,
 	projects,
+	activeProjectId,
 }: {
 	workspace: tables["workspace"];
 	projects: tables["project"][];
+	activeProjectId: string | undefined;
 }) {
 	const [isOpen, setIsOpen] = useState(true);
-	const matchRoute = useMatchRoute();
 	const { viewer, canWrite } = useWorkspaceAccess();
 
 	return (
@@ -67,13 +68,7 @@ export function NavProjects({
 							{projects.map((project) => (
 								<SidebarMenuItem key={project.id}>
 									<SidebarMenuButton
-										isActive={
-											!!matchRoute({
-												to: "/$id/projects/$projectId",
-												params: { id: workspace.id, projectId: project.id },
-												fuzzy: true,
-											})
-										}
+										isActive={project.id === activeProjectId}
 										render={
 											<Link
 												to="/$id/projects/$projectId"
