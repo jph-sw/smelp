@@ -2,6 +2,18 @@
 
 Each release is a git tag. To upgrade, follow [Upgrade](README.md#upgrade) in the README.
 
+## 0.11.0 (2026-11-17)
+
+Work items show the GitHub branches, commits and pull requests that mention them.
+
+- **GitHub:** a project admin can connect one GitHub repository under the project's settings, then GitHub. smelp shows a webhook address and a secret to add to the repository on GitHub. The secret is shown once, and can be regenerated. After that, any branch, commit or pull request that mentions a work item's key, like `SMELP-12`, shows in a new Development section on that item, and each pull request shows whether it's open, merged or closed. The activity log notes when a pull request is linked and when it merges, under the GitHub user's name. Keys of other projects are ignored, and so are deliveries for archived projects. The address refuses deliveries with a wrong signature, over 1 MB, or too many at once.
+- **Activity filter and sort:** a work item's activity can show everything, only comments or only history, newest or oldest first. Newest first is the default, and your choice is remembered in this browser.
+- **Fixed:** when the migrations folder is missing, startup now says which path it expected instead of failing with a bare ENOENT error.
+
+Not included yet: moving a work item's state when its pull request merges, and removing a link when a pull request stops mentioning a key.
+
+Upgrading runs one database change automatically, which adds the GitHub tables. Existing data isn't touched. Back up first, as the README describes.
+
 ## 0.10.0 (2026-11-16)
 
 Work item types, and comments written and shown as rich text.
