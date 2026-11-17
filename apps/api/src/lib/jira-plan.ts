@@ -627,7 +627,7 @@ export function buildPlan(
 				// Sprints aren't imported, and Jira has no modules.
 				cycleId: null,
 				moduleId: null,
-				dueDate: null,
+				dueDate: issue.dueDate,
 				workspaceId: ctx.workspaceId,
 				projectId: p.id,
 				createdAt: created,

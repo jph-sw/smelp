@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { CsvError, parseCsv, sniffDelimiter } from "../src/lib/csv";
-import { parseComment, parseJiraDate } from "../src/lib/jira-csv";
+import { parseComment, parseJiraDate, parseJiraDay } from "../src/lib/jira-csv";
 
 describe("parseCsv", () => {
 	test("reads plain rows", () => {
@@ -94,6 +94,22 @@ describe("parseJiraDate", () => {
 		expect(parseJiraDate("yesterday")).toBeNull();
 		expect(parseJiraDate("31/Feb/24 10:00 AM")).toBeNull();
 		expect(parseJiraDate("12/Xyz/24 10:00 AM")).toBeNull();
+	});
+});
+
+describe("parseJiraDay", () => {
+	test("keeps only the calendar day, as written", () => {
+		expect(parseJiraDay("20/Nov/26 5:00 PM")).toBe("2026-11-20");
+		expect(parseJiraDay("20/Nov/26")).toBe("2026-11-20");
+		expect(parseJiraDay("2026-11-20")).toBe("2026-11-20");
+		expect(parseJiraDay("2026-11-20T00:30:00.000+0100")).toBe("2026-11-20");
+		expect(parseJiraDay("20.11.2026")).toBe("2026-11-20");
+	});
+
+	test("returns null for an empty or unreadable value", () => {
+		expect(parseJiraDay("")).toBeNull();
+		expect(parseJiraDay("next week")).toBeNull();
+		expect(parseJiraDay("31/Feb/26")).toBeNull();
 	});
 });
 

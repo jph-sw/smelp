@@ -50,6 +50,8 @@ export type JiraIssue = {
 	description: string;
 	createdAt: number | null;
 	updatedAt: number | null;
+	/** YYYY-MM-DD. */
+	dueDate: string | null;
 	assignee: string | null;
 	assigneeId: string | null;
 	reporter: string | null;
@@ -101,6 +103,7 @@ const MONTHS: Record<string, number> = {
 
 /**
  * Jira's export formats: "12/Nov/24 10:15 AM" (the usual one), "12/Nov/24 22:15",
+ * "12/Nov/24" for date-only fields like the due date,
  * ISO "2024-11-12 22:15" or "2024-11-12T22:15:00.000+0100", and "12.11.2024 22:15".
  * The file carries no time zone, so times without an offset are read as UTC.
  */
@@ -109,7 +112,7 @@ export function parseJiraDate(value: string): number | null {
 	if (!text) return null;
 
 	const named = text.match(
-		/^(\d{1,2})\/([\p{L}]{3,4})\/(\d{2}|\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*([AaPp][Mm])?$/u,
+		/^(\d{1,2})\/([\p{L}]{3,4})\/(\d{2}|\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*([AaPp][Mm])?)?$/u,
 	);
 	if (named) {
 		const [, day, monthName, year, hour, minute, second, meridiem] = named;
@@ -119,8 +122,8 @@ export function parseJiraDate(value: string): number | null {
 			expandYear(year as string),
 			month,
 			Number(day),
-			to24Hour(Number(hour), meridiem),
-			Number(minute),
+			to24Hour(Number(hour ?? 0), meridiem),
+			Number(minute ?? 0),
 			Number(second ?? 0),
 		);
 	}
@@ -160,6 +163,14 @@ export function parseJiraDate(value: string): number | null {
 		return base - sign * offset * 60_000;
 	}
 	return null;
+}
+
+// A due date is a calendar day, so the time and any offset Jira writes are dropped.
+export function parseJiraDay(value: string): string | null {
+	const time = parseJiraDate(value);
+	if (time === null) return null;
+	const iso = value.trim().match(/^\d{4}-\d{2}-\d{2}/);
+	return iso ? iso[0] : new Date(time).toISOString().slice(0, 10);
 }
 
 function expandYear(year: string) {
@@ -298,6 +309,7 @@ export function parseJiraCsv(text: string): ParsedJira {
 		reporterId: columns.one("reporter id"),
 		created: columns.one("created"),
 		updated: columns.one("updated"),
+		dueDate: columns.one("due date"),
 		description: columns.one("description"),
 		parentId: columns.one("parent id"),
 		parent: columns.one("parent"),
@@ -429,6 +441,7 @@ export function parseJiraCsv(text: string): ParsedJira {
 			description: col.description < 0 ? "" : (row[col.description] ?? ""),
 			createdAt: date(col.created),
 			updatedAt: date(col.updated),
+			dueDate: parseJiraDay(cell(row, col.dueDate)),
 			assignee,
 			assigneeId,
 			reporter,
