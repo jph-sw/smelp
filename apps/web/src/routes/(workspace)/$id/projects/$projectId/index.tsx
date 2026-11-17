@@ -113,7 +113,7 @@ function RouteComponent() {
 
 	const today = localDay();
 	const visibleIssues = issues.filter((issue) =>
-		matchesFilters(issue, filters),
+		matchesFilters(issue, filters, { today, states }),
 	);
 	const visibleStates = filters.state
 		? states.filter((state) => state.id === filters.state)

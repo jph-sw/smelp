@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useDebounce } from "#/hooks/use-debounce";
 import {
 	type BoardFilters,
+	DUE_FILTERS,
 	isFiltered,
 	NO_CYCLE,
 	NO_MODULE,
@@ -178,6 +179,21 @@ export function BoardFilterBar({
 						]}
 					/>
 				)}
+				<FilterSelect
+					label="Filter by due date"
+					value={filters.due}
+					onChange={(due) =>
+						onChange({
+							...filters,
+							due: DUE_FILTERS.find((value) => value === due),
+						})
+					}
+					items={[
+						{ label: "Any due date", value: ALL },
+						{ label: "Overdue", value: "overdue" },
+						{ label: "Due this week", value: "week" },
+					]}
+				/>
 				<span
 					aria-live="polite"
 					className="shrink-0 text-sm text-muted-foreground tabular-nums"
