@@ -324,6 +324,7 @@ function RouteComponent() {
 							cycles={cycles}
 							onUpdate={update}
 						/>
+						<IssueDevelopment issueId={issue.id} className="pb-4" />
 					</div>
 					<IssueRelations
 						issueId={issue.id}
@@ -331,7 +332,6 @@ function RouteComponent() {
 						canWrite={canWrite}
 					/>
 					<IssueLinks issueId={issue.id} canWrite={canWrite} />
-					<IssueDevelopment issueId={issue.id} />
 					<IssueAttachments
 						issueId={issue.id}
 						userId={user?.id}
@@ -361,6 +361,7 @@ function RouteComponent() {
 						cycles={cycles}
 						onUpdate={update}
 					/>
+					<IssueDevelopment issueId={issue.id} className="border-t p-4" />
 				</aside>
 			</div>
 		</div>
