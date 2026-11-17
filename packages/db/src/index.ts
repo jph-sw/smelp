@@ -22,6 +22,10 @@ import {
 	REACTION_EMOJIS,
 } from "../types/tables/comment_reaction";
 import type { cycle } from "../types/tables/cycle";
+import type {
+	issue_github_ref,
+	project_github_repo,
+} from "../types/tables/github";
 import type { import_record } from "../types/tables/import_record";
 import { ISSUE_TYPES, type issue } from "../types/tables/issue";
 import type { issue_link } from "../types/tables/issue_link";
@@ -181,6 +185,8 @@ export type tables = {
 	attachment: attachment;
 	comment_reaction: comment_reaction;
 	issue_link: issue_link;
+	issue_github_ref: issue_github_ref;
+	project_github_repo: project_github_repo;
 	import_record: import_record;
 	module: module;
 	cycle: cycle;
@@ -192,6 +198,7 @@ export const DEFAULTS = {
 	ISSUE_TYPES: ISSUE_TYPES,
 };
 
+export type { PullRequestState } from "../types/tables/github";
 export type { IssueType } from "../types/tables/issue";
 
 export type ProjectMember = tables["auth_space_member"] &

@@ -3,10 +3,10 @@
 // renamed or deleted. Events about something inside a project carry its
 // projectId, which the feed uses to decide who may see them. Payloads never
 // hold secrets, tokens or long text like descriptions.
-type Event<T extends string, P> = {
+type Event<T extends string, P, Actor extends string | null = string> = {
 	type: T;
 	workspaceId: string;
-	actorId: string;
+	actorId: Actor;
 	entityId: string;
 	payload: P;
 };
@@ -17,6 +17,15 @@ type LinkChange = IssueRef & {
 	field: "link";
 	oldValue: string | null;
 	newValue: string | null;
+};
+// From a GitHub webhook, so no smelp user did it. githubLogin names who did on
+// GitHub; newValue is the pull request's number.
+type PullRequestChange = IssueRef & {
+	field: "pull_request";
+	oldValue: null;
+	newValue: string;
+	repo: string;
+	githubLogin: string | null;
 };
 type MemberRef = { userId: string; userName: string | null; role: string };
 
@@ -85,6 +94,11 @@ export type DomainEvent =
 	| Event<"issue.link_added", LinkChange>
 	| Event<"issue.link_updated", LinkChange>
 	| Event<"issue.link_removed", LinkChange>
+	| Event<
+			"issue.pull_request_linked" | "issue.pull_request_merged",
+			PullRequestChange,
+			null
+	  >
 	| Event<"comment.created", IssueRef & { issueId: string }>
 	| Event<"comment.updated", IssueRef & { issueId: string }>
 	| Event<"auth.signin", { sessionId: string; username: string }>
