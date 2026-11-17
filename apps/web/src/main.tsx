@@ -2,6 +2,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "@tanstack/react-router";
 import { lazy, StrictMode, Suspense } from "react";
 import { createRoot } from "react-dom/client";
+import { watchSystemTheme } from "#/lib/theme";
 import { queryClient, router } from "./router";
 
 import "./styles.css";
@@ -15,10 +16,7 @@ if (!rootElement) {
 	throw new Error("root element not found");
 }
 
-const darkMediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-darkMediaQuery.addEventListener("change", (e) => {
-	document.documentElement.classList.toggle("dark", e.matches);
-});
+watchSystemTheme();
 
 createRoot(rootElement).render(
 	<StrictMode>
