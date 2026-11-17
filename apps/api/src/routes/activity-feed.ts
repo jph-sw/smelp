@@ -26,6 +26,7 @@ const FIELDS_WITH_VALUE = new Set([
 	"parent",
 	"cycle",
 	"module",
+	"dueDate",
 ]);
 
 type FeedRow = Pick<

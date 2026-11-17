@@ -4,6 +4,7 @@ import { eventBus } from "@smelp/events";
 import { SQL } from "bun";
 import * as v from "valibot";
 import { requireProjectPermission, requireUser } from "../lib/access";
+import { Day } from "../lib/day";
 import { base } from "../orpc";
 
 const sql = new DB().sqlite;
@@ -23,16 +24,6 @@ const sql = new DB().sqlite;
 // An empty id would be stored as-is and skip the checks that guard real ones.
 const NonEmpty = v.pipe(v.string(), v.minLength(1));
 const Name = v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(64));
-const Day = v.pipe(
-	v.string(),
-	v.regex(/^\d{4}-\d{2}-\d{2}$/, "Use a date like 2026-01-31"),
-	v.check((value) => {
-		const date = new Date(`${value}T00:00:00Z`);
-		return (
-			!Number.isNaN(date.getTime()) && date.toISOString().startsWith(value)
-		);
-	}, "That date doesn't exist"),
-);
 
 type WritePermission = "space:update" | "content:write";
 
