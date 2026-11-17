@@ -27,6 +27,7 @@ import {
 	useProjectAccess,
 } from "#/lib/data/project-members";
 import { statesQueryOptions } from "#/lib/data/state";
+import { isOverdue, localDay } from "#/lib/due-date";
 import { toastError } from "#/lib/errors";
 
 // Without "view", the page shows the board, so existing links keep working.
@@ -110,6 +111,7 @@ function RouteComponent() {
 		},
 	});
 
+	const today = localDay();
 	const visibleIssues = issues.filter((issue) =>
 		matchesFilters(issue, filters),
 	);
@@ -192,6 +194,7 @@ function RouteComponent() {
 												key={issue.id}
 												workspaceId={workspaceId}
 												draggable={canWrite}
+												overdue={isOverdue(issue.dueDate, state.group, today)}
 												states={states}
 												onMove={(stateId) =>
 													moveIssue({ id: issue.id, state: stateId })

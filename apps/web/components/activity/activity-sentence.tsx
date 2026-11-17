@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import type { FeedEvent } from "#/lib/data/activity";
+import { formatDay } from "#/lib/day";
 import { issuePriorityLabel } from "#/lib/issue-priorities";
 import { issueTypeLabel } from "#/lib/issue-types";
 import { RELATION_PHRASES } from "#/lib/relations";
@@ -155,6 +156,15 @@ export function ActivitySentence({
 						changed the priority of {issue} to{" "}
 						<Strong>{issuePriorityLabel(d.to)}</Strong>
 					</>
+				);
+			}
+			if (d.field === "dueDate") {
+				return d.to ? (
+					<>
+						set the due date of {issue} to <Strong>{formatDay(d.to)}</Strong>
+					</>
+				) : (
+					<>removed the due date of {issue}</>
 				);
 			}
 			if (d.field === "type") {
