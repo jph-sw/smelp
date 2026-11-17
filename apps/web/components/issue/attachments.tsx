@@ -11,7 +11,7 @@ import {
 	useSuspenseQuery,
 } from "@tanstack/react-query";
 import { useRef } from "react";
-import { attachmentUrl } from "#/lib/attachment-url";
+import { attachmentUrl, isPreviewableImage } from "#/lib/attachment-url";
 import {
 	AttachmentUploadError,
 	attachmentLimitsQueryOptions,
@@ -31,6 +31,14 @@ import {
 	AlertDialogTrigger,
 } from "../ui/alert-dialog";
 import { Button } from "../ui/button";
+import {
+	Dialog,
+	DialogContent,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+	DialogTrigger,
+} from "../ui/dialog";
 import { toast } from "../ui/toast";
 
 export function formatBytes(bytes: number) {
@@ -161,6 +169,47 @@ function RemoveAttachmentButton({
 	);
 }
 
+function ImagePreview({ attachment }: { attachment: Attachment }) {
+	const url = attachmentUrl(attachment.id);
+	return (
+		<Dialog>
+			<DialogTrigger
+				aria-label={`Preview ${attachment.name}`}
+				className="h-auto min-w-0 justify-start gap-2 whitespace-normal border-0 bg-transparent p-0 text-left font-normal hover:bg-transparent hover:underline"
+			>
+				<img
+					src={url}
+					alt={attachment.name}
+					loading="lazy"
+					className="size-8 shrink-0 rounded-sm object-cover"
+				/>
+				<span className="[overflow-wrap:anywhere]">{attachment.name}</span>
+			</DialogTrigger>
+			<DialogContent className="sm:max-w-4xl">
+				<DialogHeader>
+					<DialogTitle className="pr-8 [overflow-wrap:anywhere]">
+						{attachment.name}
+					</DialogTitle>
+				</DialogHeader>
+				<img
+					src={url}
+					alt={attachment.name}
+					className="mx-auto max-h-[80vh] max-w-full object-contain"
+				/>
+				<DialogFooter>
+					<Button
+						variant="outline"
+						render={<a href={url} download={attachment.name} />}
+					>
+						<HugeiconsIcon icon={Download01Icon} />
+						Download
+					</Button>
+				</DialogFooter>
+			</DialogContent>
+		</Dialog>
+	);
+}
+
 function AttachmentList({
 	attachments,
 	canDelete,
@@ -184,17 +233,23 @@ function AttachmentList({
 					key={attachment.id}
 					className="flex items-center justify-between gap-2 rounded-md border bg-background px-2 py-1 text-sm"
 				>
-					<a
-						href={attachmentUrl(attachment.id)}
-						download={attachment.name}
-						className="flex min-w-0 items-center gap-2 hover:underline"
-					>
-						<HugeiconsIcon
-							icon={Download01Icon}
-							className="size-4 shrink-0 text-muted-foreground"
-						/>
-						<span className="[overflow-wrap:anywhere]">{attachment.name}</span>
-					</a>
+					{isPreviewableImage(attachment.contentType) ? (
+						<ImagePreview attachment={attachment} />
+					) : (
+						<a
+							href={attachmentUrl(attachment.id)}
+							download={attachment.name}
+							className="flex min-w-0 items-center gap-2 hover:underline"
+						>
+							<HugeiconsIcon
+								icon={Download01Icon}
+								className="size-4 shrink-0 text-muted-foreground"
+							/>
+							<span className="[overflow-wrap:anywhere]">
+								{attachment.name}
+							</span>
+						</a>
+					)}
 					<span className="flex shrink-0 items-center gap-1">
 						<span className="text-xs text-muted-foreground">
 							{formatBytes(attachment.size)}
