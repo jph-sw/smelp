@@ -1,4 +1,8 @@
-import { Delete02Icon, PencilEdit01Icon } from "@hugeicons/core-free-icons";
+import {
+	Delete02Icon,
+	Link01Icon,
+	PencilEdit01Icon,
+} from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { ProjectMember, tables } from "@smelp/db";
 import { useMutation } from "@tanstack/react-query";
@@ -7,6 +11,7 @@ import { updateComment } from "#/lib/data/issue";
 import { toastError } from "#/lib/errors";
 import type { ReactionEmoji } from "#/lib/reactions";
 import { formatDate, formatRelativeTime, initials } from "#/lib/utils";
+import { copyToClipboard } from "../copy-link";
 import { RichTextEditor } from "../rich-text/rich-text-editor";
 import {
 	AlertDialog,
@@ -156,6 +161,21 @@ export function CommentItem({
 							>
 								· edited
 							</span>
+						)}
+						{!editing && (
+							<Button
+								variant="ghost"
+								size="icon-sm"
+								aria-label="Copy link to comment"
+								onClick={() =>
+									copyToClipboard(
+										`${location.origin}${location.pathname}?comment=${encodeURIComponent(comment.id)}`,
+										"Link copied.",
+									)
+								}
+							>
+								<HugeiconsIcon icon={Link01Icon} />
+							</Button>
 						)}
 						{canReact && !editing && (
 							<ReactionPicker
