@@ -231,6 +231,10 @@
     & td { @apply border px-2 py-1; }
     & .selectedCell { @apply bg-accent; }
     & a[href] { @apply font-medium underline underline-offset-2 hover:text-foreground/70; }
+    & [data-work-item-key]::before {
+      @apply me-1 inline-block size-2 rounded-full bg-(--state-color) ring-1 ring-foreground/20;
+      content: "";
+    }
     & img:not(.ProseMirror-separator) { @apply inline-block max-h-[32rem] max-w-full rounded-md border align-bottom; }
     & [data-uploading] { @apply text-muted-foreground opacity-60; }
     & [data-mention] { @apply rounded-sm bg-primary/10 px-0.5 font-medium text-primary; }
