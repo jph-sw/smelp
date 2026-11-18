@@ -8,6 +8,7 @@ import {
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
 import { IssueAttachments } from "#/components/issue/attachments";
+import { CopyItemMenu } from "#/components/issue/copy-item-menu";
 import { IssueActivity } from "#/components/issue/issue-activity";
 import { IssueDescription } from "#/components/issue/issue-description";
 import { IssueDevelopment } from "#/components/issue/issue-development";
@@ -285,6 +286,11 @@ function RouteComponent() {
 						<div className="flex items-center gap-1.5 text-sm font-medium text-foreground/60">
 							<IssueTypeIcon type={issue.type} />
 							{issue.id}
+							<CopyItemMenu
+								workspaceId={workspaceId}
+								issueId={issue.id}
+								title={issue.title}
+							/>
 							{!isPublic && <WatchToggle issueId={issue.id} />}
 						</div>
 						{canWrite ? (
