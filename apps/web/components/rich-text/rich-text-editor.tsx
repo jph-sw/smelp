@@ -305,9 +305,12 @@ export function RichTextEditor({
 					return false;
 				},
 				// A plain click places the caret, so a link opens with Ctrl or Cmd.
-				handleClick: (_view, _pos, event) => {
+				// Read-only, the browser follows the link itself.
+				handleClick: (view, _pos, event) => {
 					const link = (event.target as HTMLElement).closest("a[href]");
-					if (!link || !(event.metaKey || event.ctrlKey)) return false;
+					if (!view.editable || !link || !(event.metaKey || event.ctrlKey)) {
+						return false;
+					}
 					window.open(link.getAttribute("href") ?? "", "_blank", "noopener");
 					return true;
 				},
