@@ -1,21 +1,33 @@
 import type { ProjectMember } from "@smelp/db";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+	keepPreviousData,
+	useQuery,
+	useQueryClient,
+} from "@tanstack/react-query";
+import { useRouter } from "@tanstack/react-router";
 import type { Editor } from "@tiptap/core";
 import { TextSelection } from "@tiptap/pm/state";
 import { EditorContent, type UseEditorOptions, useEditor } from "@tiptap/react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useDebounce } from "#/hooks/use-debounce";
 import { attachmentUrl } from "#/lib/attachment-url";
 import {
 	AttachmentUploadError,
 	attachmentLimitsQueryOptions,
 	attachmentsQueryOptions,
 	uploadAttachment,
+	workItemKeyLinksQueryOptions,
 } from "#/lib/data/issue";
 import { toastError } from "#/lib/errors";
 import { cn } from "#/lib/utils";
 import { formatBytes } from "../issue/attachments";
 import { toast } from "../ui/toast";
-import { parseMarkdown, richTextExtensions } from "./extensions";
+import {
+	parseMarkdown,
+	refreshWorkItemKeyLinks,
+	richTextExtensions,
+	WorkItemKeys,
+} from "./extensions";
 import {
 	askForLink,
 	createSlashMenuStore,
@@ -28,6 +40,9 @@ import {
 // Keep in sync with INLINE_TYPES in apps/api/src/lib/attachments.ts: other files
 // download instead of showing, so they go in as a link.
 const INLINE_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
+
+// Keep in sync with RESOLVE_KEYS_LIMIT in apps/api/src/routes/issues.ts.
+const MAX_RESOLVED_KEYS = 100;
 
 const isModEnter = (event: KeyboardEvent) =>
 	event.key === "Enter" && (event.metaKey || event.ctrlKey);
@@ -53,6 +68,8 @@ function findUpload(editor: Editor, uploadId: string) {
 //
 // With `mentions`, "@" offers those project members, and mentions show their
 // current names.
+//
+// Work item keys in the text link to their items, for those the viewer can read.
 //
 // With an `issueId`, pasted, dropped and picked files are uploaded to that work
 // item and inserted at the caret.
@@ -93,6 +110,23 @@ export function RichTextEditor({
 		enabled: issueId !== undefined,
 	});
 	const [store] = useState(createSlashMenuStore);
+	// Absent outside a router, as in tests that render the editor alone.
+	const router = useRouter({ warn: false });
+
+	const [workItemKeys, setWorkItemKeys] = useState<string[]>([]);
+	const debouncedKeys = useDebounce(workItemKeys, 300);
+	// Only typing needs the wait: read-only text shows its links right away.
+	const keysToResolve = editable ? debouncedKeys : workItemKeys;
+	const { data: keyLinks } = useQuery({
+		...workItemKeyLinksQueryOptions({
+			keys: keysToResolve.slice(0, MAX_RESOLVED_KEYS),
+		}),
+		placeholderData: keepPreviousData,
+	});
+	const keyLinksById = useMemo(
+		() => new Map(keyLinks?.map((link) => [link.id, link])),
+		[keyLinks],
+	);
 
 	// The editor is made once, so its handlers read these through a ref.
 	const latest = useRef({
@@ -104,6 +138,7 @@ export function RichTextEditor({
 		onSubmit,
 		onCancel,
 		mentions,
+		keyLinksById,
 	});
 	latest.current = {
 		value,
@@ -114,6 +149,7 @@ export function RichTextEditor({
 		onSubmit,
 		onCancel,
 		mentions,
+		keyLinksById,
 	};
 	// What the editor last showed or reported, so a `value` that only echoes it
 	// back doesn't reset the content and the caret.
@@ -239,6 +275,12 @@ export function RichTextEditor({
 						);
 					},
 				}),
+				WorkItemKeys.configure({
+					lookup: (key) => latest.current.keyLinksById.get(key),
+					// The view is created while this component renders.
+					onKeys: (keys) => queueMicrotask(() => setWorkItemKeys(keys)),
+					navigate: (href) => router.navigate({ href }),
+				}),
 				...(mentions
 					? [
 							mentionSuggestions({
@@ -305,9 +347,12 @@ export function RichTextEditor({
 					return false;
 				},
 				// A plain click places the caret, so a link opens with Ctrl or Cmd.
-				handleClick: (_view, _pos, event) => {
+				// Read-only, the browser follows the link itself.
+				handleClick: (view, _pos, event) => {
 					const link = (event.target as HTMLElement).closest("a[href]");
-					if (!link || !(event.metaKey || event.ctrlKey)) return false;
+					if (!view.editable || !link || !(event.metaKey || event.ctrlKey)) {
+						return false;
+					}
 					window.open(link.getAttribute("href") ?? "", "_blank", "noopener");
 					return true;
 				},
@@ -364,6 +409,11 @@ export function RichTextEditor({
 		known.current = value;
 		committed.current = toMarkdown(editor);
 	}, [editor, value]);
+
+	useEffect(() => {
+		if (!editor || editor.isDestroyed || !keyLinks) return;
+		refreshWorkItemKeyLinks(editor.view);
+	}, [editor, keyLinks]);
 
 	return (
 		// biome-ignore lint/a11y/noStaticElementInteractions: listens for focus leaving the editor and its link field, which bubbles here

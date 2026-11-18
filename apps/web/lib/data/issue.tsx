@@ -48,6 +48,17 @@ export const recentIssuesQueryOptions = ({
 		enabled: enabled && ids.length > 0,
 	});
 
+export type WorkItemKeyLink = Awaited<
+	ReturnType<typeof orpc.issues.resolveKeys>
+>[number];
+
+export const workItemKeyLinksQueryOptions = ({ keys }: { keys: string[] }) =>
+	queryOptions({
+		queryKey: ["work-item-key-links", keys],
+		queryFn: () => orpc.issues.resolveKeys({ keys }),
+		enabled: keys.length > 0,
+	});
+
 export const issueQueryOptions = ({ issueId }: { issueId: string }) =>
 	queryOptions({
 		queryKey: ["issue", issueId],

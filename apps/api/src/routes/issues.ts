@@ -3,8 +3,10 @@ import { DB, type tables } from "@smelp/db";
 import type { SQL } from "bun";
 import * as v from "valibot";
 import {
+	canReadProject,
 	requireProjectPermission,
 	requireWorkspacePermission,
+	resolveViewer,
 } from "../lib/access";
 import { base } from "../orpc";
 
@@ -187,4 +189,51 @@ export const findIssuesByIds = base
 		);
 		const byId = new Map(issues.map((issue) => [issue.id, issue]));
 		return [...new Set(input.ids)].flatMap((id) => byId.get(id) ?? []);
+	});
+
+const RESOLVE_KEYS_LIMIT = 100;
+
+export type WorkItemKeyLink = Pick<
+	tables["issue"],
+	"id" | "title" | "workspaceId"
+> & {
+	stateName: string;
+	stateColor: string;
+};
+
+// A key the viewer can't read is left out just like one that doesn't exist, so
+// this can't be used to find out what a private project holds.
+export const resolveIssueKeys = base
+	.input(
+		v.object({
+			keys: v.pipe(
+				v.array(v.pipe(v.string(), v.maxLength(32))),
+				v.maxLength(RESOLVE_KEYS_LIMIT),
+			),
+		}),
+	)
+	.handler(async ({ input, context }): Promise<WorkItemKeyLink[]> => {
+		const viewer = await resolveViewer(context.headers);
+		if (input.keys.length === 0) return [];
+
+		const rows = (await sql`
+			SELECT
+				issue.id,
+				issue.title,
+				issue.workspaceId,
+				issue.projectId,
+				state.name AS stateName,
+				state.color AS stateColor
+			FROM issue
+			JOIN state ON state.id = issue.state
+			WHERE issue.id IN ${sql(input.keys)}
+		`) as (WorkItemKeyLink & Pick<tables["issue"], "projectId">)[];
+
+		const readable = new Set<string>();
+		for (const projectId of new Set(rows.map((row) => row.projectId))) {
+			if (await canReadProject(viewer, projectId)) readable.add(projectId);
+		}
+		return rows
+			.filter((row) => readable.has(row.projectId))
+			.map(({ projectId: _, ...link }) => link);
 	});

@@ -9,6 +9,7 @@ A member comments on a work item from its Activity section, mentions people by t
 - `comment-edit`: the author edits their own comment, which then shows as edited next to its time.
 - `comment-delete`: the author deletes their own comment.
 - `comment-inbox`: a mentioned person sees the mention in their Inbox.
+- `comment-key-link`: a work item key in a comment or description links to the item, if the viewer can read it. Keys in code and unknown keys stay plain.
 
 ## How to get to it (user POV)
 
@@ -30,6 +31,7 @@ Steps:
 - **Edit.** Press `Edit comment`, change the text, and save. The paragraph changes and an edited marker shows next to the time.
 - **Delete.** Press `Delete comment` and confirm. The listitem is gone.
 - **Inbox.** Sign in as the mentioned second member and press the header button `Inbox` (named `Inbox, N unread` while there are unread items). The popover lists the mention with the work item's title.
+- **Key link.** Post ``blocked by VER-1, not `VER-1` and not VER-999``. In `getByRole("group", { name: /^Comment by/ })`, the only link is `getByRole("link", { name: "VER-1" })`, with the item's title and state as its `title`. A plain click opens the item without a page reload. In an editable description, use Ctrl or Cmd and click.
 - **Proof.** `aria("activity", page.getByRole("region", { name: "Activity" }))` before and after, and `smelp-verify sql "select body, editedAt from comment where issueId = 'VER-1'"`. For the inbox, `select type, userId, readAt from notification`.
 
 ## Gotchas
@@ -37,4 +39,5 @@ Steps:
 - Use `keyboard.type` for `@`. `fill()` doesn't fire the key events that open the mention menu.
 - `Comment` stays disabled while the box is empty, so a click on it does nothing.
 - Only the author can edit or delete, and admins can't edit other people's comments. Test that rule with a second account.
-- Verified so far: post and mention (snapshot names above). The edit and delete confirmation names, and the inbox layout, haven't been driven yet. Snapshot first and update this file.
+- The work item page scrolls inside a panel, so `shot` can miss a comment. Use `locator.screenshot` on the comment.
+- Verified so far: post, mention and key links (snapshot names above). The edit and delete confirmation names, and the inbox layout, haven't been driven yet. Snapshot first and update this file.

@@ -89,6 +89,7 @@ import {
 	findIssues,
 	findIssuesByIds,
 	findMyIssues,
+	resolveIssueKeys,
 	searchIssues,
 } from "./routes/issues";
 import { applyJiraImport, previewJiraImport } from "./routes/jira-import";
@@ -257,6 +258,7 @@ export const router = {
 		findByIds: findIssuesByIds,
 		findMine: findMyIssues,
 		search: searchIssues,
+		resolveKeys: resolveIssueKeys,
 	},
 	jiraImport: {
 		preview: previewJiraImport,

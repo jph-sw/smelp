@@ -21,7 +21,7 @@ registerDom();
 // Testing Library binds `screen` to document.body as it loads, so it loads after
 // the DOM exists. A global preload would hand the API tests happy-dom's fetch.
 const testingLibrary = await import("@testing-library/react");
-export const { act, cleanup, render, within } = testingLibrary;
+export const { act, cleanup, render, waitFor, within } = testingLibrary;
 export const { default: userEvent } = await import(
 	"@testing-library/user-event"
 );

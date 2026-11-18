@@ -1,4 +1,9 @@
-import { type AnyExtension, type JSONContent, Node } from "@tiptap/core";
+import {
+	type AnyExtension,
+	Extension,
+	type JSONContent,
+	Node,
+} from "@tiptap/core";
 import { HardBreak } from "@tiptap/extension-hard-break";
 import { Image } from "@tiptap/extension-image";
 import { Link } from "@tiptap/extension-link";
@@ -12,9 +17,13 @@ import {
 } from "@tiptap/extension-table";
 import { Placeholder } from "@tiptap/extensions";
 import { Markdown, MarkdownManager } from "@tiptap/markdown";
+import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
+import { Plugin, PluginKey } from "@tiptap/pm/state";
+import { Decoration, DecorationSet, type EditorView } from "@tiptap/pm/view";
 import { StarterKit } from "@tiptap/starter-kit";
 import { Marked, type marked, Tokenizer, type Tokens } from "marked";
 import { isAttachmentUrl } from "#/lib/attachment-url";
+import type { WorkItemKeyLink } from "#/lib/data/issue";
 
 // Anything with a scheme other than these is dropped, so a description can't
 // carry a javascript: or data: link. Paths without a scheme stay.
@@ -157,6 +166,14 @@ const ImageParagraph = Paragraph.extend({
 // Link reads any href from Markdown and only blanks a bad one when rendering,
 // so without this it would be written back on save.
 const SafeLink = Link.extend({
+	// A work item key copied from a read-only view arrives as its decorated <a>.
+	// It's pasted as the plain key, so the stored Markdown stays plain too.
+	parseHTML() {
+		return [
+			{ tag: "a[data-work-item-key]", skip: true },
+			...(this.parent?.() ?? []),
+		];
+	},
 	parseMarkdown: (token, helpers) => {
 		const content = helpers.parseInline(token.tokens ?? []);
 		return isSafeHref(token.href)
@@ -261,6 +278,133 @@ const Mention = Node.create<{ lookup: MentionLookup }>({
 	renderMarkdown: (node) => {
 		const label = String(node.attrs?.label ?? "").replace(/[[\]\n]/g, "");
 		return `@[${label}](user:${node.attrs?.id})`;
+	},
+});
+
+// A project id, then the item's number. The number is bounded so that a long run
+// of digits can't push the whole lookup over the API's limit on a key's length.
+const WORK_ITEM_KEY =
+	/(?<![\p{L}\p{N}_/-])[\p{L}\p{N}]{2,5}-[0-9]{1,15}(?![\p{L}\p{N}_]|-[\p{L}\p{N}_])/gu;
+
+const MARKS_WITHOUT_KEY_LINKS = ["code", "link"];
+
+// Looks at a whole text block at once, so the characters around a key count even
+// when formatting splits them into separate text nodes.
+export function findWorkItemKeys(doc: ProseMirrorNode) {
+	const found: { key: string; from: number; to: number }[] = [];
+	const marks = MARKS_WITHOUT_KEY_LINKS.flatMap(
+		(name) => doc.type.schema.marks[name] ?? [],
+	);
+	doc.descendants((block, blockPos) => {
+		if (!block.isTextblock) return true;
+		if (block.type.spec.code) return false;
+		// Each inline leaf, like a mention, takes up one position and one character.
+		const text = block.textBetween(0, block.content.size, undefined, "\ufffc");
+		for (const match of text.matchAll(WORK_ITEM_KEY)) {
+			const from = blockPos + 1 + match.index;
+			const to = from + match[0].length;
+			if (!marks.some((mark) => doc.rangeHasMark(from, to, mark))) {
+				found.push({ key: match[0], from, to });
+			}
+		}
+		return false;
+	});
+	return found;
+}
+
+const workItemKeysPlugin = new PluginKey<DecorationSet>("workItemKeys");
+
+export function refreshWorkItemKeyLinks(view: EditorView) {
+	view.dispatch(view.state.tr.setMeta(workItemKeysPlugin, true));
+}
+
+// Links exist only as decorations, so the document and its Markdown never change.
+export const WorkItemKeys = Extension.create<{
+	lookup: (key: string) => WorkItemKeyLink | undefined;
+	onKeys: (keys: string[]) => void;
+	navigate: (href: string) => void;
+}>({
+	name: "workItemKeys",
+	addOptions: () => ({
+		lookup: () => undefined,
+		onKeys: () => {},
+		navigate: () => {},
+	}),
+	addProseMirrorPlugins() {
+		const { lookup, onKeys, navigate } = this.options;
+
+		const decorate = (doc: ProseMirrorNode) =>
+			DecorationSet.create(
+				doc,
+				findWorkItemKeys(doc).flatMap(({ key, from, to }) => {
+					const link = lookup(key);
+					if (!link) return [];
+					const workspace = encodeURIComponent(link.workspaceId);
+					return Decoration.inline(from, to, {
+						nodeName: "a",
+						href: `/${workspace}/browse/${encodeURIComponent(key)}`,
+						title: `${link.title} (${link.stateName})`,
+						"data-work-item-key": key,
+						style: `--state-color: ${link.stateColor}`,
+					});
+				}),
+			);
+
+		let reported = "";
+		const report = (doc: ProseMirrorNode) => {
+			const keys = [
+				...new Set(findWorkItemKeys(doc).map(({ key }) => key)),
+			].sort();
+			const joined = keys.join(" ");
+			if (joined === reported) return;
+			reported = joined;
+			onKeys(keys);
+		};
+
+		return [
+			new Plugin<DecorationSet>({
+				key: workItemKeysPlugin,
+				state: {
+					init: (_, { doc }) => decorate(doc),
+					apply: (tr, decorations) =>
+						tr.docChanged || tr.getMeta(workItemKeysPlugin)
+							? decorate(tr.doc)
+							: decorations,
+				},
+				props: {
+					decorations: (state) => workItemKeysPlugin.getState(state),
+					handleDOMEvents: {
+						click: (view, event) => {
+							const modified =
+								event.metaKey ||
+								event.ctrlKey ||
+								event.shiftKey ||
+								event.altKey;
+							if (view.editable || modified || event.button !== 0) return false;
+							const { target } = event;
+							const href =
+								target instanceof Element
+									? target
+											.closest("a[data-work-item-key]")
+											?.getAttribute("href")
+									: null;
+							if (!href) return false;
+							event.preventDefault();
+							navigate(href);
+							return true;
+						},
+					},
+				},
+				view: (view) => {
+					report(view.state.doc);
+					return {
+						update: (view, previous) => {
+							if (view.state.doc !== previous.doc) report(view.state.doc);
+						},
+					};
+				},
+			}),
+		];
 	},
 });
 
