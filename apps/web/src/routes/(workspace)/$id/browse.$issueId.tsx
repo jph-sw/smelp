@@ -29,6 +29,7 @@ import {
 } from "#/components/ui/breadcrumb";
 import { Textarea } from "#/components/ui/textarea";
 import { usePageTitle } from "#/hooks/use-page-title";
+import { recallBoardSearch } from "#/lib/board-filters";
 import { cyclesQueryOptions, invalidateCycles } from "#/lib/data/cycle";
 import { githubRefsQueryOptions } from "#/lib/data/github";
 import {
@@ -243,6 +244,7 @@ function RouteComponent() {
 									<Link
 										to="/$id/projects/$projectId"
 										params={{ id: workspaceId, projectId: issue.projectId }}
+										search={recallBoardSearch(issue.projectId)}
 										className="flex items-center gap-1"
 									/>
 								}

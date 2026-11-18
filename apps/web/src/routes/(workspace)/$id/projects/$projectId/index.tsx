@@ -5,6 +5,7 @@ import {
 	useSuspenseQuery,
 } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { BoardFilterBar } from "#/components/kanban/board-filters";
 import { IssueItem } from "#/components/kanban/issue-item";
 import { StateColumn } from "#/components/kanban/state-column";
@@ -13,10 +14,10 @@ import { IssueList } from "#/components/project/issue-list";
 import { ProjectHeader } from "#/components/project/project-header";
 import { usePageTitle } from "#/hooks/use-page-title";
 import {
-	type BoardFilters,
 	isFiltered,
 	matchesFilters,
-	parseBoardFilters,
+	parseBoardSearch,
+	rememberBoardSearch,
 } from "#/lib/board-filters";
 import { cyclesQueryOptions, invalidateCycles } from "#/lib/data/cycle";
 import { issuesQueryOptions, updateIssue } from "#/lib/data/issue";
@@ -30,15 +31,9 @@ import { statesQueryOptions } from "#/lib/data/state";
 import { isOverdue, localDay } from "#/lib/due-date";
 import { toastError } from "#/lib/errors";
 
-// Without "view", the page shows the board, so existing links keep working.
-type ProjectSearch = BoardFilters & { view?: "list" };
-
 export const Route = createFileRoute("/(workspace)/$id/projects/$projectId/")({
 	component: RouteComponent,
-	validateSearch: (search: Record<string, unknown>): ProjectSearch => ({
-		...parseBoardFilters(search),
-		view: search.view === "list" ? "list" : undefined,
-	}),
+	validateSearch: parseBoardSearch,
 	loader: async ({ context: { queryClient }, params: { projectId } }) => {
 		await Promise.all([
 			queryClient.ensureQueryData(statesQueryOptions({ projectId })),
@@ -56,8 +51,13 @@ function RouteComponent() {
 		projectQueryOptions({ projectId }),
 	);
 	usePageTitle(project.name);
-	const { view, ...filters } = Route.useSearch();
+	const search = Route.useSearch();
+	const { view, ...filters } = search;
 	const navigate = Route.useNavigate();
+
+	useEffect(() => {
+		rememberBoardSearch(projectId, search);
+	}, [projectId, search]);
 
 	const { data: states } = useSuspenseQuery(statesQueryOptions({ projectId }));
 	const { data: issues } = useSuspenseQuery(issuesQueryOptions({ projectId }));

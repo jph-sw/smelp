@@ -70,6 +70,34 @@ export function parseBoardFilters(
 	};
 }
 
+// Without "view", the page shows the board, so existing links keep working.
+export type BoardSearch = BoardFilters & { view?: "list" };
+
+export const parseBoardSearch = (
+	search: Record<string, unknown>,
+): BoardSearch => ({
+	...parseBoardFilters(search),
+	view: search.view === "list" ? "list" : undefined,
+});
+
+const boardSearchKey = (projectId: string) => `smelp.board-search.${projectId}`;
+
+export function rememberBoardSearch(projectId: string, search: BoardSearch) {
+	try {
+		sessionStorage.setItem(boardSearchKey(projectId), JSON.stringify(search));
+	} catch {}
+}
+
+/** The view of this project's board last open in this tab. */
+export function recallBoardSearch(projectId: string): BoardSearch {
+	try {
+		const stored = sessionStorage.getItem(boardSearchKey(projectId));
+		return stored ? parseBoardSearch(JSON.parse(stored)) : {};
+	} catch {
+		return {};
+	}
+}
+
 const matchesRef = (
 	wanted: string | undefined,
 	none: string,
