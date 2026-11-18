@@ -153,6 +153,11 @@ function RouteComponent() {
 					states={visibleStates}
 					members={members}
 					workspaceId={workspaceId}
+					sorting={{
+						sort,
+						onChange: (next) =>
+							navigate({ search: { ...search, sort: next }, replace: true }),
+					}}
 				/>
 			) : (
 				<DragDropProvider
