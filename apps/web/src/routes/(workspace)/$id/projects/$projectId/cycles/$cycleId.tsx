@@ -1,4 +1,4 @@
-import { Edit02Icon } from "@hugeicons/core-free-icons";
+import { Edit02Icon, PlusSignIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
 	useMutation,
@@ -17,6 +17,7 @@ import {
 	CycleProgress,
 	CycleStatusBadge,
 } from "#/components/cycle/cycle-parts";
+import { openCreateIssueDialog } from "#/components/issue/create-issue-dialog-store";
 import { ArchivedBanner } from "#/components/project/archived-banner";
 import { IssueList } from "#/components/project/issue-list";
 import { ProjectHeader } from "#/components/project/project-header";
@@ -59,6 +60,7 @@ import {
 } from "#/lib/data/cycle";
 import { issuesQueryOptions } from "#/lib/data/issue";
 import { moduleQueryKeys } from "#/lib/data/module";
+import { projectQueryOptions } from "#/lib/data/project";
 import {
 	projectMembersQueryOptions,
 	useProjectAccess,
@@ -80,6 +82,7 @@ export const Route = createFileRoute(
 		);
 		if (cycle.projectId !== projectId) throw notFound();
 		await Promise.all([
+			queryClient.ensureQueryData(projectQueryOptions({ projectId })),
 			queryClient.ensureQueryData(cyclesQueryOptions({ projectId })),
 			queryClient.ensureQueryData(statesQueryOptions({ projectId })),
 			queryClient.ensureQueryData(issuesQueryOptions({ projectId })),
@@ -175,6 +178,9 @@ function RouteComponent() {
 	const queryClient = useQueryClient();
 	const { data: cycle } = useSuspenseQuery(cycleQueryOptions({ cycleId }));
 	usePageTitle(cycle.name);
+	const { data: project } = useSuspenseQuery(
+		projectQueryOptions({ projectId }),
+	);
 	const { data: states } = useSuspenseQuery(statesQueryOptions({ projectId }));
 	const { data: issues } = useSuspenseQuery(issuesQueryOptions({ projectId }));
 	const { members, canWrite, canManage, isArchived } =
@@ -242,8 +248,29 @@ function RouteComponent() {
 					<span className="text-xs text-muted-foreground">
 						{formatRange(cycle)}
 					</span>
+					{canWrite && (
+						<Button
+							variant="outline"
+							className="ms-auto"
+							onClick={() =>
+								openCreateIssueDialog({
+									workspaceId,
+									projectId,
+									projectName: project.name,
+									destination: {
+										kind: "cycle",
+										id: cycle.id,
+										name: cycle.name,
+									},
+								})
+							}
+						>
+							<HugeiconsIcon icon={PlusSignIcon} />
+							New work item
+						</Button>
+					)}
 					{canManage && !isArchived && (
-						<div className="ms-auto flex items-center gap-2">
+						<div className="flex items-center gap-2">
 							<Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
 								<DialogTrigger render={<Button variant="outline" />}>
 									<HugeiconsIcon icon={Edit02Icon} />

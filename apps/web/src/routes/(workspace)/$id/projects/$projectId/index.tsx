@@ -6,6 +6,7 @@ import {
 } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect } from "react";
+import { openCreateIssueDialog } from "#/components/issue/create-issue-dialog-store";
 import { BoardFilterBar } from "#/components/kanban/board-filters";
 import { IssueItem } from "#/components/kanban/issue-item";
 import { StateColumn } from "#/components/kanban/state-column";
@@ -203,6 +204,21 @@ function RouteComponent() {
 										filters.state
 											? undefined
 											: () => toggleCollapsedState(state.id)
+									}
+									onCreate={
+										canWrite
+											? () =>
+													openCreateIssueDialog({
+														workspaceId,
+														projectId,
+														projectName: project.name,
+														destination: {
+															kind: "state",
+															id: state.id,
+															name: state.name,
+														},
+													})
+											: undefined
 									}
 								>
 									{visibleIssues
