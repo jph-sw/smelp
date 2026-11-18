@@ -2,6 +2,24 @@
 
 Each release is a git tag. To upgrade, follow [Upgrade](README.md#upgrade) in the README.
 
+## 0.14.0 (2026-11-18)
+
+Work items link to each other, notifications open at their comment, and unsent text is kept.
+
+- **Work item key links:** a key like `SMELP-12` in a comment or description shows as a link to that item, with its state beside it and its title and state on hover. Only items you can read are linked, and the saved text doesn't change.
+- **Comment links:** inbox rows and notification emails open the work item at the comment they're about, and highlight it. Each comment has a Copy link button that does the same.
+- **Sortable list:** the list view is now a table with Priority and Due columns. Click a column header to sort, again to reverse, and a third time to return to the default order. The sort is kept in the URL, so a shared link shows the same order. Cycle and module pages get the new columns, but not sorting, and phones keep the compact list.
+- **Collapsible board columns:** a board column can collapse to a narrow strip with its name and count, and cards can still be dropped on it. The choice is saved per project in each browser.
+- **Recent items in search:** the header search opens on focus and lists the work items you opened last. The list is kept in each browser.
+- **Copy menu:** a menu next to the key on the item page copies the item's key, link or a branch name like `smelp-12-copy-item-key`.
+- **Comment drafts:** text typed into the comment box survives leaving the page and reloading, until the comment is posted. Drafts are kept in each browser.
+- **New work item drafts:** closing the New work item dialog keeps what you typed until the tab reloads, and a Discard draft button empties the form.
+- **Fixed:** the Work Items breadcrumb on an item page returns to the board with the filters and view you had.
+- **Fixed:** a notification keeps pointing at the comment it's about, instead of moving to a newer one.
+- **Fixed:** Ctrl or Cmd click on a link in read-only rich text opens one tab, not two.
+
+There are no database changes in this release. Back up before upgrading anyway, as the README describes.
+
 ## 0.13.0 (2026-11-18)
 
 Work items get a priority, a due date and watchers.
