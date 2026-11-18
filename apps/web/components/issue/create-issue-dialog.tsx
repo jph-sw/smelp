@@ -16,7 +16,17 @@ import { CreateIssueForm } from "./create-issue-form";
 export function CreateIssueDialog() {
 	const state = useCreateIssueDialogStore();
 	const [formKey, setFormKey] = useState(0);
+	const [createAnother, setCreateAnother] = useState(false);
 	const content = useRef<HTMLDivElement>(null);
+
+	const resetForm = () => {
+		// Remounting removes the focused control, which would drop focus out of
+		// the dialog.
+		flushSync(() => setFormKey((key) => key + 1));
+		content.current
+			?.querySelector<HTMLInputElement>('input[name="title"]')
+			?.focus();
+	};
 
 	return (
 		<Dialog
@@ -42,15 +52,10 @@ export function CreateIssueDialog() {
 						<CreateIssueForm
 							key={formKey}
 							params={state.params}
-							onSuccess={closeCreateIssueDialog}
-							onDiscard={() => {
-								// Remounting removes the focused button, which would drop focus
-								// out of the dialog.
-								flushSync(() => setFormKey((key) => key + 1));
-								content.current
-									?.querySelector<HTMLInputElement>('input[name="title"]')
-									?.focus();
-							}}
+							createAnother={createAnother}
+							onCreateAnotherChange={setCreateAnother}
+							onSuccess={createAnother ? resetForm : closeCreateIssueDialog}
+							onDiscard={resetForm}
 						/>
 					</>
 				)}

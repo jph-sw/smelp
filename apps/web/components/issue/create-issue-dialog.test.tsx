@@ -1,7 +1,7 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { clearCreateIssueDrafts } from "#/lib/create-issue-draft";
-import { act, cleanup, render, screen, userEvent } from "#/test/dom";
+import { act, cleanup, render, screen, userEvent, waitFor } from "#/test/dom";
 import { CreateIssueDialog } from "./create-issue-dialog";
 import {
 	closeCreateIssueDialog,
@@ -19,6 +19,10 @@ function renderDialog() {
 		defaultOptions: { queries: { enabled: false, staleTime: Infinity } },
 	});
 	queryClient.setQueryData(["auth", "me"], { id: "user-1" });
+	queryClient.setQueryData(
+		["states", project.projectId],
+		[{ id: "state-1", isDefault: true }],
+	);
 	render(
 		<QueryClientProvider client={queryClient}>
 			<CreateIssueDialog />
@@ -95,5 +99,86 @@ describe("CreateIssueDialog drafts", () => {
 		await user.keyboard("{Escape}");
 		await open();
 		expect(title().value).toBe("");
+	});
+});
+
+describe("CreateIssueDialog create another", () => {
+	afterEach(() => {
+		fetchSpy.mockRestore();
+		cleanup();
+		act(() => closeCreateIssueDialog());
+		clearCreateIssueDrafts();
+	});
+
+	let creates = 0;
+	let release: Promise<void> = Promise.resolve();
+	let fetchSpy: ReturnType<typeof spyOn<typeof globalThis, "fetch">>;
+
+	beforeEach(() => {
+		creates = 0;
+		release = Promise.resolve();
+		fetchSpy = spyOn(globalThis, "fetch").mockImplementation((async () => {
+			creates += 1;
+			await release;
+			return Response.json({ json: { id: "VER-2", title: "Created" } });
+		}) as unknown as typeof fetch);
+	});
+
+	const createAnother = () =>
+		screen.getByRole("switch", { name: "Create another" });
+	const type = () => screen.getByRole("combobox", { name: "Type" });
+
+	test("with the toggle on, a create clears the text and keeps the rest", async () => {
+		const user = renderDialog();
+		await open();
+		await user.click(createAnother());
+		await user.click(type());
+		await user.click(await screen.findByRole("option", { name: "Bug" }));
+		await user.type(title(), "First{Enter}");
+		await waitFor(() => expect(title().value).toBe(""));
+		expect(creates).toBe(1);
+		expect(screen.getByRole("dialog")).toBeTruthy();
+		expect(document.activeElement === title()).toBe(true);
+		expect(type().textContent).toContain("Bug");
+		expect(createAnother().getAttribute("aria-checked")).toBe("true");
+	});
+
+	test("with the toggle off, a create closes the dialog", async () => {
+		const user = renderDialog();
+		await open();
+		await user.type(title(), "First{Enter}");
+		await waitFor(() =>
+			expect(screen.queryByRole("dialog") === null).toBe(true),
+		);
+	});
+
+	test("Ctrl+Enter in the description creates the item", async () => {
+		const user = renderDialog();
+		await open();
+		await user.type(title(), "First");
+		await user.click(screen.getByRole("textbox", { name: "Description" }));
+		await user.keyboard("{Control>}{Enter}{/Control}");
+		await waitFor(() => expect(creates).toBe(1));
+	});
+
+	test("repeated Ctrl+Enter during a create sends one request", async () => {
+		let finish = () => {};
+		release = new Promise((resolve) => {
+			finish = resolve;
+		});
+		const user = renderDialog();
+		await open();
+		await user.type(title(), "First");
+		await user.click(screen.getByRole("textbox", { name: "Description" }));
+		await user.keyboard("{Control>}{Enter}{Enter}{Enter}{/Control}");
+		await waitFor(() => expect(creates).toBe(1));
+		await act(async () => {
+			await new Promise((resolve) => setTimeout(resolve, 20));
+		});
+		expect(creates).toBe(1);
+		finish();
+		await waitFor(() =>
+			expect(screen.queryByRole("dialog") === null).toBe(true),
+		);
 	});
 });
