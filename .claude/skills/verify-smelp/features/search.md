@@ -4,7 +4,8 @@ A member finds work items by title or key across every project they're in from t
 
 ## Sub-features
 
-- `search-hint`: under two characters, the dropdown shows a hint.
+- `search-hint`: under two characters, the dropdown shows a hint, unless the box is empty and there are recent items.
+- `search-recent`: with an empty box, the dropdown lists the last ten items opened in this workspace under `Recent`, newest first. The list is kept per person in this browser. Deleted or unreadable items drop out.
 - `search-match`: a matching query lists results as options with the title, key, project and state.
 - `search-empty`: a query with no matches shows `No work items match “<query>”.`
 - `search-open`: choosing a result (click, or ArrowDown then Enter) opens the work item and clears the bar.
@@ -29,6 +30,7 @@ Steps:
 - **Key match.** Fill it with `VER-1`. The same option appears.
 - **No match.** Fill it with `volcano`. There are no options, and the dropdown shows `No work items match “volcano”.`
 - **Open result.** Press ArrowDown, then Enter, or click the option. The URL becomes `/verify_team/browse/VER-1`, the detail page shows `textbox "Title"` holding `Seeded work item`, and the bar is empty.
+- **Recent.** Open two work items, then press `/`. The listbox has a `Recent` group with the last opened item first. ArrowDown to an option and press Enter to open it. Focus leaves the bar, so the next `/` opens the list again. Typing replaces the group with results, and clearing the box brings it back.
 - **Shortcut.** Click the page body and press `/`. The bar is focused and empty, and its `kbd` hint is hidden. `/` typed into `textbox "Add a comment"` or the New work item title stays in that field. The input has `aria-keyshortcuts="/"`.
 - **Phone.** At 375px wide, the sidebar trigger, workspace switcher, search bar, Inbox and Account menu all fit without horizontal scroll.
 - **Board filter.** On `/verify_team/projects/VER`, fill `getByRole("main").getByRole("searchbox", { name: "Search work items" })` with `seeded`. Only `VER-1` stays on the board.
