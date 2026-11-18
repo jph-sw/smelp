@@ -2,6 +2,7 @@ import { useDragDropMonitor, useDroppable } from "@dnd-kit/react";
 import {
 	ArrowLeftDoubleIcon,
 	ArrowRightDoubleIcon,
+	PlusSignIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { tables } from "@smelp/db";
@@ -13,11 +14,13 @@ export function StateColumn({
 	state,
 	collapsed = false,
 	onToggleCollapsed,
+	onCreate,
 	...props
 }: React.ComponentProps<"div"> & {
 	state: tables["state"];
 	collapsed?: boolean;
 	onToggleCollapsed?: () => void;
+	onCreate?: () => void;
 }) {
 	const [isHovered, setIsHovered] = useState(false);
 
@@ -60,6 +63,21 @@ export function StateColumn({
 			ref={collapsed ? ref : undefined}
 			id={collapsed ? state.id : undefined}
 		>
+			{!collapsed && onCreate && (
+				<Button
+					variant="ghost"
+					size="icon-sm"
+					className={cn(
+						"absolute top-1.5 z-3 shrink-0 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100",
+						onToggleCollapsed ? "end-8" : "end-0",
+					)}
+					// Not "New work item": name matching would also hit the sidebar button.
+					aria-label={`Add work item to ${state.name}`}
+					onClick={onCreate}
+				>
+					<HugeiconsIcon icon={PlusSignIcon} />
+				</Button>
+			)}
 			{/* One button in both layouts, so keyboard focus survives the toggle. */}
 			{onToggleCollapsed && (
 				<Button
@@ -98,7 +116,9 @@ export function StateColumn({
 						<div
 							className={cn(
 								"relative flex w-full shrink-0 items-center gap-1 py-1.5 text-sm",
-								onToggleCollapsed && "pe-8",
+								onCreate && onToggleCollapsed
+									? "pe-16"
+									: (onCreate || onToggleCollapsed) && "pe-8",
 							)}
 						>
 							{dot}

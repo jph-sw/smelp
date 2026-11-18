@@ -1,11 +1,18 @@
 // this was created with the help of ai
 import { useSyncExternalStore } from "react";
 
+export type CreateIssueDestination = {
+	kind: "state" | "cycle" | "module";
+	id: string;
+	name: string;
+};
+
 export type CreateIssueDialogParams = {
 	workspaceId: string;
 	projectId: string;
 	projectName: string;
 	parentId?: string;
+	destination?: CreateIssueDestination;
 };
 
 type State =
