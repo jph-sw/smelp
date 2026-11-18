@@ -513,8 +513,22 @@ describe("notification emails", () => {
 		await waitForMail(1);
 		expect(received[0]?.to[0]).toContain(person.email);
 		expect(received[0]?.text).toContain("assigned you");
-		expect(received[0]?.text).toContain(
+		expect(received[0]?.text?.split(/\r?\n/)).toContain(
 			`https://smelp.example.test/${workspaceId}/browse/${issue.id}`,
+		);
+	});
+
+	test("a comment's email links to that comment", async () => {
+		const { owner, person, workspaceId, create } = await setup(true);
+		const issue = await create("Linked", person.id);
+		await waitForMail(1);
+		const comment = await owner.client.comments.create({
+			issueId: issue.id,
+			body: "Look here",
+		});
+		await waitForMail(2);
+		expect(received[1]?.text?.split(/\r?\n/)).toContain(
+			`https://smelp.example.test/${workspaceId}/browse/${issue.id}?comment=${comment.id}`,
 		);
 	});
 

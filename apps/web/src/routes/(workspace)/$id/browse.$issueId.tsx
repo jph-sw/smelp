@@ -57,6 +57,12 @@ import { useWorkspaceViewer } from "#/lib/workspace-viewer";
 
 export const Route = createFileRoute("/(workspace)/$id/browse/$issueId")({
 	component: RouteComponent,
+	validateSearch: (search: Record<string, unknown>): { comment?: string } => ({
+		comment:
+			typeof search.comment === "string" && search.comment
+				? search.comment
+				: undefined,
+	}),
 	loader: async ({ context: { queryClient, viewer }, params: { issueId } }) => {
 		const [issue] = await Promise.all([
 			queryClient.ensureQueryData(issueQueryOptions({ issueId })),
@@ -154,6 +160,7 @@ function EditableText({
 
 function RouteComponent() {
 	const { id: workspaceId, issueId } = Route.useParams();
+	const { comment: targetCommentId } = Route.useSearch();
 	const queryClient = useQueryClient();
 
 	const { data: issue } = useSuspenseQuery(issueQueryOptions({ issueId }));
@@ -365,6 +372,7 @@ function RouteComponent() {
 						canWrite={canWrite}
 						readOnly={!canComment}
 						showHistory={!isPublic}
+						targetCommentId={targetCommentId}
 					/>
 				</div>
 				<aside className="relative hidden w-80 shrink-0 overflow-y-auto border-l lg:block xl:w-96">

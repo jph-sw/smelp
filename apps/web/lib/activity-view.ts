@@ -55,6 +55,19 @@ export function arrangeTimeline<T extends { kind: string; createdAt: number }>(
 		.sort((a, b) => direction * (a.createdAt - b.createdAt));
 }
 
+/** A link to a comment shows it even if History is saved, until the viewer picks a filter. */
+export function displayedActivityFilter(
+	saved: ActivityFilter,
+	{
+		revealsComment,
+		pickedSinceArrival,
+	}: { revealsComment: boolean; pickedSinceArrival: boolean },
+): ActivityFilter {
+	return saved === "history" && revealsComment && !pickedSinceArrival
+		? "all"
+		: saved;
+}
+
 /** The viewer's last choice, kept in this browser for every work item. */
 export function useActivityView() {
 	const [view, setView] = useState(readActivityView);

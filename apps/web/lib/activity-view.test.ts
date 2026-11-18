@@ -1,5 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { arrangeTimeline, readActivityView } from "./activity-view";
+import {
+	arrangeTimeline,
+	displayedActivityFilter,
+	readActivityView,
+} from "./activity-view";
 
 const entry = (
 	id: string,
@@ -56,6 +60,37 @@ describe("arrangeTimeline", () => {
 			"last-comment",
 			"moved",
 		]);
+	});
+});
+
+describe("displayedActivityFilter", () => {
+	const arriving = { revealsComment: true, pickedSinceArrival: false };
+
+	test("a comment link shows comments when History is saved", () => {
+		expect(displayedActivityFilter("history", arriving)).toBe("all");
+	});
+
+	test("filters that already show comments stay as saved", () => {
+		expect(displayedActivityFilter("comments", arriving)).toBe("comments");
+		expect(displayedActivityFilter("all", arriving)).toBe("all");
+	});
+
+	test("a filter picked after arriving wins", () => {
+		expect(
+			displayedActivityFilter("history", {
+				revealsComment: true,
+				pickedSinceArrival: true,
+			}),
+		).toBe("history");
+	});
+
+	test("without a comment to reveal the saved filter stands", () => {
+		expect(
+			displayedActivityFilter("history", {
+				revealsComment: false,
+				pickedSinceArrival: false,
+			}),
+		).toBe("history");
 	});
 });
 

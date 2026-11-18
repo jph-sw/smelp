@@ -145,7 +145,8 @@ async function notify(event: DomainEvent) {
 			if (!(await canRead(userId, draft.projectId))) continue;
 
 			// One row per person per item. A newer event refreshes it and makes it
-			// unread again, and an unread row keeps the stronger of the two reasons.
+			// unread again, and an unread row keeps the stronger of the two reasons,
+			// along with the comment that reason is about.
 			await sql`
 				INSERT INTO notification (
 					id, userId, workspaceId, type, actorId, issueId, projectId,
@@ -165,7 +166,14 @@ async function notify(event: DomainEvent) {
 						ELSE excluded.type
 					END,
 					actorId = excluded.actorId,
-					commentId = COALESCE(excluded.commentId, notification.commentId),
+					commentId = CASE
+						WHEN notification.readAt IS NULL AND (
+							CASE notification.type WHEN 'mention' THEN 3 WHEN 'assigned' THEN 2 WHEN 'comment' THEN 1 WHEN 'status_changed' THEN 1 END
+						) > (
+							CASE excluded.type WHEN 'mention' THEN 3 WHEN 'assigned' THEN 2 WHEN 'comment' THEN 1 WHEN 'status_changed' THEN 1 END
+						) THEN notification.commentId
+						ELSE excluded.commentId
+					END,
 					title = excluded.title,
 					createdAt = excluded.createdAt,
 					readAt = NULL
@@ -215,6 +223,7 @@ async function emailAbout(
 				to: user.email,
 				workspaceId: event.workspaceId,
 				issueId: draft.issueId,
+				commentId: draft.commentId,
 				summary,
 				actorName,
 				excerpt,

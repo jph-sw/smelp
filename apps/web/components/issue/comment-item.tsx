@@ -1,4 +1,8 @@
-import { Delete02Icon, PencilEdit01Icon } from "@hugeicons/core-free-icons";
+import {
+	Delete02Icon,
+	Link01Icon,
+	PencilEdit01Icon,
+} from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { ProjectMember, tables } from "@smelp/db";
 import { useMutation } from "@tanstack/react-query";
@@ -7,6 +11,7 @@ import { updateComment } from "#/lib/data/issue";
 import { toastError } from "#/lib/errors";
 import type { ReactionEmoji } from "#/lib/reactions";
 import { formatDate, formatRelativeTime, initials } from "#/lib/utils";
+import { copyToClipboard } from "../copy-link";
 import { RichTextEditor } from "../rich-text/rich-text-editor";
 import {
 	AlertDialog,
@@ -29,6 +34,8 @@ import {
 
 export const composerBox =
 	"rounded-md border border-input bg-background px-3 py-2 focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 [&_.rich-text]:min-h-16";
+
+export const commentElementId = (commentId: string) => `comment-${commentId}`;
 
 export function Timestamp({ time }: { time: number }) {
 	return (
@@ -93,6 +100,9 @@ export function CommentItem({
 	onDelete,
 	onEdited,
 	onToggleReaction,
+	isTarget,
+	highlightKey,
+	onHighlightEnd,
 }: {
 	issueId: string;
 	userId: string | undefined;
@@ -112,6 +122,10 @@ export function CommentItem({
 	isRemoving: boolean;
 	onDelete: () => void;
 	onEdited: () => Promise<void>;
+	isTarget: boolean;
+	/** Changes with each arrival, so the highlight plays again. */
+	highlightKey: string | null;
+	onHighlightEnd: () => void;
 }) {
 	const [editing, setEditing] = useState(false);
 	const [draft, setDraft] = useState(comment.body);
@@ -137,12 +151,24 @@ export function CommentItem({
 	};
 
 	return (
-		<li className="flex gap-3">
+		<li
+			id={commentElementId(comment.id)}
+			tabIndex={isTarget ? -1 : undefined}
+			className="flex scroll-mt-4 gap-3 outline-none"
+		>
 			<Avatar size="sm" className="mt-2">
 				<AvatarImage src={comment.authorImage ?? undefined} alt="" />
 				<AvatarFallback>{initials(comment.authorName)}</AvatarFallback>
 			</Avatar>
-			<div className="min-w-0 flex-1 rounded-lg border bg-card px-3 py-2">
+			<div className="relative min-w-0 flex-1 rounded-lg border bg-card px-3 py-2">
+				{highlightKey && (
+					<span
+						key={highlightKey}
+						aria-hidden
+						className="comment-highlight"
+						onAnimationEnd={onHighlightEnd}
+					/>
+				)}
 				<div className="flex min-h-7 items-center justify-between gap-3">
 					<span className="text-xs font-medium [overflow-wrap:anywhere]">
 						{comment.authorName ?? "Former member"}
@@ -156,6 +182,21 @@ export function CommentItem({
 							>
 								· edited
 							</span>
+						)}
+						{!editing && (
+							<Button
+								variant="ghost"
+								size="icon-sm"
+								aria-label="Copy link to comment"
+								onClick={() =>
+									copyToClipboard(
+										`${location.origin}${location.pathname}?comment=${encodeURIComponent(comment.id)}`,
+										"Link copied.",
+									)
+								}
+							>
+								<HugeiconsIcon icon={Link01Icon} />
+							</Button>
 						)}
 						{canReact && !editing && (
 							<ReactionPicker
