@@ -43,9 +43,9 @@ export default async function ({ page, seed, step, shot, aria, expect }) {
 
 	step("List view shows the icon before the key");
 	await page.goto(`${board}?view=list`);
-	await page.getByRole("link", { name: new RegExp(`${key} ${bugTitle}`) }).waitFor();
+	await page.getByRole("row", { name: new RegExp(`${key} ${bugTitle}`) }).waitFor();
 	expect(
-		(await page.getByRole("link", { name: new RegExp(`${key} ${bugTitle}`) }).getByRole("img", { name: "Bug" }).count()) === 1,
+		(await page.getByRole("row", { name: new RegExp(`${key} ${bugTitle}`) }).getByRole("img", { name: "Bug" }).count()) === 1,
 		"the list row has a Bug icon",
 	);
 	await shot("list-with-bug");

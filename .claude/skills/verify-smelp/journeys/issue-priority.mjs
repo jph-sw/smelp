@@ -70,7 +70,7 @@ export default async function ({ page, seed, step, shot, aria, expect }) {
 
 	step("List view shows the icon too");
 	await page.goto(`${board}?view=list`);
-	const row = page.getByRole("link", { name: new RegExp(`${key} .*${urgentTitle}`) });
+	const row = page.getByRole("row", { name: new RegExp(`${key} .*${urgentTitle}`) });
 	await row.waitFor();
 	expect((await row.getByRole("img", { name: "High priority" }).count()) === 1, "the list row has a High priority icon");
 	await shot("list-with-high");
