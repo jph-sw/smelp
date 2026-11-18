@@ -7,7 +7,7 @@ declare global {
 
 function registerDom() {
 	if (GlobalRegistrator.isRegistered) return;
-	GlobalRegistrator.register();
+	GlobalRegistrator.register({ url: "http://localhost:3000/" });
 	globalThis.__UI_SDK_STRICT__ = true;
 	HTMLElement.prototype.showPopover = () => {};
 	HTMLElement.prototype.hidePopover = () => {};

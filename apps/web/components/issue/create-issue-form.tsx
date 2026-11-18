@@ -1,4 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
 import { useId, useState } from "react";
 import * as v from "valibot";
 import { useAppForm } from "#/hooks/form";
@@ -19,9 +20,13 @@ import { orpc } from "#/lib/orpc";
 import { RichTextEditor } from "../rich-text/rich-text-editor";
 import { Button } from "../ui/button";
 import { Field, FieldGroup } from "../ui/field";
+import { Switch } from "../ui/switch";
 import { toast } from "../ui/toast";
 import { AssigneeSelect } from "./assignee-select";
-import type { CreateIssueDialogParams } from "./create-issue-dialog-store";
+import {
+	type CreateIssueDialogParams,
+	closeCreateIssueDialog,
+} from "./create-issue-dialog-store";
 import { ISSUE_PRIORITY_ITEMS } from "./issue-priority-icon";
 import { ISSUE_TYPE_ITEMS } from "./issue-type-icon";
 
@@ -39,10 +44,14 @@ const CreateIssueSchema = v.object({
 
 export function CreateIssueForm({
 	params,
+	createAnother,
+	onCreateAnotherChange,
 	onSuccess,
 	onDiscard,
 }: {
 	params: CreateIssueDialogParams;
+	createAnother: boolean;
+	onCreateAnotherChange: (createAnother: boolean) => void;
 	onSuccess: () => void;
 	onDiscard: () => void;
 }) {
@@ -58,6 +67,7 @@ export function CreateIssueForm({
 			? destination.id
 			: states?.find((state) => state.isDefault)?.id;
 	const queryClient = useQueryClient();
+	const navigate = useNavigate();
 	const descriptionLabel = useId();
 	const descriptionHint = useId();
 	const [defaultValues] = useState(() => readCreateIssueDraft(params));
@@ -98,6 +108,16 @@ export function CreateIssueForm({
 				toast({
 					type: "success",
 					description: `Work item "${res.title}" created.`,
+					action: {
+						label: "Open",
+						onAction: () => {
+							closeCreateIssueDialog();
+							navigate({
+								to: "/$id/browse/$issueId",
+								params: { id: params.workspaceId, issueId: res.id },
+							});
+						},
+					},
 				});
 				queryClient.invalidateQueries({
 					queryKey: ["issues", params.projectId],
@@ -111,7 +131,15 @@ export function CreateIssueForm({
 						queryClient.invalidateQueries({ queryKey });
 					}
 				}
-				deleteCreateIssueDraft(params);
+				if (createAnother) {
+					saveCreateIssueDraft(params, {
+						...value,
+						title: "",
+						description: "",
+					});
+				} else {
+					deleteCreateIssueDraft(params);
+				}
 				onSuccess();
 			} catch (e) {
 				toastError(e);
@@ -119,11 +147,16 @@ export function CreateIssueForm({
 		},
 	});
 
+	// The keyboard can submit while the disabled button can't.
+	const submit = () => {
+		if (!form.state.isSubmitting) form.handleSubmit();
+	};
+
 	return (
 		<form
 			onSubmit={(e) => {
 				e.preventDefault();
-				form.handleSubmit();
+				submit();
 			}}
 		>
 			<FieldGroup>
@@ -144,6 +177,7 @@ export function CreateIssueForm({
 								value={field.state.value}
 								className="rounded-md border border-input px-2.5 py-1.5 focus-within:border-ring"
 								onChange={field.handleChange}
+								onSubmit={submit}
 							/>
 							<p id={descriptionHint} className="text-xs text-muted-foreground">
 								Type / for commands
@@ -185,6 +219,13 @@ export function CreateIssueForm({
 				<form.AppForm>
 					<form.SubscribeButton label="Create work item" className="mt-0" />
 				</form.AppForm>
+				<label className="mx-2 flex items-center gap-2 text-xs font-medium">
+					Create another
+					<Switch
+						checked={createAnother}
+						onCheckedChange={onCreateAnotherChange}
+					/>
+				</label>
 				<form.Subscribe
 					selector={(state) => ({
 						hasDraft: !isEmptyCreateIssueDraft(state.values),
