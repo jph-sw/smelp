@@ -19,6 +19,7 @@ import {
 	parseBoardSearch,
 	rememberBoardSearch,
 } from "#/lib/board-filters";
+import { useCollapsedStates } from "#/lib/collapsed-states";
 import { cyclesQueryOptions, invalidateCycles } from "#/lib/data/cycle";
 import { issuesQueryOptions, updateIssue } from "#/lib/data/issue";
 import { moduleQueryKeys, modulesQueryOptions } from "#/lib/data/module";
@@ -71,7 +72,11 @@ function RouteComponent() {
 
 	const isArchived = project.archivedAt !== null;
 	// Guests can look but not move cards, and nobody moves them while archived.
-	const { canWrite } = useProjectAccess(projectId);
+	const { canWrite, user } = useProjectAccess(projectId);
+	const [collapsedStates, toggleCollapsedState] = useCollapsedStates(
+		user?.id,
+		projectId,
+	);
 
 	const queryClient = useQueryClient();
 	const issuesQueryKey = issuesQueryOptions({ projectId }).queryKey;
@@ -184,7 +189,17 @@ function RouteComponent() {
 						)}
 						<div className="relative flex h-full min-h-0 w-full flex-1 gap-3 overflow-x-auto p-4 pointer-coarse:snap-x pointer-coarse:snap-proximity pointer-coarse:scroll-px-4 pointer-coarse:overscroll-x-contain sm:gap-8">
 							{visibleStates.map((state) => (
-								<StateColumn key={state.id} state={state}>
+								<StateColumn
+									key={state.id}
+									state={state}
+									// Filtering to a state must show it, whatever was collapsed.
+									collapsed={!filters.state && collapsedStates.has(state.id)}
+									onToggleCollapsed={
+										filters.state
+											? undefined
+											: () => toggleCollapsedState(state.id)
+									}
+								>
 									{visibleIssues
 										.filter((issue) => issue.state === state.id)
 										.sort((a, b) => b.updatedAt - a.updatedAt)
