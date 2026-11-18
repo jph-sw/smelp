@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { createHmac } from "node:crypto";
 import { createRouterClient } from "@orpc/server";
+import { issueBranchName } from "../../web/lib/issue-branch";
 
 // Imported dynamically so setup.ts points the database at a temp file first.
 await import("./setup");
@@ -462,6 +463,24 @@ describe("item keys in text", () => {
 		expect(issueKeys("XSMELP-1 SMELP-10 SMELP-1a", "SMELP")).toEqual([
 			"SMELP-10",
 		]);
+	});
+
+	test("find the item's key in its generated branch name", () => {
+		for (const title of [
+			"Copy item key",
+			"2fa login",
+			"🚀",
+			"Follow up on SMELP-3",
+			"Smelp 3 rollout",
+			"smelp smelp 3 4",
+			`${"a".repeat(42)} smelp-3a`,
+		]) {
+			const branch = issueBranchName("SMELP-12", title);
+			expect(issueKeys(branch, "SMELP")).toEqual(["SMELP-12"]);
+		}
+		expect(issueKeys(issueBranchName("SMELP-12", "x"), "SMELP")).not.toContain(
+			"SMELP-1",
+		);
 	});
 });
 
