@@ -6,7 +6,7 @@ import {
 	useQuery,
 	useQueryClient,
 } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
+import { Link, useMatchRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "#/components/ui/avatar";
 import { Button } from "#/components/ui/button";
@@ -38,6 +38,13 @@ function describe(item: InboxItem) {
 			return "changed the state of";
 	}
 }
+
+// A row keeps its last comment when a later event updates it, so only these
+// kinds are about that comment.
+const linkedCommentId = (item: InboxItem) =>
+	item.type === "mention" || item.type === "comment"
+		? (item.commentId ?? undefined)
+		: undefined;
 
 export function NotificationsMenu({ workspaceId }: { workspaceId: string }) {
 	const [isOpen, setIsOpen] = useState(false);
@@ -86,6 +93,7 @@ function InboxList({
 	onNavigate: () => void;
 }) {
 	const queryClient = useQueryClient();
+	const matchRoute = useMatchRoute();
 	const { data, isPending, fetchNextPage, hasNextPage, isFetchingNextPage } =
 		useInfiniteQuery(notificationsQueryOptions({ workspaceId }));
 	const items = data?.pages.flatMap((page) => page.notifications) ?? [];
@@ -137,11 +145,30 @@ function InboxList({
 					<ol className="space-y-1">
 						{items.map((item) => {
 							const isUnread = item.readAt === null;
+							const comment = linkedCommentId(item);
+							const params = { id: workspaceId, issueId: item.issueId };
 							return (
 								<li key={item.id}>
 									<Link
 										to="/$id/browse/$issueId"
-										params={{ id: workspaceId, issueId: item.issueId }}
+										params={params}
+										search={{ comment }}
+										// The router ignores a link to the current URL unless its
+										// state differs, and this one should reveal the comment again.
+										state={
+											comment
+												? (state) => ({ ...state, openedAt: Date.now() })
+												: undefined
+										}
+										replace={
+											!!comment &&
+											!!matchRoute({
+												to: "/$id/browse/$issueId",
+												params,
+												search: { comment },
+												includeSearch: true,
+											})
+										}
 										onClick={() => {
 											if (isUnread) markRead(item.id);
 											onNavigate();
