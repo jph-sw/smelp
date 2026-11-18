@@ -557,6 +557,8 @@ export const createIssue = base
 			priority: v.optional(IssuePriority, "none"),
 			assignee: v.optional(v.string()),
 			parentId: v.optional(v.string()),
+			cycleId: v.optional(NonEmpty),
+			moduleId: v.optional(NonEmpty),
 			dueDate: v.optional(Day),
 			workspaceId: v.string(),
 			projectId: v.string(),
@@ -575,6 +577,17 @@ export const createIssue = base
 		if (input.parentId) {
 			await requireValidParent(input.parentId, project.id);
 		}
+		if (input.cycleId) {
+			await requireCycleInProject(input.cycleId, project.id);
+		}
+		if (input.moduleId) {
+			await requireModuleInProject(input.moduleId, project.id);
+		}
+
+		// Read before the write, so the log names what was validated even if the
+		// cycle or module is renamed or deleted a moment later.
+		const newCycleName = await cycleName(input.cycleId ?? null);
+		const newModuleName = await moduleName(input.moduleId ?? null);
 
 		const project_counter = (
 			await sql`SELECT * FROM project_counter WHERE projectId = ${input.projectId}`
@@ -589,8 +602,8 @@ export const createIssue = base
 			type: input.type,
 			priority: input.priority,
 			parentId: input.parentId || null,
-			moduleId: null,
-			cycleId: null,
+			moduleId: input.moduleId ?? null,
+			cycleId: input.cycleId ?? null,
 			dueDate: input.dueDate ?? null,
 			workspaceId: project.workspaceId,
 			projectId: project.id,
@@ -608,6 +621,15 @@ export const createIssue = base
 					throw new ORPCError("CONFLICT", {
 						message: "An issue with this name already exists",
 					});
+				}
+				// The cycle or module can be deleted after the checks above passed.
+				if (e.code === "SQLITE_CONSTRAINT_FOREIGNKEY") {
+					if (input.cycleId) {
+						await requireCycleInProject(input.cycleId, project.id);
+					}
+					if (input.moduleId) {
+						await requireModuleInProject(input.moduleId, project.id);
+					}
 				}
 			}
 			throw e;
@@ -653,6 +675,36 @@ export const createIssue = base
 					newValue: issue.assignee,
 					oldName: null,
 					newName: await displayNameOf(issue.assignee),
+				},
+			});
+		}
+		if (issue.cycleId) {
+			eventBus.emit({
+				type: "issue.updated",
+				entityId: issue.id,
+				actorId: caller.userId,
+				workspaceId: issue.workspaceId,
+				payload: {
+					title: issue.title,
+					projectId: issue.projectId,
+					field: "cycle",
+					oldValue: null,
+					newValue: newCycleName,
+				},
+			});
+		}
+		if (issue.moduleId) {
+			eventBus.emit({
+				type: "issue.updated",
+				entityId: issue.id,
+				actorId: caller.userId,
+				workspaceId: issue.workspaceId,
+				payload: {
+					title: issue.title,
+					projectId: issue.projectId,
+					field: "module",
+					oldValue: null,
+					newValue: newModuleName,
 				},
 			});
 		}

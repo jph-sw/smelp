@@ -508,6 +508,38 @@ describe("work items in modules", () => {
 	});
 });
 
+describe("creating a work item in a module", () => {
+	test("stores the module and logs it by name", async () => {
+		const mod = await admin.client.modules.create({
+			projectId: PROJECT,
+			name: "Created in",
+		});
+		const item = await member.client.issue.create({
+			...newIssue("Born in a module"),
+			moduleId: mod?.id,
+		});
+		expect(item.moduleId).toBe(mod?.id ?? "");
+
+		const rows = await activityRows(item.id, "issue.updated");
+		expect(rows).toEqual([
+			{ field: "module", oldValue: null, newValue: "Created in" },
+		]);
+	});
+
+	test("refuses a module of another project, a missing one and an empty id", async () => {
+		const elsewhere = await admin.client.modules.create({
+			projectId: OTHER_PROJECT,
+			name: "Other project",
+		});
+		for (const moduleId of [elsewhere?.id ?? "", "no-such-module", ""]) {
+			await expectCode(
+				member.client.issue.create({ ...newIssue("Refused"), moduleId }),
+				"BAD_REQUEST",
+			);
+		}
+	});
+});
+
 describe("archived projects", () => {
 	test("modules and assignments are read-only", async () => {
 		const mod = await admin.client.modules.create({
