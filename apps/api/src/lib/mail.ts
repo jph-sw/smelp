@@ -175,6 +175,7 @@ export async function sendNotificationEmail(notification: {
 	to: string;
 	workspaceId: string;
 	issueId: string;
+	commentId?: string | null;
 	summary: string;
 	actorName: string;
 	excerpt?: string;
@@ -182,6 +183,9 @@ export async function sendNotificationEmail(notification: {
 	const { config } = readConfig();
 	if (!config) return "none";
 
+	const commentSearch = notification.commentId
+		? `?comment=${encodeURIComponent(notification.commentId)}`
+		: "";
 	return deliver({
 		to: notification.to,
 		subject: oneLine(notification.summary),
@@ -195,7 +199,7 @@ export async function sendNotificationEmail(notification: {
 					]
 				: []),
 			"",
-			`${config.appUrl}/${notification.workspaceId}/browse/${notification.issueId}`,
+			`${config.appUrl}/${notification.workspaceId}/browse/${notification.issueId}${commentSearch}`,
 			"",
 			"You get this because you turned on email notifications in your account settings.",
 		].join("\n"),

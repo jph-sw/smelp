@@ -215,6 +215,7 @@ async function emailAbout(
 				to: user.email,
 				workspaceId: event.workspaceId,
 				issueId: draft.issueId,
+				commentId: draft.commentId,
 				summary,
 				actorName,
 				excerpt,
