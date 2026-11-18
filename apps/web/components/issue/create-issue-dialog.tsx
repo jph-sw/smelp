@@ -1,3 +1,5 @@
+import { useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import {
 	Dialog,
 	DialogContent,
@@ -13,6 +15,8 @@ import { CreateIssueForm } from "./create-issue-form";
 
 export function CreateIssueDialog() {
 	const state = useCreateIssueDialogStore();
+	const [formKey, setFormKey] = useState(0);
+	const content = useRef<HTMLDivElement>(null);
 
 	return (
 		<Dialog
@@ -26,7 +30,7 @@ export function CreateIssueDialog() {
 				if (!open) closeCreateIssueDialog();
 			}}
 		>
-			<DialogContent className="sm:max-w-2xl">
+			<DialogContent ref={content} className="sm:max-w-2xl">
 				{state.isOpen && (
 					<>
 						<DialogHeader>
@@ -36,8 +40,17 @@ export function CreateIssueDialog() {
 							</DialogDescription>
 						</DialogHeader>
 						<CreateIssueForm
+							key={formKey}
 							params={state.params}
 							onSuccess={closeCreateIssueDialog}
+							onDiscard={() => {
+								// Remounting removes the focused button, which would drop focus
+								// out of the dialog.
+								flushSync(() => setFormKey((key) => key + 1));
+								content.current
+									?.querySelector<HTMLInputElement>('input[name="title"]')
+									?.focus();
+							}}
 						/>
 					</>
 				)}
