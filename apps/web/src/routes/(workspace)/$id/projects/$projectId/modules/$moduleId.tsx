@@ -1,4 +1,4 @@
-import { Layers02Icon } from "@hugeicons/core-free-icons";
+import { Layers02Icon, PlusSignIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
 	useMutation,
@@ -6,6 +6,7 @@ import {
 	useSuspenseQuery,
 } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { openCreateIssueDialog } from "#/components/issue/create-issue-dialog-store";
 import { ModuleDialog } from "#/components/module/module-dialog";
 import {
 	formatTargetDate,
@@ -89,6 +90,9 @@ function RouteComponent() {
 	);
 	const projectId = found.projectId;
 	usePageTitle(found.name);
+	const { data: project } = useSuspenseQuery(
+		projectQueryOptions({ projectId }),
+	);
 
 	const { data: states } = useSuspenseQuery(statesQueryOptions({ projectId }));
 	const { data: issues } = useSuspenseQuery(issuesQueryOptions({ projectId }));
@@ -239,29 +243,51 @@ function RouteComponent() {
 				</div>
 				<div className="flex items-center justify-between gap-2 border-t px-4 pt-4 sm:px-9">
 					<h2 className="text-sm font-medium">Work items</h2>
-					{canWrite && candidates.length > 0 && (
-						<Select
-							items={pickItems}
-							value={PICK_ITEM}
-							disabled={isAdding}
-							onValueChange={(next) =>
-								next != null && next !== PICK_ITEM && addItem(next)
-							}
-						>
-							<SelectTrigger
-								aria-label="Add a work item to this module"
-								className="w-full max-w-64"
+					{canWrite && (
+						<div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2">
+							{candidates.length > 0 && (
+								<Select
+									items={pickItems}
+									value={PICK_ITEM}
+									disabled={isAdding}
+									onValueChange={(next) =>
+										next != null && next !== PICK_ITEM && addItem(next)
+									}
+								>
+									<SelectTrigger
+										aria-label="Add a work item to this module"
+										className="w-full max-w-64"
+									>
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										{pickItems.map((item) => (
+											<SelectItem key={item.value} value={item.value}>
+												{item.label}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+							)}
+							<Button
+								variant="outline"
+								onClick={() =>
+									openCreateIssueDialog({
+										workspaceId,
+										projectId,
+										projectName: project.name,
+										destination: {
+											kind: "module",
+											id: found.id,
+											name: found.name,
+										},
+									})
+								}
 							>
-								<SelectValue />
-							</SelectTrigger>
-							<SelectContent>
-								{pickItems.map((item) => (
-									<SelectItem key={item.value} value={item.value}>
-										{item.label}
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
+								<HugeiconsIcon icon={PlusSignIcon} />
+								New work item
+							</Button>
+						</div>
 					)}
 				</div>
 				{items.length === 0 ? (

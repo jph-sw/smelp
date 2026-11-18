@@ -5,6 +5,7 @@ A member creates a work item in a project, sees it as a card in its state's colu
 ## Sub-features
 
 - `item-create`: the sidebar `New work item` dialog creates an item in the current project.
+- `item-create-in`: a column's `Add work item to <State>` button, and `New work item` on a cycle or module page, open the same dialog with that destination. The item starts in that state, cycle or module.
 - `item-open`: a board card opens the detail page at `/<workspace>/browse/<KEY>`.
 - `item-edit`: title and description edit in place on the detail page. The description is a rich-text editor (Tiptap), stored as Markdown, with a `/` command menu and image uploads.
 - `item-state`: the `State` combobox moves the item to another column.
@@ -15,6 +16,7 @@ A member creates a work item in a project, sees it as a card in its state's colu
 ## How to get to it (user POV)
 
 - Press `New work item` at the top of the sidebar, from any workspace page.
+- Hover a board column and press its `+`, or press `New work item` on a cycle or module page. People who can't write don't get these buttons, and a collapsed column has no `+`.
 - Press a card (`<Type> <KEY> <title>`) on a project board (`/<workspace>/projects/<PROJECT>`), or a row on the List view (`?view=list`), whose link is named by the title alone.
 - Open a search result (see [search.md](./search.md)).
 - Drag a card to another column. This is a second way to change state.
@@ -34,6 +36,8 @@ Steps:
 - **Open board.** `page.goto("/verify_team/projects/VER")`, then wait for `getByRole("heading", { name: "Verification" })`. You see the columns, with counts next to their names.
 - **Open dialog.** `getByRole("button", { name: "New work item" }).click()`. `getByRole("dialog", { name: "New work item" })` appears with the text `In Verification`, the `Title` and `Description` textboxes, the `Type`, `Priority` and `Assignee` comboboxes, and `Create work item`.
 - **Create.** Fill `getByRole("textbox", { name: "Title" })` inside the dialog, then press `Create work item`. The dialog closes, a toast says `Work item "<title>" created.`, and the card `getByRole("button", { name: /^Task VER-\d+ <title>$/ })` appears at the top of Backlog.
+- **Create in a column.** `getByRole("button", { name: "Add work item to In Progress" }).click()`. The dialog reads `In Verification · State: In Progress`, and the new item is stored in that state.
+- **Create in a cycle or module.** On the cycle or module page use `getByRole("main").getByRole("button", { name: "New work item" })`, because the sidebar has a button with the same name. The dialog reads `In Verification · Cycle: <name>` or `In Verification · Module: <name>`. The item appears in the page's list in the default state, and its timeline logs the cycle or module.
 - **Create several.** Turn on `switch "Create another"` in the dialog. Enter in `Title` or Ctrl/Cmd+Enter in `Description` creates the item, and the dialog stays open with an empty title and description, the same type, priority and assignee, and focus on `Title`. The toggle stays on until the page reloads.
 - **Open from the toast.** The success toast has `button "Open"`, which closes the dialog and goes to the item. F6 moves focus to the newest toast, even with the dialog open, and Tab reaches `Open`.
 - **Open.** Press the card. The detail page shows `navigation "breadcrumb"` with `Work Items › VER-n`, `textbox "Title"` holding the title, and `region "Activity"` with `vera created this work item`.

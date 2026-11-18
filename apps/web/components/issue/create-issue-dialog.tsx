@@ -8,10 +8,17 @@ import {
 	DialogTitle,
 } from "../ui/dialog";
 import {
+	type CreateIssueDestination,
 	closeCreateIssueDialog,
 	useCreateIssueDialogStore,
 } from "./create-issue-dialog-store";
 import { CreateIssueForm } from "./create-issue-form";
+
+const DESTINATION_LABELS: Record<CreateIssueDestination["kind"], string> = {
+	state: "State",
+	cycle: "Cycle",
+	module: "Module",
+};
 
 export function CreateIssueDialog() {
 	const state = useCreateIssueDialogStore();
@@ -45,8 +52,10 @@ export function CreateIssueDialog() {
 					<>
 						<DialogHeader>
 							<DialogTitle>New work item</DialogTitle>
-							<DialogDescription>
+							<DialogDescription className="[overflow-wrap:anywhere]">
 								In {state.params.projectName}
+								{state.params.destination &&
+									` · ${DESTINATION_LABELS[state.params.destination.kind]}: ${state.params.destination.name}`}
 							</DialogDescription>
 						</DialogHeader>
 						<CreateIssueForm

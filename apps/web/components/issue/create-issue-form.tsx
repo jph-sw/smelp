@@ -9,6 +9,8 @@ import {
 	readCreateIssueDraft,
 	saveCreateIssueDraft,
 } from "#/lib/create-issue-draft";
+import { invalidateCycles } from "#/lib/data/cycle";
+import { moduleQueryKeys } from "#/lib/data/module";
 import { projectMembersQueryOptions } from "#/lib/data/project-members";
 import { statesQueryOptions } from "#/lib/data/state";
 import { toastError } from "#/lib/errors";
@@ -59,7 +61,11 @@ export function CreateIssueForm({
 	const { data: members } = useQuery(
 		projectMembersQueryOptions({ projectId: params.projectId }),
 	);
-	const defaultState = states?.find((state) => state.isDefault);
+	const { destination } = params;
+	const stateId =
+		destination?.kind === "state"
+			? destination.id
+			: states?.find((state) => state.isDefault)?.id;
 	const queryClient = useQueryClient();
 	const navigate = useNavigate();
 	const descriptionLabel = useId();
@@ -77,7 +83,7 @@ export function CreateIssueForm({
 			},
 		},
 		onSubmit: async ({ value }) => {
-			if (!defaultState) {
+			if (!stateId) {
 				toast({
 					type: "error",
 					description: "No default state found for this project.",
@@ -89,11 +95,13 @@ export function CreateIssueForm({
 				const res = await orpc.issue.create({
 					title: value.title,
 					description: value.description,
-					state: defaultState.id,
+					state: stateId,
 					type: value.type,
 					priority: value.priority,
 					assignee: value.assignee ?? undefined,
 					parentId: params.parentId,
+					cycleId: destination?.kind === "cycle" ? destination.id : undefined,
+					moduleId: destination?.kind === "module" ? destination.id : undefined,
 					workspaceId: params.workspaceId,
 					projectId: params.projectId,
 				});
@@ -115,6 +123,14 @@ export function CreateIssueForm({
 					queryKey: ["issues", params.projectId],
 				});
 				queryClient.invalidateQueries({ queryKey: ["my-issues"] });
+				if (destination?.kind === "cycle") {
+					invalidateCycles(queryClient, params.projectId);
+				}
+				if (destination?.kind === "module") {
+					for (const queryKey of moduleQueryKeys(params.projectId)) {
+						queryClient.invalidateQueries({ queryKey });
+					}
+				}
 				if (createAnother) {
 					saveCreateIssueDraft(params, {
 						...value,

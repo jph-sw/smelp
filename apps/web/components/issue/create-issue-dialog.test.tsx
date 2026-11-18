@@ -4,6 +4,7 @@ import { clearCreateIssueDrafts } from "#/lib/create-issue-draft";
 import { act, cleanup, render, screen, userEvent, waitFor } from "#/test/dom";
 import { CreateIssueDialog } from "./create-issue-dialog";
 import {
+	type CreateIssueDialogParams,
 	closeCreateIssueDialog,
 	openCreateIssueDialog,
 } from "./create-issue-dialog-store";
@@ -31,10 +32,50 @@ function renderDialog() {
 	return userEvent.setup();
 }
 
-const open = (params = project) =>
+const open = (params: CreateIssueDialogParams = project) =>
 	act(async () => openCreateIssueDialog(params));
 const title = () => screen.getByLabelText<HTMLInputElement>("Title");
 const discard = () => screen.queryByRole("button", { name: "Discard draft" });
+
+describe("CreateIssueDialog destination", () => {
+	afterEach(() => {
+		cleanup();
+		act(() => closeCreateIssueDialog());
+		clearCreateIssueDrafts();
+	});
+
+	test("without a destination it names just the project", async () => {
+		renderDialog();
+		await open();
+		expect(screen.getByText("In Project")).toBeTruthy();
+	});
+
+	test.each([
+		["state", "In Progress", "In Project · State: In Progress"],
+		["cycle", "Sprint 1", "In Project · Cycle: Sprint 1"],
+		["module", "Auth", "In Project · Module: Auth"],
+	] as const)("names a %s destination", async (kind, name, description) => {
+		renderDialog();
+		await open({ ...project, destination: { kind, id: "target", name } });
+		expect(screen.getByText(description)).toBeTruthy();
+	});
+
+	test("a draft follows the user to another destination", async () => {
+		const user = renderDialog();
+		await open({
+			...project,
+			destination: { kind: "cycle", id: "cycle-1", name: "Sprint 1" },
+		});
+		await user.type(title(), "Fix login");
+		await user.keyboard("{Escape}");
+		await open({
+			...project,
+			destination: { kind: "module", id: "module-1", name: "Auth" },
+		});
+		expect(title().value).toBe("Fix login");
+		expect(screen.getByText("In Project · Module: Auth")).toBeTruthy();
+	});
+});
 
 describe("CreateIssueDialog drafts", () => {
 	afterEach(() => {
@@ -75,7 +116,7 @@ describe("CreateIssueDialog drafts", () => {
 		await open();
 		await user.type(title(), "Top level");
 		await user.keyboard("{Escape}");
-		await open({ ...project, parentId: "SMELP-3" } as typeof project);
+		await open({ ...project, parentId: "SMELP-3" });
 		expect(title().value).toBe("");
 	});
 

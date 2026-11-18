@@ -515,6 +515,37 @@ describe("work items in cycles", () => {
 	});
 });
 
+describe("creating a work item in a cycle", () => {
+	test("stores the cycle and logs it by name", async () => {
+		const cycle = await admin.client.cycles.create(newCycle("Created in"));
+		const issue = await member.client.issue.create({
+			...newIssue("Born in a cycle"),
+			cycleId: cycle.id,
+		});
+		expect(issue.cycleId).toBe(cycle.id);
+
+		const listed = await member.client.issues.find({ projectId: PROJECT });
+		expect(listed.find((i) => i.id === issue.id)?.cycleId).toBe(cycle.id);
+
+		const rows = await activityOf(issue.id, 1);
+		expect(rows.map((r) => [r.action, r.oldValue, r.newValue])).toEqual([
+			["issue.updated", null, "Created in"],
+		]);
+	});
+
+	test("refuses a cycle of another project, a missing one and an empty id", async () => {
+		const elsewhere = await admin.client.cycles.create(
+			newCycle("Other project", window(), OTHER_PROJECT),
+		);
+		for (const cycleId of [elsewhere.id, "no-such-cycle", ""]) {
+			await expectCode(
+				member.client.issue.create({ ...newIssue("Refused"), cycleId }),
+				"BAD_REQUEST",
+			);
+		}
+	});
+});
+
 describe("moving unfinished items", () => {
 	test("moves only unfinished items and logs each one", async () => {
 		const from = await admin.client.cycles.create(newCycle("From"));
