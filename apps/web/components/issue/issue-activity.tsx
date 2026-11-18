@@ -5,7 +5,7 @@ import {
 	useQueryClient,
 	useSuspenseQuery,
 } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
 	ACTIVITY_FILTERS,
 	ACTIVITY_SORTS,
@@ -14,6 +14,7 @@ import {
 	isActivitySort,
 	useActivityView,
 } from "#/lib/activity-view";
+import { commentDraftStore } from "#/lib/comment-draft";
 import {
 	commentsQueryOptions,
 	createComment,
@@ -63,10 +64,19 @@ export function IssueActivity({
 		...issueActivityQueryOptions({ issueId }),
 		enabled: showHistory,
 	});
-	const [draft, setDraft] = useState("");
+	const [draftStore] = useState(() => commentDraftStore(userId, issueId));
+	const [draft, setDraft] = useState(draftStore.read);
 	// A new editor after each post starts empty, with no undo history.
 	const [composer, setComposer] = useState(0);
 	const [view, setView] = useActivityView();
+
+	useEffect(() => {
+		window.addEventListener("pagehide", draftStore.flush);
+		return () => {
+			window.removeEventListener("pagehide", draftStore.flush);
+			draftStore.flush();
+		};
+	}, [draftStore]);
 
 	const refreshComments = () =>
 		queryClient.invalidateQueries({ queryKey: commentsOptions.queryKey });
@@ -74,6 +84,7 @@ export function IssueActivity({
 	const { mutate: addComment, isPending: isAdding } = useMutation({
 		mutationFn: createComment,
 		onSuccess: async () => {
+			draftStore.clear();
 			setDraft("");
 			setComposer((n) => n + 1);
 			await Promise.all([
@@ -163,13 +174,16 @@ export function IssueActivity({
 		>
 			<RichTextEditor
 				key={composer}
-				value=""
+				value={draft}
 				issueId={issueId}
 				mentions={{ members, currentUserId: userId }}
 				aria-label="Add a comment"
 				placeholder="Add a comment. Type @ to mention someone, / for formatting."
 				className={composerBox}
-				onChange={setDraft}
+				onChange={(markdown) => {
+					setDraft(markdown);
+					draftStore.save(markdown);
+				}}
 				onSubmit={submit}
 			/>
 			<Button type="submit" disabled={!draft.trim() || isAdding}>

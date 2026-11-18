@@ -344,6 +344,7 @@ function RouteComponent() {
 						canManage={canManage}
 					/>
 					<IssueActivity
+						key={issue.id}
 						issueId={issue.id}
 						userId={user?.id}
 						states={states}
