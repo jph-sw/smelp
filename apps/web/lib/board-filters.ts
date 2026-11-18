@@ -1,5 +1,6 @@
 import type { tables } from "@smelp/db";
 import { isDueThisWeek, isOverdue } from "./due-date";
+import { isListSort, type ListSort } from "./issue-list-sort";
 import { type IssuePriority, isIssuePriority } from "./issue-priorities";
 import { type IssueType, isIssueType } from "./issue-types";
 
@@ -71,13 +72,14 @@ export function parseBoardFilters(
 }
 
 // Without "view", the page shows the board, so existing links keep working.
-export type BoardSearch = BoardFilters & { view?: "list" };
+export type BoardSearch = BoardFilters & { view?: "list"; sort?: ListSort };
 
 export const parseBoardSearch = (
 	search: Record<string, unknown>,
 ): BoardSearch => ({
 	...parseBoardFilters(search),
 	view: search.view === "list" ? "list" : undefined,
+	sort: isListSort(search.sort) ? search.sort : undefined,
 });
 
 const boardSearchKey = (projectId: string) => `smelp.board-search.${projectId}`;

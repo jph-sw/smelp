@@ -3,6 +3,7 @@ import {
 	isFiltered,
 	matchesFilters,
 	parseBoardFilters,
+	parseBoardSearch,
 	recallBoardSearch,
 	rememberBoardSearch,
 	UNASSIGNED,
@@ -173,6 +174,23 @@ describe("due date filters", () => {
 	});
 });
 
+describe("parseBoardSearch", () => {
+	test("keeps a valid list sort in either direction", () => {
+		expect(parseBoardSearch({ sort: "due" }).sort).toBe("due");
+		expect(parseBoardSearch({ sort: "-priority" }).sort).toBe("-priority");
+	});
+
+	test("drops a sort it doesn't know", () => {
+		expect(parseBoardSearch({ sort: "updatedAt" }).sort).toBeUndefined();
+		expect(parseBoardSearch({ sort: ["due"] }).sort).toBeUndefined();
+	});
+
+	test("the sort isn't a filter", () => {
+		expect(parseBoardFilters({ sort: "due" })).not.toHaveProperty("sort");
+		expect(isFiltered(parseBoardSearch({ sort: "due" }))).toBe(false);
+	});
+});
+
 describe("remembered board search", () => {
 	const stored = new Map<string, string>();
 	const original = globalThis.sessionStorage;
@@ -195,6 +213,16 @@ describe("remembered board search", () => {
 	test("restores the filters and the view", () => {
 		rememberBoardSearch("ABC", { assignee: ["ana"], view: "list" });
 		expect(recalled("ABC")).toEqual({ assignee: ["ana"], view: "list" });
+	});
+
+	test("restores the list sort", () => {
+		rememberBoardSearch("ABC", { view: "list", sort: "-due" });
+		expect(recalled("ABC")).toEqual({ view: "list", sort: "-due" });
+	});
+
+	test("forgets a stored sort it doesn't know", () => {
+		stored.set("smelp.board-search.ABC", '{"view":"list","sort":"nope"}');
+		expect(recalled("ABC")).toEqual({ view: "list" });
 	});
 
 	test("keeps each project's search apart", () => {
