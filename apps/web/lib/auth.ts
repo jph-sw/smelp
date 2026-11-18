@@ -1,5 +1,6 @@
 import type { tables } from "@smelp/db";
 import { type QueryClient, queryOptions } from "@tanstack/react-query";
+import { clearCreateIssueDrafts } from "./create-issue-draft";
 import { orpc } from "./orpc";
 
 export type AuthUser = tables["auth_user"] & {
@@ -49,6 +50,7 @@ export const currentUserQueryOptions = queryOptions({
 // previous user and loads the new one.
 export async function startSession(queryClient: QueryClient) {
 	queryClient.clear();
+	clearCreateIssueDrafts();
 	await queryClient.fetchQuery(currentUserQueryOptions);
 }
 
@@ -58,6 +60,7 @@ export async function endSession(
 	queryClient: QueryClient,
 	redirectToSignIn: () => Promise<void>,
 ) {
+	clearCreateIssueDrafts();
 	queryClient.setQueryData(currentUserQueryOptions.queryKey, null);
 	await redirectToSignIn();
 	queryClient.removeQueries({

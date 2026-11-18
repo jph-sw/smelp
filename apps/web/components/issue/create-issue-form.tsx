@@ -1,14 +1,21 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useId } from "react";
+import { useId, useState } from "react";
 import * as v from "valibot";
 import { useAppForm } from "#/hooks/form";
+import {
+	deleteCreateIssueDraft,
+	isEmptyCreateIssueDraft,
+	readCreateIssueDraft,
+	saveCreateIssueDraft,
+} from "#/lib/create-issue-draft";
 import { projectMembersQueryOptions } from "#/lib/data/project-members";
 import { statesQueryOptions } from "#/lib/data/state";
 import { toastError } from "#/lib/errors";
-import { ISSUE_PRIORITIES, type IssuePriority } from "#/lib/issue-priorities";
-import { ISSUE_TYPES, type IssueType } from "#/lib/issue-types";
+import { ISSUE_PRIORITIES } from "#/lib/issue-priorities";
+import { ISSUE_TYPES } from "#/lib/issue-types";
 import { orpc } from "#/lib/orpc";
 import { RichTextEditor } from "../rich-text/rich-text-editor";
+import { Button } from "../ui/button";
 import { Field, FieldGroup } from "../ui/field";
 import { toast } from "../ui/toast";
 import { AssigneeSelect } from "./assignee-select";
@@ -31,9 +38,11 @@ const CreateIssueSchema = v.object({
 export function CreateIssueForm({
 	params,
 	onSuccess,
+	onDiscard,
 }: {
 	params: CreateIssueDialogParams;
 	onSuccess: () => void;
+	onDiscard: () => void;
 }) {
 	const { data: states } = useQuery(
 		statesQueryOptions({ projectId: params.projectId }),
@@ -45,17 +54,17 @@ export function CreateIssueForm({
 	const queryClient = useQueryClient();
 	const descriptionLabel = useId();
 	const descriptionHint = useId();
+	const [defaultValues] = useState(() => readCreateIssueDraft(params));
 
 	const form = useAppForm({
-		defaultValues: {
-			title: "",
-			description: "",
-			type: "task" as IssueType,
-			priority: "none" as IssuePriority,
-			assignee: null as string | null,
-		},
+		defaultValues,
 		validators: {
 			onSubmit: CreateIssueSchema,
+		},
+		listeners: {
+			onChange: ({ formApi }) => {
+				saveCreateIssueDraft(params, formApi.state.values);
+			},
 		},
 		onSubmit: async ({ value }) => {
 			if (!defaultState) {
@@ -86,6 +95,7 @@ export function CreateIssueForm({
 					queryKey: ["issues", params.projectId],
 				});
 				queryClient.invalidateQueries({ queryKey: ["my-issues"] });
+				deleteCreateIssueDraft(params);
 				onSuccess();
 			} catch (e) {
 				toastError(e);
@@ -155,9 +165,33 @@ export function CreateIssueForm({
 					)}
 				/>
 			</FieldGroup>
-			<form.AppForm>
-				<form.SubscribeButton label="Create work item" />
-			</form.AppForm>
+			<div className="mt-4 flex items-center gap-2">
+				<form.AppForm>
+					<form.SubscribeButton label="Create work item" className="mt-0" />
+				</form.AppForm>
+				<form.Subscribe
+					selector={(state) => ({
+						hasDraft: !isEmptyCreateIssueDraft(state.values),
+						isSubmitting: state.isSubmitting,
+					})}
+				>
+					{({ hasDraft, isSubmitting }) =>
+						hasDraft && (
+							<Button
+								type="button"
+								variant="ghost"
+								disabled={isSubmitting}
+								onClick={() => {
+									deleteCreateIssueDraft(params);
+									onDiscard();
+								}}
+							>
+								Discard draft
+							</Button>
+						)
+					}
+				</form.Subscribe>
+			</div>
 		</form>
 	);
 }

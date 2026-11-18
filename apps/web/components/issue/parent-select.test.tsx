@@ -1,5 +1,5 @@
-import { describe, expect, mock, test } from "bun:test";
-import { render, screen, userEvent } from "#/test/dom";
+import { afterEach, describe, expect, mock, test } from "bun:test";
+import { cleanup, render, screen, userEvent } from "#/test/dom";
 import { type ParentOption, ParentSelect } from "./parent-select";
 
 const options: ParentOption[] = [
@@ -20,6 +20,9 @@ const optionNames = () =>
 	screen.getAllByRole("option").map((option) => option.textContent);
 
 describe("ParentSelect", () => {
+	// Testing Library's automatic cleanup binds only to the first DOM test file.
+	afterEach(cleanup);
+
 	test("shows the current parent's key and title", () => {
 		renderParentSelect("SMELP-12");
 		expect(trigger().textContent).toBe("Parent: SMELP-12 Search everywhere");
