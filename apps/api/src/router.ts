@@ -85,7 +85,12 @@ import {
 	findIssueRelations,
 	removeIssueRelation,
 } from "./routes/issue-relation";
-import { findIssues, findMyIssues, searchIssues } from "./routes/issues";
+import {
+	findIssues,
+	findIssuesByIds,
+	findMyIssues,
+	searchIssues,
+} from "./routes/issues";
 import { applyJiraImport, previewJiraImport } from "./routes/jira-import";
 import { createLink, deleteLink, findLinks, updateLink } from "./routes/link";
 import {
@@ -249,6 +254,7 @@ export const router = {
 	},
 	issues: {
 		find: findIssues,
+		findByIds: findIssuesByIds,
 		findMine: findMyIssues,
 		search: searchIssues,
 	},

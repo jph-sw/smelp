@@ -175,6 +175,10 @@ const membersOnlyReads: Read[] = [
 	["activity.findForIssue", (c) => c.activity.findForIssue({ issueId })],
 	["activity.findWorkspace", (c) => c.activity.findWorkspace({ workspaceId })],
 	["issues.search", (c) => c.issues.search({ workspaceId, query: "board" })],
+	[
+		"issues.findByIds",
+		(c) => c.issues.findByIds({ workspaceId, ids: [issueId] }),
+	],
 	["issues.findMine", (c) => c.issues.findMine({ workspaceId })],
 	["workspaceMembers.find", (c) => c.workspaceMembers.find({ workspaceId })],
 	["workspaceInvites.find", (c) => c.workspaceInvites.find({ workspaceId })],

@@ -1,5 +1,6 @@
 import { Auth } from "@smelp/auth";
 import { DB, type tables } from "@smelp/db";
+import type { SQL } from "bun";
 import * as v from "valibot";
 import {
 	requireProjectPermission,
@@ -80,6 +81,58 @@ export type SearchResult = Pick<
 	projectArchived: boolean;
 };
 
+// Members of a project, in any role, find its issues. Being in the workspace alone
+// isn't enough. Instance admins also find public projects' issues, but never a
+// private project's unless they're in it: searching shouldn't reach past that.
+async function findReadableIssues(
+	workspaceId: string,
+	userId: string,
+	matches: SQL.Query<unknown>,
+) {
+	const isInstanceAdmin = (await auth.isInstanceAdmin(userId)) ? 1 : 0;
+
+	const rows = (await sql`
+		SELECT
+			issue.id,
+			issue.title,
+			issue.projectId,
+			issue.assignee,
+			issue.updatedAt,
+			project.name AS projectName,
+			project.archivedAt IS NOT NULL AS projectArchived,
+			state.name AS stateName,
+			state.color AS stateColor,
+			state."group" AS stateGroup,
+			assignee.displayName AS assigneeName,
+			assignee.image AS assigneeImage
+		FROM issue
+		JOIN project ON project.id = issue.projectId
+		JOIN state ON state.id = issue.state
+		LEFT JOIN auth_user assignee ON assignee.id = issue.assignee
+		WHERE project.workspaceId = ${workspaceId}
+			AND (
+				(${isInstanceAdmin} = 1 AND project.access = 'public')
+				OR EXISTS (
+					SELECT 1 FROM auth_space_member
+					WHERE auth_space_member.spaceId = project.spaceId
+						AND auth_space_member.userId = ${userId}
+				)
+			)
+			AND ${matches}
+		ORDER BY issue.updatedAt DESC
+		LIMIT ${SEARCH_LIMIT}
+	`) as (Omit<SearchResult, "projectArchived"> & {
+		projectArchived: number;
+	})[];
+	// SQLite answers 0 or 1, which the page would print as text.
+	return rows.map(
+		(row): SearchResult => ({
+			...row,
+			projectArchived: row.projectArchived === 1,
+		}),
+	);
+}
+
 export const searchIssues = base
 	.input(
 		v.object({
@@ -97,53 +150,41 @@ export const searchIssues = base
 		const query = input.query.trim();
 		if (query.length < 2) return [];
 
-		// Members of a project, in any role, find its issues. Being in the workspace alone
-		// isn't enough. Instance admins also find public projects' issues, but never a
-		// private project's unless they're in it: searching shouldn't reach past that.
-		const isInstanceAdmin = (await auth.isInstanceAdmin(caller.userId)) ? 1 : 0;
 		const pattern = `%${escapeLike(query)}%`;
-
-		const rows = (await sql`
-			SELECT
-				issue.id,
-				issue.title,
-				issue.projectId,
-				issue.assignee,
-				issue.updatedAt,
-				project.name AS projectName,
-				project.archivedAt IS NOT NULL AS projectArchived,
-				state.name AS stateName,
-				state.color AS stateColor,
-				state."group" AS stateGroup,
-				assignee.displayName AS assigneeName,
-				assignee.image AS assigneeImage
-			FROM issue
-			JOIN project ON project.id = issue.projectId
-			JOIN state ON state.id = issue.state
-			LEFT JOIN auth_user assignee ON assignee.id = issue.assignee
-			WHERE project.workspaceId = ${input.workspaceId}
-				AND (
-					(${isInstanceAdmin} = 1 AND project.access = 'public')
-					OR EXISTS (
-						SELECT 1 FROM auth_space_member
-						WHERE auth_space_member.spaceId = project.spaceId
-							AND auth_space_member.userId = ${caller.userId}
-					)
-				)
-				AND (
-					issue.title LIKE ${pattern} ESCAPE '!'
-					OR lower(issue.id) = lower(${query})
-				)
-			ORDER BY issue.updatedAt DESC
-			LIMIT ${SEARCH_LIMIT}
-		`) as (Omit<SearchResult, "projectArchived"> & {
-			projectArchived: number;
-		})[];
-		// SQLite answers 0 or 1, which the page would print as text.
-		return rows.map(
-			(row): SearchResult => ({
-				...row,
-				projectArchived: row.projectArchived === 1,
-			}),
+		return findReadableIssues(
+			input.workspaceId,
+			caller.userId,
+			sql`(
+				issue.title LIKE ${pattern} ESCAPE '!'
+				OR lower(issue.id) = lower(${query})
+			)`,
 		);
+	});
+
+// Answers in the order asked, leaving out items that are gone or can't be read.
+export const findIssuesByIds = base
+	.input(
+		v.object({
+			workspaceId: v.string(),
+			ids: v.pipe(
+				v.array(v.pipe(v.string(), v.maxLength(200))),
+				v.maxLength(SEARCH_LIMIT),
+			),
+		}),
+	)
+	.handler(async ({ input, context }) => {
+		const { caller } = await requireWorkspacePermission(
+			context.headers,
+			input.workspaceId,
+			"space:read",
+		);
+		if (input.ids.length === 0) return [];
+
+		const issues = await findReadableIssues(
+			input.workspaceId,
+			caller.userId,
+			sql`issue.id IN ${sql(input.ids)}`,
+		);
+		const byId = new Map(issues.map((issue) => [issue.id, issue]));
+		return [...new Set(input.ids)].flatMap((id) => byId.get(id) ?? []);
 	});

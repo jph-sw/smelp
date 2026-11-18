@@ -282,3 +282,73 @@ describe("issues.search access", () => {
 	test("rejects an unknown workspace", () =>
 		expectCode(search(owner, "login", "no_such_workspace"), "NOT_FOUND"));
 });
+
+describe("issues.findByIds", () => {
+	const key = (title: string) => keys[title] as string;
+	const findByIds = (user: User, ids: string[], workspaceId = WORKSPACE) =>
+		user.client.issues.findByIds({ workspaceId, ids });
+	const found = async (user: User, ids: string[]) =>
+		(await findByIds(user, ids)).map((issue) => issue.id);
+
+	test("answers in the order asked, with current details", async () => {
+		const ids = [key("Login page copy"), key("Fix the login button")];
+		expect(await found(owner, ids)).toEqual(ids);
+		expect(await found(owner, [...ids].reverse())).toEqual([...ids].reverse());
+
+		const [first] = await findByIds(owner, ids);
+		expect(first).toMatchObject({
+			title: "Login page copy",
+			projectName: `Project ${BETA}`,
+			projectArchived: false,
+		});
+		expect(first?.stateName).toBeString();
+	});
+
+	test("lists a repeated id once", async () => {
+		const id = key("Login page copy");
+		expect(await found(owner, [id, id])).toEqual([id]);
+	});
+
+	test("answers nothing for no ids", async () => {
+		expect(await findByIds(owner, [])).toEqual([]);
+	});
+
+	test("leaves out deleted items", async () => {
+		const deleted = await createIssue(owner, WORKSPACE, ALPHA, "Gone soon");
+		await owner.client.issue.delete({ id: deleted.id });
+		const kept = key("Fix the login button");
+		expect(await found(owner, [deleted.id, kept])).toEqual([kept]);
+	});
+
+	test("leaves out what the search wouldn't show", async () => {
+		const open = key("Fix the login button");
+		const secret = key("Login secrets rotation");
+		const unjoined = key("Login page copy");
+		const elsewhere = key("Login elsewhere");
+
+		expect(
+			await found(alphaMember, [open, secret, unjoined, elsewhere]),
+		).toEqual([open]);
+		expect(await found(workspaceGuest, [open])).toEqual([]);
+		expect(await found(instanceAdmin, [secret, unjoined])).toEqual([unjoined]);
+		expect(await found(owner, [elsewhere])).toEqual([]);
+	});
+
+	test("rejects people outside the workspace and signed-out callers", async () => {
+		const ids = [key("Fix the login button")];
+		await expectCode(findByIds(outsider, ids), "FORBIDDEN");
+		await expectCode(
+			clientFor().issues.findByIds({ workspaceId: WORKSPACE, ids }),
+			"UNAUTHORIZED",
+		);
+	});
+
+	test("rejects more ids than a page of results", () =>
+		expectCode(
+			findByIds(
+				owner,
+				Array.from({ length: 51 }, (_, i) => `SRA-${i}`),
+			),
+			"BAD_REQUEST",
+		));
+});
