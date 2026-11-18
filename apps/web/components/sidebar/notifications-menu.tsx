@@ -39,8 +39,7 @@ function describe(item: InboxItem) {
 	}
 }
 
-// A row keeps its last comment when a later event updates it, so only these
-// kinds are about that comment.
+// Older rows of other kinds can still hold a comment they aren't about.
 const linkedCommentId = (item: InboxItem) =>
 	item.type === "mention" || item.type === "comment"
 		? (item.commentId ?? undefined)

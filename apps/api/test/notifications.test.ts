@@ -276,6 +276,30 @@ describe("one notification per person per item", () => {
 		});
 	});
 
+	test("a row points at the comment its reason is about", async () => {
+		const issue = await owner.client.issue.create(newIssue("Which comment"));
+		await bob.client.comments.create({ issueId: issue.id, body: "mine" });
+		const mentioning = await carol.client.comments.create({
+			issueId: issue.id,
+			body: mention(bob),
+		});
+		await carol.client.comments.create({ issueId: issue.id, body: "again" });
+		await settle();
+		const [note] = await forIssue(bob, issue.id);
+		expect(note).toMatchObject({ type: "mention", commentId: mentioning.id });
+
+		await bob.client.notifications.markRead({ id: note?.id ?? "" });
+		const later = await carol.client.comments.create({
+			issueId: issue.id,
+			body: "later",
+		});
+		await settle();
+		expect((await forIssue(bob, issue.id))[0]).toMatchObject({
+			type: "comment",
+			commentId: later.id,
+		});
+	});
+
 	test("mentioning and assigning the same person gives one mention", async () => {
 		const issue = await owner.client.issue.create(newIssue("Both"));
 		await owner.client.issue.update({ id: issue.id, assignee: bob.id });
@@ -538,6 +562,21 @@ describe("watching", () => {
 			});
 		}
 		expect(await forIssue(owner, issue.id)).toHaveLength(0);
+	});
+
+	test("a state change replacing a comment no longer points at it", async () => {
+		const issue = await owner.client.issue.create(newIssue("Then moved"));
+		await bob.client.comments.create({ issueId: issue.id, body: "mine" });
+		await carol.client.comments.create({ issueId: issue.id, body: "reply" });
+		await owner.client.issue.update({
+			id: issue.id,
+			state: await otherState(),
+		});
+		await settle();
+		expect((await forIssue(bob, issue.id))[0]).toMatchObject({
+			type: "status_changed",
+			commentId: null,
+		});
 	});
 
 	test("an unread assignment outranks a later state change", async () => {
