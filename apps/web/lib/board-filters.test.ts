@@ -1,8 +1,10 @@
-import { describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import {
 	isFiltered,
 	matchesFilters,
 	parseBoardFilters,
+	recallBoardSearch,
+	rememberBoardSearch,
 	UNASSIGNED,
 } from "./board-filters";
 import type { IssuePriority } from "./issue-priorities";
@@ -168,5 +170,56 @@ describe("due date filters", () => {
 	test("ignores a due filter it doesn't know", () => {
 		expect(parseBoardFilters({ due: "soon" }).due).toBeUndefined();
 		expect(shown({ due: "soon" }, dated)).toHaveLength(dated.length);
+	});
+});
+
+describe("remembered board search", () => {
+	const stored = new Map<string, string>();
+	const original = globalThis.sessionStorage;
+
+	beforeEach(() => {
+		stored.clear();
+		globalThis.sessionStorage = {
+			getItem: (key: string) => stored.get(key) ?? null,
+			setItem: (key: string, value: string) => stored.set(key, value),
+		} as unknown as Storage;
+	});
+
+	afterEach(() => {
+		globalThis.sessionStorage = original;
+	});
+
+	const recalled = (projectId: string) =>
+		JSON.parse(JSON.stringify(recallBoardSearch(projectId)));
+
+	test("restores the filters and the view", () => {
+		rememberBoardSearch("ABC", { assignee: ["ana"], view: "list" });
+		expect(recalled("ABC")).toEqual({ assignee: ["ana"], view: "list" });
+	});
+
+	test("keeps each project's search apart", () => {
+		rememberBoardSearch("ABC", { type: "bug" });
+		expect(recalled("XYZ")).toEqual({});
+	});
+
+	test("the latest search replaces the earlier one", () => {
+		rememberBoardSearch("ABC", { type: "bug" });
+		rememberBoardSearch("ABC", {});
+		expect(recalled("ABC")).toEqual({});
+	});
+
+	test("ignores stored values it can't read", () => {
+		stored.set("smelp.board-search.ABC", "not json");
+		expect(recalled("ABC")).toEqual({});
+		stored.set("smelp.board-search.ABC", "null");
+		expect(recalled("ABC")).toEqual({});
+		stored.set("smelp.board-search.ABC", '{"view":"grid","type":"nope"}');
+		expect(recalled("ABC")).toEqual({});
+	});
+
+	test("works without browser storage", () => {
+		globalThis.sessionStorage = undefined as unknown as Storage;
+		expect(() => rememberBoardSearch("ABC", { type: "bug" })).not.toThrow();
+		expect(recalled("ABC")).toEqual({});
 	});
 });
