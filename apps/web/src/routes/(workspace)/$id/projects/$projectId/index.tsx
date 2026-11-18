@@ -53,7 +53,7 @@ function RouteComponent() {
 	);
 	usePageTitle(project.name);
 	const search = Route.useSearch();
-	const { view, ...filters } = search;
+	const { view, sort, ...filters } = search;
 	const navigate = Route.useNavigate();
 
 	useEffect(() => {
@@ -138,7 +138,7 @@ function RouteComponent() {
 			<BoardFilterBar
 				filters={filters}
 				onChange={(next) =>
-					navigate({ search: { ...next, view }, replace: true })
+					navigate({ search: { ...next, view, sort }, replace: true })
 				}
 				members={members}
 				states={states}
@@ -158,6 +158,11 @@ function RouteComponent() {
 					states={visibleStates}
 					members={members}
 					workspaceId={workspaceId}
+					sorting={{
+						sort,
+						onChange: (next) =>
+							navigate({ search: { ...search, sort: next }, replace: true }),
+					}}
 				/>
 			) : (
 				<DragDropProvider

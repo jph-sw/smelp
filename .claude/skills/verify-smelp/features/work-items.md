@@ -9,13 +9,13 @@ A member creates a work item in a project, sees it as a card in its state's colu
 - `item-edit`: title and description edit in place on the detail page. The description is a rich-text editor (Tiptap), stored as Markdown, with a `/` command menu and image uploads.
 - `item-state`: the `State` combobox moves the item to another column.
 - `item-type`: the `Type` select in the dialog (default Task) and on the detail page sets the type. Cards, list rows and the detail header show its icon, the board's `Filter by type` select narrows to one type, and a change is logged as `changed the type to <Type>`.
-- `item-priority`: the `Priority` select in the dialog (default None) and on the detail page sets the priority. Cards show its icon next to the assignee and list rows before the title, both only when it isn't None. The board's `Filter by priority` select narrows to one priority, and a change is logged as `changed the priority to <Priority>`.
+- `item-priority`: the `Priority` select in the dialog (default None) and on the detail page sets the priority. Cards show its icon next to the assignee. List rows show the icon and label in the `Priority` column, or the icon before the title below the `sm` breakpoint. All of these appear only when it isn't None. The board's `Filter by priority` select narrows to one priority, and a change is logged as `changed the priority to <Priority>`.
 - `item-delete`: `Delete work item` removes it.
 
 ## How to get to it (user POV)
 
 - Press `New work item` at the top of the sidebar, from any workspace page.
-- Press a card (`<Type> <KEY> <title>`) on a project board (`/<workspace>/projects/<PROJECT>`), or on the List view (`?view=list`).
+- Press a card (`<Type> <KEY> <title>`) on a project board (`/<workspace>/projects/<PROJECT>`), or a row on the List view (`?view=list`), whose link is named by the title alone.
 - Open a search result (see [search.md](./search.md)).
 - Drag a card to another column. This is a second way to change state.
 
