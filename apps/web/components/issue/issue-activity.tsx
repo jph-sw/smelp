@@ -5,11 +5,13 @@ import {
 	useQueryClient,
 	useSuspenseQuery,
 } from "@tanstack/react-query";
+import { useLocation } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
 	ACTIVITY_FILTERS,
 	ACTIVITY_SORTS,
 	arrangeTimeline,
+	displayedActivityFilter,
 	isActivityFilter,
 	isActivitySort,
 	useActivityView,
@@ -26,7 +28,12 @@ import { toastError } from "#/lib/errors";
 import { RichTextEditor } from "../rich-text/rich-text-editor";
 import { Button } from "../ui/button";
 import { ViewSelect } from "./activity-view-select";
-import { CommentItem, composerBox, Timestamp } from "./comment-item";
+import {
+	CommentItem,
+	commentElementId,
+	composerBox,
+	Timestamp,
+} from "./comment-item";
 import { describeActivity } from "./describe-activity";
 
 const EMPTY_MESSAGES = {
@@ -34,6 +41,66 @@ const EMPTY_MESSAGES = {
 	comments: "No comments yet.",
 	history: "No changes yet.",
 } as const;
+
+// Rich text and attachments can still move the comment after the first paint.
+const SETTLE_MS = 3000;
+const SHIFT_TOLERANCE_PX = 2;
+const USER_SCROLL_INPUTS = ["wheel", "touchmove", "keydown", "pointerdown"];
+
+function revealComment(element: HTMLElement) {
+	let scroller = element.parentElement;
+	while (scroller && !/auto|scroll/.test(getComputedStyle(scroller).overflowY))
+		scroller = scroller.parentElement;
+	const pane = scroller ?? document.documentElement;
+	const behavior: ScrollBehavior = matchMedia(
+		"(prefers-reduced-motion: reduce)",
+	).matches
+		? "instant"
+		: "smooth";
+
+	// Measured against the content, so the scroll itself doesn't count as a shift.
+	const measure = () => ({
+		offset:
+			element.getBoundingClientRect().top -
+			pane.getBoundingClientRect().top +
+			pane.scrollTop,
+		contentHeight: pane.scrollHeight,
+		paneHeight: pane.clientHeight,
+	});
+
+	let placed: ReturnType<typeof measure> | undefined;
+	let startedAt: number | undefined;
+	let frame = 0;
+	const stop = () => {
+		cancelAnimationFrame(frame);
+		for (const input of USER_SCROLL_INPUTS)
+			window.removeEventListener(input, stop, true);
+	};
+	const settle = (now: number) => {
+		startedAt ??= now;
+		const layout = measure();
+		if (
+			!placed ||
+			Math.abs(layout.offset - placed.offset) > SHIFT_TOLERANCE_PX ||
+			layout.contentHeight !== placed.contentHeight ||
+			layout.paneHeight !== placed.paneHeight
+		) {
+			placed = layout;
+			element.scrollIntoView({
+				behavior,
+				block: element.offsetHeight > layout.paneHeight ? "start" : "center",
+			});
+		}
+		if (now - startedAt < SETTLE_MS) frame = requestAnimationFrame(settle);
+		else stop();
+	};
+
+	for (const input of USER_SCROLL_INPUTS)
+		window.addEventListener(input, stop, { capture: true, passive: true });
+	element.focus({ preventScroll: true });
+	settle(performance.now());
+	return stop;
+}
 
 export function IssueActivity({
 	issueId,
@@ -44,6 +111,7 @@ export function IssueActivity({
 	canWrite = false,
 	readOnly = false,
 	showHistory = true,
+	targetCommentId,
 }: {
 	issueId: string;
 	userId: string | undefined;
@@ -56,6 +124,8 @@ export function IssueActivity({
 	readOnly?: boolean;
 	/** The changes made to the item. Only members may read them. */
 	showHistory?: boolean;
+	/** The comment a link pointed at, which stays in the URL. */
+	targetCommentId?: string;
 }) {
 	const queryClient = useQueryClient();
 	const commentsOptions = commentsQueryOptions({ issueId });
@@ -69,6 +139,37 @@ export function IssueActivity({
 	// A new editor after each post starts empty, with no undo history.
 	const [composer, setComposer] = useState(0);
 	const [view, setView] = useActivityView();
+	const [filterPickedAt, setFilterPickedAt] = useState<string | null>(null);
+	const [highlightEndedAt, setHighlightEndedAt] = useState<string | null>(null);
+
+	// The location moves ahead of the route's search while a navigation loads, so
+	// its key only counts once both point at the same comment.
+	const locationKey = useLocation({
+		select: (location) =>
+			location.search.comment === targetCommentId
+				? (location.state.__TSR_key ?? "")
+				: null,
+	});
+	const targetExists = comments.some(({ id }) => id === targetCommentId);
+	const arrival =
+		targetCommentId && targetExists && locationKey !== null
+			? `${targetCommentId}:${locationKey}`
+			: null;
+
+	// A notification can be newer than the comments already on screen.
+	useEffect(() => {
+		if (targetCommentId && locationKey !== null && !targetExists) {
+			queryClient.invalidateQueries({
+				queryKey: commentsQueryOptions({ issueId }).queryKey,
+			});
+		}
+	}, [targetCommentId, locationKey, targetExists, queryClient, issueId]);
+
+	useEffect(() => {
+		if (!arrival || !targetCommentId) return;
+		const element = document.getElementById(commentElementId(targetCommentId));
+		return element ? revealComment(element) : undefined;
+	}, [arrival, targetCommentId]);
 
 	useEffect(() => {
 		window.addEventListener("pagehide", draftStore.flush);
@@ -154,7 +255,12 @@ export function IssueActivity({
 	};
 
 	// Without history only comments remain, whatever filter was saved.
-	const filter = showHistory ? view.filter : "all";
+	const filter = showHistory
+		? displayedActivityFilter(view.filter, {
+				revealsComment: arrival !== null,
+				pickedSinceArrival: filterPickedAt === arrival,
+			})
+		: "all";
 	const timeline = arrangeTimeline(
 		[
 			...comments.map((comment) => ({ kind: "comment" as const, ...comment })),
@@ -203,7 +309,10 @@ export function IssueActivity({
 							value={filter}
 							options={ACTIVITY_FILTERS}
 							isOption={isActivityFilter}
-							onChange={(next) => setView({ filter: next })}
+							onChange={(next) => {
+								setView({ filter: next });
+								setFilterPickedAt(arrival);
+							}}
 						/>
 					)}
 					<ViewSelect
@@ -255,6 +364,13 @@ export function IssueActivity({
 							isRemoving={isRemoving}
 							onDelete={() => removeComment({ id: entry.id })}
 							onEdited={refreshComments}
+							isTarget={entry.id === targetCommentId}
+							highlightKey={
+								entry.id === targetCommentId && arrival !== highlightEndedAt
+									? arrival
+									: null
+							}
+							onHighlightEnd={() => setHighlightEndedAt(arrival)}
 						/>
 					),
 				)}

@@ -264,6 +264,18 @@
     }
 }
 
+@layer components {
+  .comment-highlight {
+    @apply pointer-events-none absolute -inset-px rounded-[inherit] bg-primary/10 ring-2 ring-primary/60;
+    animation: comment-highlight 2.4s ease-out forwards;
+  }
+}
+
+@keyframes comment-highlight {
+  0%, 40% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
 /* Touch screens: everything people tap gets a hit area of at least 44px, and
    text fields stay at 16px so iOS doesn't zoom in on focus. Inline links in
    running text are inline boxes, which min-size doesn't affect. Mouse and
@@ -321,5 +333,8 @@
   }
   [data-slot="collapsible-panel"] {
     transition: none !important;
+  }
+  .comment-highlight {
+    animation-timing-function: step-end;
   }
 }
