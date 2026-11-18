@@ -33,6 +33,21 @@ export const searchIssuesQueryOptions = ({
 		enabled: query.trim().length >= 2,
 	});
 
+export const recentIssuesQueryOptions = ({
+	workspaceId,
+	ids,
+	enabled,
+}: {
+	workspaceId: string;
+	ids: string[];
+	enabled: boolean;
+}) =>
+	queryOptions({
+		queryKey: ["recent-issues", workspaceId, ids],
+		queryFn: () => orpc.issues.findByIds({ workspaceId, ids }),
+		enabled: enabled && ids.length > 0,
+	});
+
 export const issueQueryOptions = ({ issueId }: { issueId: string }) =>
 	queryOptions({
 		queryKey: ["issue", issueId],

@@ -50,6 +50,7 @@ import {
 } from "#/lib/data/project-members";
 import { statesQueryOptions } from "#/lib/data/state";
 import { toastError } from "#/lib/errors";
+import { recordRecentIssue } from "#/lib/recent-issues";
 import { cn } from "#/lib/utils";
 import { useWorkspaceViewer } from "#/lib/workspace-viewer";
 
@@ -184,6 +185,11 @@ function RouteComponent() {
 			)
 			.catch(() => {});
 	}, [issueId, isPublic, queryClient]);
+
+	const userId = user?.id;
+	useEffect(() => {
+		if (!isPublic) recordRecentIssue(userId, workspaceId, issue.id);
+	}, [userId, workspaceId, issue.id, isPublic]);
 
 	const { mutate: update } = useMutation({
 		mutationFn: (changes: Omit<Parameters<typeof updateIssue>[0], "id">) =>
