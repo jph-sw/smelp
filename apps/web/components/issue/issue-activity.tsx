@@ -110,7 +110,6 @@ export function IssueActivity({
 	canManage,
 	canWrite = false,
 	readOnly = false,
-	showHistory = true,
 	targetCommentId,
 }: {
 	issueId: string;
@@ -122,18 +121,15 @@ export function IssueActivity({
 	canWrite?: boolean;
 	/** Archived project: show the discussion, but no way to add to or remove from it. */
 	readOnly?: boolean;
-	/** The changes made to the item. Only members may read them. */
-	showHistory?: boolean;
 	/** The comment a link pointed at, which stays in the URL. */
 	targetCommentId?: string;
 }) {
 	const queryClient = useQueryClient();
 	const commentsOptions = commentsQueryOptions({ issueId });
 	const { data: comments } = useSuspenseQuery(commentsOptions);
-	const { data: activity = [] } = useQuery({
-		...issueActivityQueryOptions({ issueId }),
-		enabled: showHistory,
-	});
+	const { data: activity = [] } = useQuery(
+		issueActivityQueryOptions({ issueId }),
+	);
 	const [draftStore] = useState(() => commentDraftStore(userId, issueId));
 	const [draft, setDraft] = useState(draftStore.read);
 	// A new editor after each post starts empty, with no undo history.
@@ -254,13 +250,10 @@ export function IssueActivity({
 		if (draft.trim() && !isAdding) addComment({ issueId, body: draft });
 	};
 
-	// Without history only comments remain, whatever filter was saved.
-	const filter = showHistory
-		? displayedActivityFilter(view.filter, {
-				revealsComment: arrival !== null,
-				pickedSinceArrival: filterPickedAt === arrival,
-			})
-		: "all";
+	const filter = displayedActivityFilter(view.filter, {
+		revealsComment: arrival !== null,
+		pickedSinceArrival: filterPickedAt === arrival,
+	});
 	const timeline = arrangeTimeline(
 		[
 			...comments.map((comment) => ({ kind: "comment" as const, ...comment })),
@@ -303,18 +296,16 @@ export function IssueActivity({
 			<div className="flex flex-wrap items-center justify-between gap-2">
 				<h2 className="text-sm font-semibold">Activity</h2>
 				<div className="flex items-center gap-2">
-					{showHistory && (
-						<ViewSelect
-							label="Show"
-							value={filter}
-							options={ACTIVITY_FILTERS}
-							isOption={isActivityFilter}
-							onChange={(next) => {
-								setView({ filter: next });
-								setFilterPickedAt(arrival);
-							}}
-						/>
-					)}
+					<ViewSelect
+						label="Show"
+						value={filter}
+						options={ACTIVITY_FILTERS}
+						isOption={isActivityFilter}
+						onChange={(next) => {
+							setView({ filter: next });
+							setFilterPickedAt(arrival);
+						}}
+					/>
 					<ViewSelect
 						label="Sort"
 						value={view.sort}
