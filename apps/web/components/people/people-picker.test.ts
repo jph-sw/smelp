@@ -1,4 +1,7 @@
 import { describe, expect, test } from "bun:test";
+// ui-sdk's shared shortcuts stay inert for the whole run when a ui-sdk
+// component loads before the DOM exists.
+import "#/test/dom";
 import type { ProjectMember } from "@smelp/db";
 import { sortMembers } from "./people-picker";
 
