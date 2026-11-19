@@ -110,6 +110,7 @@ export function IssueActivity({
 	canManage,
 	canWrite = false,
 	readOnly = false,
+	join,
 	targetCommentId,
 }: {
 	issueId: string;
@@ -119,8 +120,10 @@ export function IssueActivity({
 	canManage: boolean;
 	/** A member or admin of a project that isn't archived, who can attach files. */
 	canWrite?: boolean;
-	/** Archived project: show the discussion, but no way to add to or remove from it. */
+	/** Archived, or not in the project: show the discussion, but no way to add to or remove from it. */
 	readOnly?: boolean;
+	/** Offered in place of the comment box to someone who may join the project. */
+	join?: { onJoin: () => void; isJoining: boolean };
 	/** The comment a link pointed at, which stays in the URL. */
 	targetCommentId?: string;
 }) {
@@ -263,7 +266,17 @@ export function IssueActivity({
 	);
 	const showEmpty = timeline.length === 0 && (readOnly || filter !== "all");
 
-	const composerForm = !readOnly && (
+	const composerForm = readOnly ? (
+		join && (
+			<Button
+				variant="secondary"
+				disabled={join.isJoining}
+				onClick={join.onJoin}
+			>
+				Join project to comment
+			</Button>
+		)
+	) : (
 		<form
 			className="space-y-2"
 			onSubmit={(event) => {

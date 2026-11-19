@@ -58,7 +58,14 @@ export function projectPermissions(
 		// Includes archive, unarchive and delete, which still work while archived.
 		canManage: isInstanceAdmin || role === "admin",
 		// Guests may comment too. Someone reading from outside may not.
-		canComment: !isArchived && viewer.mode !== "public",
+		canComment: !isArchived && (isInstanceAdmin || role !== undefined),
+		// Someone outside the project reads it only because it's public, and any
+		// workspace member who can write may join a public project.
+		canJoin:
+			!isArchived &&
+			role === undefined &&
+			viewer.mode === "member" &&
+			viewer.role !== "guest",
 	};
 }
 
