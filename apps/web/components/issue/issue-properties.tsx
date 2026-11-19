@@ -250,13 +250,16 @@ export function IssueProperties({
 			/>
 			<div className="grid grid-cols-[5.5rem_1fr] items-center gap-2">
 				<span className="text-muted-foreground">Assignee</span>
-				<AssigneeSelect
-					value={issue.assignee}
-					members={members}
-					disabled={!canWrite}
-					className="w-full border-transparent bg-transparent px-2 font-normal hover:border-transparent hover:bg-accent disabled:after:hidden"
-					onChange={(assignee) => onUpdate({ assignee })}
-				/>
+				<div className="flex min-w-0 items-center gap-1">
+					<AssigneeSelect
+						value={issue.assignee}
+						members={members}
+						disabled={!canWrite}
+						offerSelf={canWrite}
+						className="min-w-0 flex-1 border-transparent bg-transparent px-2 font-normal hover:border-transparent hover:bg-accent disabled:after:hidden"
+						onChange={(assignee) => onUpdate({ assignee })}
+					/>
+				</div>
 			</div>
 			<PropertySelect
 				label="Cycle"

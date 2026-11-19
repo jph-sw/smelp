@@ -24,6 +24,10 @@ function renderDialog() {
 		["states", project.projectId],
 		[{ id: "state-1", isDefault: true }],
 	);
+	queryClient.setQueryData(
+		["project-members", project.projectId],
+		[{ userId: "user-1", displayName: "Me", fullName: "Me" }],
+	);
 	render(
 		<QueryClientProvider client={queryClient}>
 			<CreateIssueDialog />
@@ -191,6 +195,18 @@ describe("CreateIssueDialog create another", () => {
 		await waitFor(() =>
 			expect(screen.queryByRole("dialog") === null).toBe(true),
 		);
+	});
+
+	test("Assign to me fills the assignee and sends it on create", async () => {
+		const user = renderDialog();
+		await open();
+		await user.click(screen.getByRole("button", { name: "Assign to me" }));
+		expect(screen.getByRole("button", { name: "Assignee: Me" })).toBeTruthy();
+		expect(screen.queryByRole("button", { name: "Assign to me" })).toBeNull();
+		await user.type(title(), "First{Enter}");
+		await waitFor(() => expect(creates).toBe(1));
+		const request = fetchSpy.mock.calls[0]?.[0] as Request;
+		expect((await request.json()).json.assignee).toBe("user-1");
 	});
 
 	test("Ctrl+Enter in the description creates the item", async () => {
