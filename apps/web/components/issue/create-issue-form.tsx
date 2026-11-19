@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import * as v from "valibot";
 import { useAppForm } from "#/hooks/form";
 import {
@@ -46,13 +46,11 @@ export function CreateIssueForm({
 	params,
 	createAnother,
 	onCreateAnotherChange,
-	onSuccess,
 	onDiscard,
 }: {
 	params: CreateIssueDialogParams;
 	createAnother: boolean;
 	onCreateAnotherChange: (createAnother: boolean) => void;
-	onSuccess: () => void;
 	onDiscard: () => void;
 }) {
 	const { data: states } = useQuery(
@@ -71,6 +69,7 @@ export function CreateIssueForm({
 	const descriptionLabel = useId();
 	const descriptionHint = useId();
 	const [defaultValues] = useState(() => readCreateIssueDraft(params));
+	const formElement = useRef<HTMLFormElement>(null);
 
 	const form = useAppForm({
 		defaultValues,
@@ -90,6 +89,21 @@ export function CreateIssueForm({
 				});
 				return;
 			}
+
+			const keepOpen = createAnother;
+			const setText = (title: string, description: string) => {
+				// Focus first, since the description editor ignores a new value
+				// while it has focus.
+				formElement.current
+					?.querySelector<HTMLInputElement>('input[name="title"]')
+					?.focus();
+				form.setFieldValue("title", title, { dontValidate: true });
+				form.setFieldValue("description", description, { dontValidate: true });
+				saveCreateIssueDraft(params, form.state.values);
+			};
+			// Clear right away so text typed while the create runs starts the
+			// next item.
+			if (keepOpen) setText("", "");
 
 			try {
 				const res = await orpc.issue.create({
@@ -131,17 +145,18 @@ export function CreateIssueForm({
 						queryClient.invalidateQueries({ queryKey });
 					}
 				}
-				if (createAnother) {
-					saveCreateIssueDraft(params, {
-						...value,
-						title: "",
-						description: "",
-					});
-				} else {
+				if (!keepOpen) {
 					deleteCreateIssueDraft(params);
+					closeCreateIssueDialog();
 				}
-				onSuccess();
 			} catch (e) {
+				if (keepOpen) {
+					const { title, description } = form.state.values;
+					setText(
+						[value.title, title].filter(Boolean).join(" "),
+						[value.description, description].filter(Boolean).join("\n\n"),
+					);
+				}
 				toastError(e);
 			}
 		},
@@ -154,6 +169,7 @@ export function CreateIssueForm({
 
 	return (
 		<form
+			ref={formElement}
 			onSubmit={(e) => {
 				e.preventDefault();
 				submit();
