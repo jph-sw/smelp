@@ -63,14 +63,13 @@ export const Route = createFileRoute("/(workspace)/$id/browse/$issueId")({
 				? search.comment
 				: undefined,
 	}),
-	loader: async ({ context: { queryClient, viewer }, params: { issueId } }) => {
+	loader: async ({ context: { queryClient }, params: { issueId } }) => {
 		const [issue] = await Promise.all([
 			queryClient.ensureQueryData(issueQueryOptions({ issueId })),
 			queryClient.ensureQueryData(commentsQueryOptions({ issueId })),
 			queryClient.ensureQueryData(linksQueryOptions({ issueId })),
 			queryClient.ensureQueryData(githubRefsQueryOptions({ issueId })),
-			viewer.mode !== "public" &&
-				queryClient.ensureQueryData(issueActivityQueryOptions({ issueId })),
+			queryClient.ensureQueryData(issueActivityQueryOptions({ issueId })),
 			queryClient.ensureQueryData(attachmentsQueryOptions({ issueId })),
 			queryClient.ensureQueryData(issueRelationsQueryOptions({ issueId })),
 		]);
@@ -371,7 +370,6 @@ function RouteComponent() {
 						canManage={canManage}
 						canWrite={canWrite}
 						readOnly={!canComment}
-						showHistory={!isPublic}
 						targetCommentId={targetCommentId}
 					/>
 				</div>
