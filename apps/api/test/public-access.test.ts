@@ -158,6 +158,7 @@ const projectReads: Read[] = [
 	["issues.find", (c) => c.issues.find({ projectId: OPEN_PROJECT })],
 	["issue.find", (c) => c.issue.find({ issueId })],
 	["comments.find", (c) => c.comments.find({ issueId })],
+	["activity.findForIssue", (c) => c.activity.findForIssue({ issueId })],
 	["links.find", (c) => c.links.find({ issueId })],
 	["issueRelations.find", (c) => c.issueRelations.find({ issueId })],
 	["attachments.find", (c) => c.attachments.find({ issueId })],
@@ -172,7 +173,6 @@ const projectReads: Read[] = [
 ];
 
 const membersOnlyReads: Read[] = [
-	["activity.findForIssue", (c) => c.activity.findForIssue({ issueId })],
 	["activity.findWorkspace", (c) => c.activity.findWorkspace({ workspaceId })],
 	["issues.search", (c) => c.issues.search({ workspaceId, query: "board" })],
 	[
@@ -596,6 +596,21 @@ describe("a private project in a public workspace", () => {
 		}
 	});
 
+	test("doesn't show through a work item's activity", async () => {
+		const relatedIds = async (client: Client) =>
+			(await client.activity.findForIssue({ issueId }))
+				.map((entry) => entry.relatedId)
+				.filter((id) => id !== null)
+				.sort();
+		expect(await relatedIds(owner.client)).toEqual(
+			[relatedIssueId, secretIssueId].sort(),
+		);
+
+		for (const client of [visitor, outsider.client, colleague.client]) {
+			expect(await relatedIds(client)).toEqual([relatedIssueId]);
+		}
+	});
+
 	test("doesn't show through a relation from a public work item", async () => {
 		const forOwner = await owner.client.issueRelations.find({ issueId });
 		expect(forOwner.map((relation) => relation.issue.id).sort()).toEqual(
@@ -632,6 +647,9 @@ describe("someone signed in who isn't a member", () => {
 			projectId: OPEN_PROJECT,
 		});
 		expect(issues).toHaveLength(2);
+		expect(await colleague.client.activity.findForIssue({ issueId })).toEqual(
+			await member.client.activity.findForIssue({ issueId }),
+		);
 		await expectCode(
 			colleague.client.comments.create({ issueId, body: "Not yet" }),
 			"FORBIDDEN",
