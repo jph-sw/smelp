@@ -209,6 +209,7 @@ export function CreateIssueForm({
 								value={field.state.value}
 								members={members ?? []}
 								className="w-full"
+								offerSelf
 								onChange={field.handleChange}
 							/>
 						</Field>
