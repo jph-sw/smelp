@@ -42,6 +42,33 @@ export function workspacePermissions(viewer: WorkspaceViewer) {
 	};
 }
 
+// What the person on the page can do in a project, given their role in it.
+export function projectPermissions(
+	viewer: WorkspaceViewer,
+	role: tables["auth_space_member"]["role"] | undefined,
+	project: Pick<tables["project"], "archivedAt">,
+) {
+	const isInstanceAdmin = viewer.mode === "instanceAdmin";
+	const isArchived = project.archivedAt !== null;
+	return {
+		isArchived,
+		// An archived project is read-only for everyone, admins included.
+		canWrite:
+			!isArchived && (isInstanceAdmin || role === "member" || role === "admin"),
+		// Includes archive, unarchive and delete, which still work while archived.
+		canManage: isInstanceAdmin || role === "admin",
+		// Guests may comment too. Someone reading from outside may not.
+		canComment: !isArchived && (isInstanceAdmin || role !== undefined),
+		// Someone outside the project reads it only because it's public, and any
+		// workspace member who can write may join a public project.
+		canJoin:
+			!isArchived &&
+			role === undefined &&
+			viewer.mode === "member" &&
+			viewer.role !== "guest",
+	};
+}
+
 export function useWorkspaceViewer() {
 	return useRouteContext({
 		from: "/(workspace)/$id",
