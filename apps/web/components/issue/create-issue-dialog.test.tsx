@@ -39,6 +39,20 @@ function renderDialog() {
 const open = (params: CreateIssueDialogParams = project) =>
 	act(async () => openCreateIssueDialog(params));
 const title = () => screen.getByLabelText<HTMLInputElement>("Title");
+const description = () => screen.getByRole("textbox", { name: "Description" });
+// Browsers give Escape keyCode 27, which ProseMirror's keydown handler checks.
+// userEvent leaves it 0 here.
+const pressEscape = (target: Element) =>
+	act(async () => {
+		const event = new KeyboardEvent("keydown", {
+			key: "Escape",
+			code: "Escape",
+			bubbles: true,
+			cancelable: true,
+		});
+		Object.defineProperty(event, "keyCode", { value: 27 });
+		target.dispatchEvent(event);
+	});
 const discard = () => screen.queryByRole("button", { name: "Discard draft" });
 
 describe("CreateIssueDialog destination", () => {
@@ -104,6 +118,29 @@ describe("CreateIssueDialog drafts", () => {
 		expect(screen.queryByRole("dialog")).toBeNull();
 		await open();
 		expect(title().value).toBe("Fix login");
+	});
+
+	test("a description typed before Escape is there on reopening", async () => {
+		const user = renderDialog();
+		await open();
+		await user.click(description());
+		await user.keyboard("Steps to reproduce");
+		await pressEscape(description());
+		// A failing toBeNull on a happy-dom element crashes Bun as it prints it.
+		expect(screen.queryByRole("dialog") === null).toBe(true);
+		await open();
+		expect(description().textContent).toBe("Steps to reproduce");
+	});
+
+	test("Escape in the slash menu closes only the menu", async () => {
+		const user = renderDialog();
+		await open();
+		await user.click(description());
+		await user.keyboard("/");
+		expect(screen.getByRole("listbox")).toBeTruthy();
+		await pressEscape(description());
+		expect(screen.queryByRole("listbox") === null).toBe(true);
+		expect(screen.getByRole("dialog")).toBeTruthy();
 	});
 
 	test("a title typed before the close button is there on reopening", async () => {
