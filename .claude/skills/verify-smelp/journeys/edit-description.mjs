@@ -57,6 +57,24 @@ export default async ({ page, seed, step, shot, aria, expect, evidenceDir }) => 
 	);
 	expect((await createDesc.innerText()).includes("/quo"), "typed text kept");
 	for (let i = 0; i < 5; i++) await page.keyboard.press("Backspace");
+	step("Choosing Link in the dialog focuses the field, and Escape closes only the field");
+	await page.keyboard.type(" /link");
+	await page.keyboard.press("Enter");
+	const dialogAddress = dialog.getByRole("textbox", { name: "Link address" });
+	await dialogAddress.waitFor();
+	expect(await dialogAddress.evaluate((el) => el === document.activeElement), "link field has focus");
+	await page.keyboard.type("https://example.com");
+	expect((await dialogAddress.inputValue()) === "https://example.com", "typing goes into the link field");
+	await shot("create-link-field");
+	await page.keyboard.press("Escape");
+	expect((await dialogAddress.count()) === 0, "Escape closed the link field");
+	expect(await dialog.isVisible(), "dialog stays open after Escape in the link field");
+	// Tiptap moves focus back on the next animation frame.
+	await page.waitForFunction(() => document.activeElement?.classList.contains("ProseMirror"));
+	await page.keyboard.type("!");
+	expect((await createDesc.innerText()).includes("first task !"), "typing after Escape goes back into the description");
+	await page.keyboard.press("Backspace");
+	await page.keyboard.press("Backspace");
 	step("Pasting a file in the create dialog doesn't upload");
 	const b64 = await pngBase64("#c0392b");
 	await createDesc.evaluate(async (el, b64) => {
@@ -204,6 +222,8 @@ export default async ({ page, seed, step, shot, aria, expect, evidenceDir }) => 
 	await page.keyboard.type("/link");
 	await page.keyboard.press("Enter");
 	const address = page.getByRole("textbox", { name: "Link address" });
+	await address.waitFor();
+	expect(await address.evaluate((el) => el === document.activeElement), "link field has focus on the item page");
 	await address.fill("javascript:alert(1)");
 	await address.press("Enter");
 	expect((await address.getAttribute("aria-invalid")) === "true", "unsafe address refused");
