@@ -172,6 +172,8 @@ describe("CreateIssueDialog create another", () => {
 	const createAnother = () =>
 		screen.getByRole("switch", { name: "Create another" });
 	const type = () => screen.getByRole("combobox", { name: "Type" });
+	const description = () =>
+		screen.getByRole("textbox", { name: "Description" });
 
 	test("with the toggle on, a create clears the text and keeps the rest", async () => {
 		const user = renderDialog();
@@ -186,6 +188,58 @@ describe("CreateIssueDialog create another", () => {
 		expect(document.activeElement === title()).toBe(true);
 		expect(type().textContent).toContain("Bug");
 		expect(createAnother().getAttribute("aria-checked")).toBe("true");
+	});
+
+	test("text typed during a slow create starts the next item", async () => {
+		let finish = () => {};
+		release = new Promise((resolve) => {
+			finish = resolve;
+		});
+		const user = renderDialog();
+		await open();
+		await user.click(createAnother());
+		await user.type(title(), "First");
+		await user.type(description(), "Details");
+		await user.click(title());
+		await user.keyboard("{Enter}");
+		await waitFor(() => expect(creates).toBe(1));
+		await user.type(title(), "Next");
+		expect(title().value).toBe("Next");
+		finish();
+		await waitFor(() =>
+			expect(
+				screen.getByRole("button", { name: "Create work item" }),
+			).toHaveProperty("disabled", false),
+		);
+		expect(title().value).toBe("Next");
+		expect(description().textContent).toBe("");
+	});
+
+	test("a failed create keeps the submitted title and description", async () => {
+		fetchSpy.mockImplementation((async () => {
+			creates += 1;
+			return Response.json(
+				{
+					json: {
+						defined: false,
+						code: "INTERNAL_SERVER_ERROR",
+						status: 500,
+						message: "Boom",
+					},
+				},
+				{ status: 500 },
+			);
+		}) as unknown as typeof fetch);
+		const user = renderDialog();
+		await open();
+		await user.click(createAnother());
+		await user.type(title(), "First");
+		await user.type(description(), "Details");
+		await user.click(title());
+		await user.keyboard("{Enter}");
+		await waitFor(() => expect(creates).toBe(1));
+		await waitFor(() => expect(title().value).toBe("First"));
+		expect(description().textContent).toBe("Details");
 	});
 
 	test("with the toggle off, a create closes the dialog", async () => {

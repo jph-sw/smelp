@@ -63,7 +63,6 @@ export function CreateIssueDialog() {
 							params={state.params}
 							createAnother={createAnother}
 							onCreateAnotherChange={setCreateAnother}
-							onSuccess={createAnother ? resetForm : closeCreateIssueDialog}
 							onDiscard={resetForm}
 						/>
 					</>
