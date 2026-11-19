@@ -6,6 +6,7 @@ import {
 	DrawerContent,
 	DrawerTitle,
 } from "@ui-sdk/react/drawer";
+import { useShortcut } from "@ui-sdk/react/shortcuts";
 import * as React from "react";
 
 import { Button } from "#/components/ui/button";
@@ -14,7 +15,6 @@ import { cn } from "#/lib/utils";
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state";
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
-const SIDEBAR_KEYBOARD_SHORTCUT = "b";
 
 type SidebarContextProps = {
 	open: boolean;
@@ -56,19 +56,7 @@ function SidebarProvider({
 		else setOpen(!open);
 	}, [isMobile, open, setOpen]);
 
-	React.useEffect(() => {
-		const onKeyDown = (event: KeyboardEvent) => {
-			if (
-				event.key === SIDEBAR_KEYBOARD_SHORTCUT &&
-				(event.metaKey || event.ctrlKey)
-			) {
-				event.preventDefault();
-				toggleSidebar();
-			}
-		};
-		window.addEventListener("keydown", onKeyDown);
-		return () => window.removeEventListener("keydown", onKeyDown);
-	}, [toggleSidebar]);
+	useShortcut("mod+b", toggleSidebar, { description: "Toggle the sidebar" });
 
 	const value = React.useMemo(
 		() => ({
