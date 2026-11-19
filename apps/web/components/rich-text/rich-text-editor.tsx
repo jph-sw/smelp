@@ -313,6 +313,19 @@ export function RichTextEditor({
 							class: "rich-text min-h-24 outline-none",
 						}
 					: { role: "group", ...aria, class: "rich-text" },
+				// ProseMirror marks every Escape as handled, which hides it from a
+				// dialog around the editor. Without a use for it here, it passes by.
+				handleDOMEvents: {
+					keydown: (_view, event) => {
+						const { onCommit, onCancel } = latest.current;
+						return (
+							event.key === "Escape" &&
+							!onCommit &&
+							!onCancel &&
+							!isSlashMenuOpen(store)
+						);
+					},
+				},
 				handleKeyDown: (view, event) => {
 					const editor = editorRef.current;
 					const { onCommit, onSubmit, onCancel } = latest.current;
