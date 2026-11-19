@@ -2,6 +2,7 @@ import { HomeIcon, PlusSignIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { tables } from "@smelp/db";
 import { Link, useMatchRoute, useParams } from "@tanstack/react-router";
+import { useShortcut, useShortcutHint } from "@ui-sdk/react/shortcuts";
 import {
 	Sidebar,
 	SidebarContent,
@@ -49,6 +50,20 @@ export function AppSidebar({
 		? undefined
 		: (myProjects.find((project) => project.id === currentProjectId) ??
 			myProjects[0]);
+	const createWorkItem = () =>
+		targetProject &&
+		openCreateIssueDialog({
+			workspaceId: workspace.id,
+			projectId: targetProject.id,
+			projectName: targetProject.name,
+		});
+	// Registered here rather than in the Sidebar's children: on mobile those sit
+	// in a Drawer that unmounts them while it's closed.
+	useShortcut(isPublic ? null : "c", createWorkItem, {
+		description: "Create a work item",
+		when: () => !!targetProject,
+	});
+	const createHint = useShortcutHint("c");
 
 	return (
 		<Sidebar
@@ -66,17 +81,14 @@ export function AppSidebar({
 										size="lg"
 										className="mb-2 w-full"
 										disabled={!targetProject}
-										onClick={() =>
-											targetProject &&
-											openCreateIssueDialog({
-												workspaceId: workspace.id,
-												projectId: targetProject.id,
-												projectName: targetProject.name,
-											})
-										}
+										onClick={createWorkItem}
+										aria-keyshortcuts={createHint.ariaKeyshortcuts}
 									>
 										<HugeiconsIcon icon={PlusSignIcon} />
 										New work item
+										<kbd aria-hidden className="ms-auto">
+											{createHint.text}
+										</kbd>
 									</Button>
 								</SidebarMenuItem>
 							)}

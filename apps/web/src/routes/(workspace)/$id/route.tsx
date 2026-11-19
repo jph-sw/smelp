@@ -3,6 +3,7 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { ErrorPage } from "#/components/error-page";
 import { SiteHeader } from "#/components/sidebar/header";
+import { KeyboardShortcutsDialog } from "#/components/sidebar/keyboard-shortcuts-dialog";
 import { AppSidebar } from "#/components/sidebar/sidebar";
 import { SidebarInset, SidebarProvider } from "#/components/ui/sidebar";
 import { VerifyEmailBanner } from "#/components/verify-email-banner";
@@ -78,6 +79,7 @@ function RouteComponent() {
 						</div>
 					</SidebarInset>
 				</div>
+				<KeyboardShortcutsDialog />
 			</SidebarProvider>
 		</div>
 	);
