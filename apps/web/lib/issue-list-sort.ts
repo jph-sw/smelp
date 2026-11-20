@@ -56,7 +56,7 @@ const textOrder = new Intl.Collator(undefined, {
 	sensitivity: "base",
 });
 
-function parseListSort(sort: ListSort) {
+export function parseListSort(sort: ListSort) {
 	const descending = sort.startsWith("-");
 	return {
 		column: (descending ? sort.slice(1) : sort) as ListSortColumn,
@@ -82,6 +82,11 @@ export function nextListSort(
 	if (current === first) return second;
 	if (current === second) return undefined;
 	return first;
+}
+
+export function reverseListSort(sort: ListSort): ListSort {
+	const { column, descending } = parseListSort(sort);
+	return descending ? column : `-${column}`;
 }
 
 export function listSortAria(

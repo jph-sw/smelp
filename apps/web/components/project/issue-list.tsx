@@ -11,6 +11,8 @@ import {
 	type ListSortColumn,
 	listSortAria,
 	nextListSort,
+	parseListSort,
+	reverseListSort,
 	sortIssues,
 } from "#/lib/issue-list-sort";
 import { ISSUE_PRIORITY_INFO } from "#/lib/issue-priorities";
@@ -19,6 +21,15 @@ import { IssuePriorityIcon } from "../issue/issue-priority-icon";
 import { IssueTypeIcon } from "../issue/issue-type-icon";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Button } from "../ui/button";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuGroup,
+	DropdownMenuLabel,
+	DropdownMenuRadioGroup,
+	DropdownMenuRadioItem,
+	DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
 import {
 	Table,
 	TableBody,
@@ -95,6 +106,75 @@ function ColumnHeader({
 	);
 }
 
+const BOARD_ORDER = "board";
+
+// Below sm the header row is hidden, so this bar is the sort control there.
+function CompactSortBar({
+	sorting: { sort, onChange },
+}: {
+	sorting: ListSorting;
+}) {
+	const active = sort ? { sort, ...parseListSort(sort) } : undefined;
+	const reverseLabel = active?.descending
+		? "Sort ascending"
+		: "Sort descending";
+	return (
+		<div className="-ms-2 mb-1 flex items-center gap-1 sm:hidden">
+			<DropdownMenu>
+				<DropdownMenuTrigger
+					render={<Button variant="ghost" size="sm" className="text-xs" />}
+				>
+					{active
+						? `Sort: ${COLUMNS[active.column].label}`
+						: "Sort: Board order"}
+				</DropdownMenuTrigger>
+				<DropdownMenuContent align="start" className="min-w-40">
+					<DropdownMenuGroup>
+						<DropdownMenuLabel>Sort by</DropdownMenuLabel>
+						<DropdownMenuRadioGroup
+							value={active?.column ?? BOARD_ORDER}
+							onValueChange={(value) => {
+								if (value === BOARD_ORDER) return onChange(undefined);
+								const column = value as ListSortColumn;
+								if (column !== active?.column) {
+									onChange(nextListSort(undefined, column));
+								}
+							}}
+						>
+							<DropdownMenuRadioItem value={BOARD_ORDER} closeOnSelect>
+								Board order
+							</DropdownMenuRadioItem>
+							{LIST_SORT_COLUMNS.map((column) => (
+								<DropdownMenuRadioItem
+									key={column}
+									value={column}
+									closeOnSelect
+								>
+									{COLUMNS[column].label}
+								</DropdownMenuRadioItem>
+							))}
+						</DropdownMenuRadioGroup>
+					</DropdownMenuGroup>
+				</DropdownMenuContent>
+			</DropdownMenu>
+			{active && (
+				<Button
+					variant="ghost"
+					size="icon-sm"
+					aria-label={reverseLabel}
+					title={reverseLabel}
+					onClick={() => onChange(reverseListSort(active.sort))}
+				>
+					<HugeiconsIcon
+						icon={active.descending ? ArrowDown02Icon : ArrowUp02Icon}
+						aria-hidden
+					/>
+				</Button>
+			)}
+		</div>
+	);
+}
+
 // The board's items as a table, in the board's order unless `sorting` says
 // otherwise. With `sorting`, the column headers change the order.
 export function IssueList({
@@ -117,6 +197,7 @@ export function IssueList({
 
 	return (
 		<div className="min-h-0 flex-1 overflow-y-auto p-4">
+			{sorting && <CompactSortBar sorting={sorting} />}
 			<Table
 				aria-label="Work items"
 				className="table-fixed border-separate border-spacing-x-0 border-spacing-y-0.5 sm:min-w-[34rem] lg:min-w-[44rem]"
@@ -173,6 +254,19 @@ export function IssueList({
 										>
 											{issue.title}
 										</Link>
+										{issue.dueDate && (
+											<span
+												className={cn(
+													ABOVE_ROW_LINK,
+													"ms-auto shrink-0 text-xs text-muted-foreground sm:hidden",
+													overdue && "font-medium text-destructive",
+												)}
+												title={`${formatDay(issue.dueDate)}${overdue ? " · Overdue" : ""}`}
+											>
+												{formatShortDay(issue.dueDate)}
+												{overdue && <span className="sr-only"> · Overdue</span>}
+											</span>
+										)}
 									</span>
 								</TableCell>
 								<TableCell className={cn(COLUMNS.state.className, CELL_HOVER)}>
