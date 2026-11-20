@@ -248,6 +248,19 @@ export function IssueList({
 										>
 											{issue.title}
 										</Link>
+										{issue.dueDate && (
+											<span
+												className={cn(
+													ABOVE_ROW_LINK,
+													"ms-auto shrink-0 text-xs text-muted-foreground sm:hidden",
+													overdue && "font-medium text-destructive",
+												)}
+												title={`${formatDay(issue.dueDate)}${overdue ? " · Overdue" : ""}`}
+											>
+												{formatShortDay(issue.dueDate)}
+												{overdue && <span className="sr-only"> · Overdue</span>}
+											</span>
+										)}
 									</span>
 								</TableCell>
 								<TableCell className={cn(COLUMNS.state.className, CELL_HOVER)}>

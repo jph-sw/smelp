@@ -8,8 +8,9 @@ import {
 	createRouter,
 	RouterProvider,
 } from "@tanstack/react-router";
+import { formatShortDay } from "#/lib/day";
 import type { ListSort } from "#/lib/issue-list-sort";
-import { act, cleanup, render, screen, userEvent } from "#/test/dom";
+import { act, cleanup, render, screen, userEvent, within } from "#/test/dom";
 import { IssueList } from "./issue-list";
 
 afterEach(cleanup);
@@ -78,5 +79,15 @@ describe("IssueList compact sort bar", () => {
 			screen.getByRole("menuitemradio", { name: "Board order" }),
 		);
 		expect(onChange).toHaveBeenLastCalledWith(undefined);
+	});
+
+	test("shows the due date in the title cell for the compact row", async () => {
+		await renderList(undefined);
+		const titleCell = screen
+			.getByRole("link", { name: "Ship the list" })
+			.closest("td") as HTMLElement;
+		expect(
+			within(titleCell).getByText(formatShortDay("2026-12-01")),
+		).toBeDefined();
 	});
 });
