@@ -61,9 +61,10 @@ describe("IssueList compact sort bar", () => {
 		expect(
 			screen.queryByRole("button", { name: /Sort (a|de)scending/ }),
 		).toBeNull();
-		await user.click(screen.getByRole("button", { name: "Board order" }));
+		await user.click(screen.getByRole("button", { name: "Sort: Board order" }));
 		await user.click(screen.getByRole("menuitemradio", { name: "Due" }));
 		expect(onChange).toHaveBeenLastCalledWith("due");
+		expect(screen.queryByRole("menuitemradio", { name: "Due" })).toBeNull();
 	});
 
 	test("the direction toggle reverses the sort", async () => {

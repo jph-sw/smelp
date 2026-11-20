@@ -124,7 +124,9 @@ function CompactSortBar({
 				<DropdownMenuTrigger
 					render={<Button variant="ghost" size="sm" className="text-xs" />}
 				>
-					{active ? `Sort: ${COLUMNS[active.column].label}` : "Board order"}
+					{active
+						? `Sort: ${COLUMNS[active.column].label}`
+						: "Sort: Board order"}
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="start" className="min-w-40">
 					<DropdownMenuGroup>
@@ -139,11 +141,15 @@ function CompactSortBar({
 								}
 							}}
 						>
-							<DropdownMenuRadioItem value={BOARD_ORDER}>
+							<DropdownMenuRadioItem value={BOARD_ORDER} closeOnSelect>
 								Board order
 							</DropdownMenuRadioItem>
 							{LIST_SORT_COLUMNS.map((column) => (
-								<DropdownMenuRadioItem key={column} value={column}>
+								<DropdownMenuRadioItem
+									key={column}
+									value={column}
+									closeOnSelect
+								>
 									{COLUMNS[column].label}
 								</DropdownMenuRadioItem>
 							))}
