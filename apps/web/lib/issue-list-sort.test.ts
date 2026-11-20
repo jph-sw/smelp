@@ -4,6 +4,7 @@ import {
 	type ListSort,
 	listSortAria,
 	nextListSort,
+	reverseListSort,
 	sortIssues,
 } from "./issue-list-sort";
 import type { IssuePriority } from "./issue-priorities";
@@ -167,6 +168,14 @@ describe("nextListSort", () => {
 	test("moving to another column starts that column over", () => {
 		expect(nextListSort("-due", "title")).toBe("title");
 		expect(nextListSort("title", "priority")).toBe("-priority");
+	});
+});
+
+describe("reverseListSort", () => {
+	test("flips the direction and keeps the column", () => {
+		expect(reverseListSort("due")).toBe("-due");
+		expect(reverseListSort("-due")).toBe("due");
+		expect(reverseListSort("-priority")).toBe("priority");
 	});
 });
 
