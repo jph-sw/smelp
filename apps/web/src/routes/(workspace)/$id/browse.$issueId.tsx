@@ -45,6 +45,7 @@ import {
 } from "#/lib/data/issue";
 import { moduleQueryKeys, modulesQueryOptions } from "#/lib/data/module";
 import { markIssueNotificationRead } from "#/lib/data/notifications";
+import { joinProject } from "#/lib/data/project";
 import {
 	projectMembersQueryOptions,
 	useProjectAccess,
@@ -176,8 +177,15 @@ function RouteComponent() {
 	const { data: cycles } = useSuspenseQuery(
 		cyclesQueryOptions({ projectId: issue.projectId }),
 	);
-	const { user, members, canWrite, canManage, canComment, isArchived } =
-		useProjectAccess(issue.projectId);
+	const {
+		user,
+		members,
+		canWrite,
+		canManage,
+		canComment,
+		canJoin,
+		isArchived,
+	} = useProjectAccess(issue.projectId);
 	const isPublic = useWorkspaceViewer().mode === "public";
 
 	// Opening an item reads its notification.
@@ -197,6 +205,19 @@ function RouteComponent() {
 	useEffect(() => {
 		if (!isPublic) recordRecentIssue(userId, workspaceId, issue.id);
 	}, [userId, workspaceId, issue.id, isPublic]);
+
+	const { mutate: join, isPending: isJoining } = useMutation({
+		mutationFn: () => joinProject({ projectId: issue.projectId }),
+		onSuccess: () =>
+			Promise.all([
+				queryClient.invalidateQueries({
+					queryKey: projectMembersQueryOptions({ projectId: issue.projectId })
+						.queryKey,
+				}),
+				queryClient.invalidateQueries({ queryKey: ["projects", workspaceId] }),
+			]),
+		onError: (e) => toastError(e, "Couldn't join the project."),
+	});
 
 	const { mutate: update } = useMutation({
 		mutationFn: (changes: Omit<Parameters<typeof updateIssue>[0], "id">) =>
@@ -370,6 +391,7 @@ function RouteComponent() {
 						canManage={canManage}
 						canWrite={canWrite}
 						readOnly={!canComment}
+						join={canJoin ? { onJoin: () => join(), isJoining } : undefined}
 						targetCommentId={targetCommentId}
 					/>
 				</div>

@@ -9,6 +9,7 @@ A member comments on a work item from its Activity section, mentions people by t
 - `comment-edit`: the author edits their own comment, which then shows as edited next to its time.
 - `comment-delete`: the author deletes their own comment.
 - `comment-inbox`: a mentioned person sees the mention in their Inbox.
+- `comment-outsider`: someone outside the project, reading it because it's public, gets no comment box. A workspace member or admin gets `button "Join project to comment"` in its place, which adds them to the project and shows the box. A workspace guest gets neither.
 - `comment-key-link`: a work item key in a comment or description links to the item, if the viewer can read it. Keys in code and unknown keys stay plain.
 
 ## How to get to it (user POV)
@@ -38,6 +39,7 @@ Steps:
 
 - Use `keyboard.type` for `@`. `fill()` doesn't fire the key events that open the mention menu.
 - `Comment` stays disabled while the box is empty, so a click on it does nothing.
+- `comment-outsider` needs the instance and workspace public (`instance/update` `publicAccess`, `workspace/update` `public`) and a second account from an invite. After signing up through `/signup?invite=<token>`, open `/invite/<token>` and press `Accept invite`, or the account isn't a workspace member yet.
 - Only the author can edit or delete, and admins can't edit other people's comments. Test that rule with a second account.
 - The work item page scrolls inside a panel, so `shot` can miss a comment. Use `locator.screenshot` on the comment.
 - Verified so far: post, mention and key links (snapshot names above). The edit and delete confirmation names, and the inbox layout, haven't been driven yet. Snapshot first and update this file.

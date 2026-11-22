@@ -1,6 +1,6 @@
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import { orpc } from "../orpc";
-import { useWorkspaceViewer } from "../workspace-viewer";
+import { projectPermissions, useWorkspaceViewer } from "../workspace-viewer";
 import { projectQueryOptions } from "./project";
 
 export const projectMembersQueryOptions = ({
@@ -62,20 +62,10 @@ export function useProjectAccess(projectId: string) {
 		viewer.mode === "public"
 			? undefined
 			: members.find((member) => member.userId === viewer.user.id)?.role;
-	const isInstanceAdmin = viewer.mode === "instanceAdmin";
-	const isArchived = project.archivedAt !== null;
-	const canManage = isInstanceAdmin || role === "admin";
 
 	return {
 		user: viewer.user,
 		members,
-		isArchived,
-		// An archived project is read-only for everyone, admins included.
-		canWrite:
-			!isArchived && (isInstanceAdmin || role === "member" || role === "admin"),
-		// Includes archive, unarchive and delete, which still work while archived.
-		canManage,
-		// Guests may comment too. Someone reading from outside may not.
-		canComment: !isArchived && viewer.mode !== "public",
+		...projectPermissions(viewer, role, project),
 	};
 }
