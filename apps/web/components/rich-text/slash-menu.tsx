@@ -362,9 +362,7 @@ function insertLink(editor: Editor, at: number, text: string, href: string) {
 // clips nor covers it.
 function useCaretPosition(rect: DOMRect | null) {
 	const ref = useRef<HTMLDivElement>(null);
-	const [style, setStyle] = useState<React.CSSProperties>({
-		visibility: "hidden",
-	});
+	const [style, setStyle] = useState<React.CSSProperties>({});
 	useLayoutEffect(() => {
 		const popup = ref.current;
 		if (!popup || !rect) return;
@@ -488,6 +486,12 @@ function LinkField({
 	store: SlashMenuStore;
 }) {
 	const { ref, style } = useCaretPosition(state.rect);
+	const input = useRef<HTMLInputElement>(null);
+	// Not autoFocus: it runs before useCaretPosition opens the popover, and a
+	// closed popover can't take focus.
+	useLayoutEffect(() => {
+		input.current?.focus();
+	}, []);
 	const [href, setHref] = useState("");
 	const [invalid, setInvalid] = useState(false);
 	const close = () => {
@@ -504,7 +508,7 @@ function LinkField({
 			style={style}
 		>
 			<input
-				autoFocus
+				ref={input}
 				type="url"
 				aria-label="Link address"
 				aria-invalid={invalid || undefined}
