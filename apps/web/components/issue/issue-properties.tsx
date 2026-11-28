@@ -2,10 +2,11 @@ import { Cancel01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { ProjectMember, tables } from "@smelp/db";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { invalidateCycles } from "#/lib/data/cycle";
 import { deleteIssue } from "#/lib/data/issue";
+import { type Label, useSetIssueLabels } from "#/lib/data/label";
 import { moduleQueryKeys } from "#/lib/data/module";
 import { isOverdue, localDay } from "#/lib/due-date";
 import { toastError } from "#/lib/errors";
@@ -37,12 +38,14 @@ import { toast } from "../ui/toast";
 import { AssigneeSelect } from "./assignee-select";
 import { ISSUE_PRIORITY_ITEMS } from "./issue-priority-icon";
 import { ISSUE_TYPE_ITEMS } from "./issue-type-icon";
+import { LabelSelect } from "./label-select";
 import { type ParentOption, ParentSelect } from "./parent-select";
 
 const NO_MODULE = "none";
 const NO_CYCLE = "none";
 
 type IssueDetail = tables["issue"] & {
+	labelIds: string[];
 	createdByName: string | null;
 	updatedByName: string | null;
 };
@@ -216,9 +219,11 @@ export function IssueProperties({
 	states,
 	members,
 	canWrite,
+	canManage,
 	parentOptions,
 	modules,
 	cycles,
+	labels,
 	onUpdate,
 }: {
 	issue: IssueDetail;
@@ -226,11 +231,13 @@ export function IssueProperties({
 	states: tables["state"][];
 	members: ProjectMember[];
 	canWrite: boolean;
+	canManage: boolean;
 	/** Work items this one may sit under: same project, never itself or its own sub-items. */
 	parentOptions: ParentOption[];
 	modules: { id: string; name: string }[];
 	/** The project's cycles, for the Cycle selector. */
 	cycles: { id: string; name: string }[];
+	labels: Label[];
 	onUpdate: (changes: {
 		type?: IssueType;
 		priority?: IssuePriority;
@@ -245,6 +252,10 @@ export function IssueProperties({
 }) {
 	const navigate = useNavigate();
 	const queryClient = useQueryClient();
+	const { mutate: setLabels } = useSetIssueLabels({
+		issueId: issue.id,
+		projectId: issue.projectId,
+	});
 
 	const { mutateAsync: remove } = useMutation({
 		mutationFn: deleteIssue,
@@ -360,6 +371,34 @@ export function IssueProperties({
 					...modules.map((item) => ({ label: item.name, value: item.id })),
 				]}
 			/>
+			<div className="grid grid-cols-[5.5rem_1fr] items-center gap-2">
+				<span className="text-muted-foreground">Labels</span>
+				{labels.length > 0 ? (
+					<LabelSelect
+						value={issue.labelIds}
+						labels={labels}
+						disabled={!canWrite}
+						className="w-full min-w-0 border-transparent bg-transparent px-2 font-normal hover:border-transparent hover:bg-accent disabled:after:hidden"
+						onChange={(labelIds) => setLabels(labelIds)}
+					/>
+				) : (
+					<span className="px-2 text-muted-foreground">
+						No labels in this project.
+						{canManage && (
+							<>
+								{" "}
+								<Link
+									to="/$id/settings/projects/$projectId/labels"
+									params={{ id: workspaceId, projectId: issue.projectId }}
+									className="text-foreground underline-offset-4 hover:underline"
+								>
+									Create one
+								</Link>
+							</>
+						)}
+					</span>
+				)}
+			</div>
 			<PersonAndTime
 				label="Created"
 				name={issue.createdByName}

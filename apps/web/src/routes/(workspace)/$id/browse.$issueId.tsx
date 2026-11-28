@@ -43,6 +43,7 @@ import {
 	linksQueryOptions,
 	updateIssue,
 } from "#/lib/data/issue";
+import { labelsQueryOptions } from "#/lib/data/label";
 import { moduleQueryKeys, modulesQueryOptions } from "#/lib/data/module";
 import { markIssueNotificationRead } from "#/lib/data/notifications";
 import { joinProject } from "#/lib/data/project";
@@ -89,6 +90,9 @@ export const Route = createFileRoute("/(workspace)/$id/browse/$issueId")({
 			),
 			queryClient.ensureQueryData(
 				cyclesQueryOptions({ projectId: issue.projectId }),
+			),
+			queryClient.ensureQueryData(
+				labelsQueryOptions({ projectId: issue.projectId }),
 			),
 		]);
 	},
@@ -176,6 +180,9 @@ function RouteComponent() {
 	);
 	const { data: cycles } = useSuspenseQuery(
 		cyclesQueryOptions({ projectId: issue.projectId }),
+	);
+	const { data: labels } = useSuspenseQuery(
+		labelsQueryOptions({ projectId: issue.projectId }),
 	);
 	const {
 		user,
@@ -363,9 +370,11 @@ function RouteComponent() {
 							states={states}
 							members={members}
 							canWrite={canWrite}
+							canManage={canManage}
 							parentOptions={parentOptions}
 							modules={modules}
 							cycles={cycles}
+							labels={labels}
 							onUpdate={update}
 						/>
 						<IssueDevelopment issueId={issue.id} className="pb-4" />
@@ -402,9 +411,11 @@ function RouteComponent() {
 						states={states}
 						members={members}
 						canWrite={canWrite}
+						canManage={canManage}
 						parentOptions={parentOptions}
 						modules={modules}
 						cycles={cycles}
+						labels={labels}
 						onUpdate={update}
 					/>
 					<IssueDevelopment issueId={issue.id} className="border-t p-4" />

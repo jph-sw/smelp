@@ -41,6 +41,7 @@ import { Route as workspaceIdProjectsProjectIdModulesIndexRouteImport } from './
 import { Route as workspaceIdProjectsProjectIdModulesModuleIdRouteImport } from './routes/(workspace)/$id/projects/$projectId/modules/$moduleId'
 import { Route as workspaceIdSettingsProjectsProjectIdIndexRouteImport } from './routes/(workspace)/$id/settings/projects/$projectId.index'
 import { Route as workspaceIdSettingsProjectsProjectIdGithubRouteImport } from './routes/(workspace)/$id/settings/projects/$projectId.github'
+import { Route as workspaceIdSettingsProjectsProjectIdLabelsRouteImport } from './routes/(workspace)/$id/settings/projects/$projectId.labels'
 import { Route as workspaceIdSettingsProjectsProjectIdMembersRouteImport } from './routes/(workspace)/$id/settings/projects/$projectId.members'
 import { Route as workspaceIdSettingsProjectsProjectIdStatesRouteImport } from './routes/(workspace)/$id/settings/projects/$projectId.states'
 
@@ -220,6 +221,12 @@ const workspaceIdSettingsProjectsProjectIdGithubRoute =
     path: '/github',
     getParentRoute: () => workspaceIdSettingsProjectsProjectIdRouteRoute,
   } as any)
+const workspaceIdSettingsProjectsProjectIdLabelsRoute =
+  workspaceIdSettingsProjectsProjectIdLabelsRouteImport.update({
+    id: '/labels',
+    path: '/labels',
+    getParentRoute: () => workspaceIdSettingsProjectsProjectIdRouteRoute,
+  } as any)
 const workspaceIdSettingsProjectsProjectIdMembersRoute =
   workspaceIdSettingsProjectsProjectIdMembersRouteImport.update({
     id: '/members',
@@ -262,6 +269,7 @@ export interface FileRoutesByFullPath {
   '/$id/projects/$projectId/cycles/$cycleId': typeof workspaceIdProjectsProjectIdCyclesCycleIdRoute
   '/$id/projects/$projectId/modules/$moduleId': typeof workspaceIdProjectsProjectIdModulesModuleIdRoute
   '/$id/settings/projects/$projectId/github': typeof workspaceIdSettingsProjectsProjectIdGithubRoute
+  '/$id/settings/projects/$projectId/labels': typeof workspaceIdSettingsProjectsProjectIdLabelsRoute
   '/$id/settings/projects/$projectId/members': typeof workspaceIdSettingsProjectsProjectIdMembersRoute
   '/$id/settings/projects/$projectId/states': typeof workspaceIdSettingsProjectsProjectIdStatesRoute
   '/$id/projects/$projectId/cycles/': typeof workspaceIdProjectsProjectIdCyclesIndexRoute
@@ -292,6 +300,7 @@ export interface FileRoutesByTo {
   '/$id/projects/$projectId/cycles/$cycleId': typeof workspaceIdProjectsProjectIdCyclesCycleIdRoute
   '/$id/projects/$projectId/modules/$moduleId': typeof workspaceIdProjectsProjectIdModulesModuleIdRoute
   '/$id/settings/projects/$projectId/github': typeof workspaceIdSettingsProjectsProjectIdGithubRoute
+  '/$id/settings/projects/$projectId/labels': typeof workspaceIdSettingsProjectsProjectIdLabelsRoute
   '/$id/settings/projects/$projectId/members': typeof workspaceIdSettingsProjectsProjectIdMembersRoute
   '/$id/settings/projects/$projectId/states': typeof workspaceIdSettingsProjectsProjectIdStatesRoute
   '/$id/projects/$projectId/cycles': typeof workspaceIdProjectsProjectIdCyclesIndexRoute
@@ -329,6 +338,7 @@ export interface FileRoutesById {
   '/(workspace)/$id/projects/$projectId/cycles/$cycleId': typeof workspaceIdProjectsProjectIdCyclesCycleIdRoute
   '/(workspace)/$id/projects/$projectId/modules/$moduleId': typeof workspaceIdProjectsProjectIdModulesModuleIdRoute
   '/(workspace)/$id/settings/projects/$projectId/github': typeof workspaceIdSettingsProjectsProjectIdGithubRoute
+  '/(workspace)/$id/settings/projects/$projectId/labels': typeof workspaceIdSettingsProjectsProjectIdLabelsRoute
   '/(workspace)/$id/settings/projects/$projectId/members': typeof workspaceIdSettingsProjectsProjectIdMembersRoute
   '/(workspace)/$id/settings/projects/$projectId/states': typeof workspaceIdSettingsProjectsProjectIdStatesRoute
   '/(workspace)/$id/projects/$projectId/cycles/': typeof workspaceIdProjectsProjectIdCyclesIndexRoute
@@ -366,6 +376,7 @@ export interface FileRouteTypes {
     | '/$id/projects/$projectId/cycles/$cycleId'
     | '/$id/projects/$projectId/modules/$moduleId'
     | '/$id/settings/projects/$projectId/github'
+    | '/$id/settings/projects/$projectId/labels'
     | '/$id/settings/projects/$projectId/members'
     | '/$id/settings/projects/$projectId/states'
     | '/$id/projects/$projectId/cycles/'
@@ -396,6 +407,7 @@ export interface FileRouteTypes {
     | '/$id/projects/$projectId/cycles/$cycleId'
     | '/$id/projects/$projectId/modules/$moduleId'
     | '/$id/settings/projects/$projectId/github'
+    | '/$id/settings/projects/$projectId/labels'
     | '/$id/settings/projects/$projectId/members'
     | '/$id/settings/projects/$projectId/states'
     | '/$id/projects/$projectId/cycles'
@@ -432,6 +444,7 @@ export interface FileRouteTypes {
     | '/(workspace)/$id/projects/$projectId/cycles/$cycleId'
     | '/(workspace)/$id/projects/$projectId/modules/$moduleId'
     | '/(workspace)/$id/settings/projects/$projectId/github'
+    | '/(workspace)/$id/settings/projects/$projectId/labels'
     | '/(workspace)/$id/settings/projects/$projectId/members'
     | '/(workspace)/$id/settings/projects/$projectId/states'
     | '/(workspace)/$id/projects/$projectId/cycles/'
@@ -679,6 +692,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof workspaceIdSettingsProjectsProjectIdGithubRouteImport
       parentRoute: typeof workspaceIdSettingsProjectsProjectIdRouteRoute
     }
+    '/(workspace)/$id/settings/projects/$projectId/labels': {
+      id: '/(workspace)/$id/settings/projects/$projectId/labels'
+      path: '/labels'
+      fullPath: '/$id/settings/projects/$projectId/labels'
+      preLoaderRoute: typeof workspaceIdSettingsProjectsProjectIdLabelsRouteImport
+      parentRoute: typeof workspaceIdSettingsProjectsProjectIdRouteRoute
+    }
     '/(workspace)/$id/settings/projects/$projectId/members': {
       id: '/(workspace)/$id/settings/projects/$projectId/members'
       path: '/members'
@@ -751,6 +771,7 @@ const workspaceIdSettingsWorkspaceRouteRouteWithChildren =
 
 interface workspaceIdSettingsProjectsProjectIdRouteRouteChildren {
   workspaceIdSettingsProjectsProjectIdGithubRoute: typeof workspaceIdSettingsProjectsProjectIdGithubRoute
+  workspaceIdSettingsProjectsProjectIdLabelsRoute: typeof workspaceIdSettingsProjectsProjectIdLabelsRoute
   workspaceIdSettingsProjectsProjectIdMembersRoute: typeof workspaceIdSettingsProjectsProjectIdMembersRoute
   workspaceIdSettingsProjectsProjectIdStatesRoute: typeof workspaceIdSettingsProjectsProjectIdStatesRoute
   workspaceIdSettingsProjectsProjectIdIndexRoute: typeof workspaceIdSettingsProjectsProjectIdIndexRoute
@@ -760,6 +781,8 @@ const workspaceIdSettingsProjectsProjectIdRouteRouteChildren: workspaceIdSetting
   {
     workspaceIdSettingsProjectsProjectIdGithubRoute:
       workspaceIdSettingsProjectsProjectIdGithubRoute,
+    workspaceIdSettingsProjectsProjectIdLabelsRoute:
+      workspaceIdSettingsProjectsProjectIdLabelsRoute,
     workspaceIdSettingsProjectsProjectIdMembersRoute:
       workspaceIdSettingsProjectsProjectIdMembersRoute,
     workspaceIdSettingsProjectsProjectIdStatesRoute:

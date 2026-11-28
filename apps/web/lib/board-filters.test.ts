@@ -22,6 +22,7 @@ const issue = (
 		cycleId: string | null;
 		moduleId: string | null;
 		dueDate: string | null;
+		labelIds: string[];
 	}> = {},
 ) => ({
 	id,
@@ -33,6 +34,7 @@ const issue = (
 	cycleId: null,
 	moduleId: null,
 	dueDate: null,
+	labelIds: [] as string[],
 	...fields,
 });
 
@@ -143,6 +145,70 @@ describe("matchesFilters", () => {
 		expect(shown({ q: "FIX LOG" })).toEqual(["WEB-1"]);
 		expect(shown({ q: "web-3" })).toEqual(["WEB-3"]);
 		expect(isFiltered(parseBoardFilters({ q: "web-3" }))).toBe(true);
+	});
+});
+
+describe("label filter", () => {
+	const labelled = [
+		issue("LAB-1", { labelIds: ["frontend"] }),
+		issue("LAB-2", { labelIds: ["frontend", "customer"] }),
+		issue("LAB-3", { labelIds: ["customer"] }),
+		issue("LAB-4"),
+	];
+
+	test("shows every item, labelled or not, without a label filter", () => {
+		expect(shown({}, labelled)).toEqual(["LAB-1", "LAB-2", "LAB-3", "LAB-4"]);
+		expect(isFiltered(parseBoardFilters({}))).toBe(false);
+	});
+
+	test("shows the items that carry the chosen label", () => {
+		expect(shown({ label: ["frontend"] }, labelled)).toEqual([
+			"LAB-1",
+			"LAB-2",
+		]);
+		expect(isFiltered(parseBoardFilters({ label: ["frontend"] }))).toBe(true);
+	});
+
+	test("shows items that carry any of several chosen labels", () => {
+		expect(shown({ label: ["frontend", "customer"] }, labelled)).toEqual([
+			"LAB-1",
+			"LAB-2",
+			"LAB-3",
+		]);
+	});
+
+	test("hides items without labels once a label is chosen", () => {
+		expect(shown({ label: ["customer"] }, labelled)).toEqual([
+			"LAB-2",
+			"LAB-3",
+		]);
+		expect(shown({ label: ["deleted-label"] }, labelled)).toEqual([]);
+	});
+
+	test("combines with the other filters", () => {
+		const mixed = [
+			issue("MIX-1", { labelIds: ["frontend"], type: "bug" }),
+			issue("MIX-2", { labelIds: ["frontend"] }),
+		];
+		expect(shown({ label: ["frontend"], type: "bug" }, mixed)).toEqual([
+			"MIX-1",
+		]);
+	});
+
+	test("an older link without a label shows everything", () => {
+		expect(parseBoardFilters({ assignee: "ana" }).label).toBeUndefined();
+		expect(shown({ type: "task" }, labelled)).toHaveLength(labelled.length);
+	});
+
+	test("reads a single label or a list, dropping empty entries and repeats", () => {
+		expect(parseBoardFilters({ label: "frontend" }).label).toEqual([
+			"frontend",
+		]);
+		expect(
+			parseBoardFilters({ label: ["frontend", "", "frontend", "customer"] })
+				.label,
+		).toEqual(["frontend", "customer"]);
+		expect(parseBoardFilters({ label: [] }).label).toBeUndefined();
 	});
 });
 

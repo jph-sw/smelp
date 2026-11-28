@@ -3,11 +3,13 @@ import { MoreHorizontal } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { ProjectMember, tables } from "@smelp/db";
 import { Link } from "@tanstack/react-router";
+import type { Label } from "#/lib/data/label";
 import { formatShortDay } from "#/lib/day";
 import { formatPoints, formatShortPoints } from "#/lib/points";
 import { cn, initials } from "#/lib/utils";
 import { IssuePriorityIcon } from "../issue/issue-priority-icon";
 import { IssueTypeIcon } from "../issue/issue-type-icon";
+import { LabelChips } from "../label/label-chips";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Button } from "../ui/button";
 import {
@@ -24,6 +26,7 @@ export function IssueItem({
 	issue,
 	workspaceId,
 	assignee,
+	labels = [],
 	draggable = true,
 	overdue = false,
 	states,
@@ -32,6 +35,7 @@ export function IssueItem({
 	issue: tables["issue"];
 	workspaceId: string;
 	assignee?: ProjectMember;
+	labels?: Label[];
 	draggable?: boolean;
 	overdue?: boolean;
 	/** With onMove, touch screens get a menu to change the state without dragging. */
@@ -86,6 +90,7 @@ export function IssueItem({
 					</span>
 				</div>
 				<div className="text-sm [overflow-wrap:anywhere]">{issue.title}</div>
+				<LabelChips labels={labels} className="mt-1.5" />
 				{issue.dueDate && (
 					<div
 						className={cn(

@@ -3,6 +3,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import type { ProjectMember, tables } from "@smelp/db";
 import { Link } from "@tanstack/react-router";
 import type { MouseEvent as ReactMouseEvent } from "react";
+import type { Label } from "#/lib/data/label";
 import { formatDay, formatShortDay } from "#/lib/day";
 import { isOverdue, localDay } from "#/lib/due-date";
 import {
@@ -19,6 +20,7 @@ import { ISSUE_PRIORITY_INFO } from "#/lib/issue-priorities";
 import { cn, initials } from "#/lib/utils";
 import { IssuePriorityIcon } from "../issue/issue-priority-icon";
 import { IssueTypeIcon } from "../issue/issue-type-icon";
+import { LabelChips, labelsOf } from "../label/label-chips";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Button } from "../ui/button";
 import {
@@ -181,12 +183,14 @@ export function IssueList({
 	issues,
 	states,
 	members,
+	labels = [],
 	workspaceId,
 	sorting,
 }: {
-	issues: tables["issue"][];
+	issues: (tables["issue"] & { labelIds?: string[] })[];
 	states: tables["state"][];
 	members: ProjectMember[];
+	labels?: Label[];
 	workspaceId: string;
 	sorting?: ListSorting;
 }) {
@@ -254,6 +258,14 @@ export function IssueList({
 										>
 											{issue.title}
 										</Link>
+										<LabelChips
+											labels={labelsOf(labels, issue.labelIds ?? [])}
+											max={2}
+											className={cn(
+												ABOVE_ROW_LINK,
+												"hidden shrink-0 flex-nowrap lg:flex",
+											)}
+										/>
 										{issue.dueDate && (
 											<span
 												className={cn(

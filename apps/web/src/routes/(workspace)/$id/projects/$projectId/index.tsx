@@ -10,6 +10,7 @@ import { openCreateIssueDialog } from "#/components/issue/create-issue-dialog-st
 import { BoardFilterBar } from "#/components/kanban/board-filters";
 import { IssueItem } from "#/components/kanban/issue-item";
 import { StateColumn } from "#/components/kanban/state-column";
+import { labelsOf } from "#/components/label/label-chips";
 import { ArchivedBanner } from "#/components/project/archived-banner";
 import { IssueList } from "#/components/project/issue-list";
 import { ProjectHeader } from "#/components/project/project-header";
@@ -23,6 +24,7 @@ import {
 import { useCollapsedStates } from "#/lib/collapsed-states";
 import { cyclesQueryOptions, invalidateCycles } from "#/lib/data/cycle";
 import { issuesQueryOptions, updateIssue } from "#/lib/data/issue";
+import { labelsQueryOptions } from "#/lib/data/label";
 import { moduleQueryKeys, modulesQueryOptions } from "#/lib/data/module";
 import { projectQueryOptions } from "#/lib/data/project";
 import {
@@ -43,6 +45,7 @@ export const Route = createFileRoute("/(workspace)/$id/projects/$projectId/")({
 			queryClient.ensureQueryData(projectMembersQueryOptions({ projectId })),
 			queryClient.ensureQueryData(modulesQueryOptions({ projectId })),
 			queryClient.ensureQueryData(cyclesQueryOptions({ projectId })),
+			queryClient.ensureQueryData(labelsQueryOptions({ projectId })),
 		]);
 	},
 });
@@ -70,6 +73,7 @@ function RouteComponent() {
 		modulesQueryOptions({ projectId }),
 	);
 	const { data: cycles } = useSuspenseQuery(cyclesQueryOptions({ projectId }));
+	const { data: labels } = useSuspenseQuery(labelsQueryOptions({ projectId }));
 
 	const isArchived = project.archivedAt !== null;
 	// Guests can look but not move cards, and nobody moves them while archived.
@@ -145,6 +149,7 @@ function RouteComponent() {
 				states={states}
 				modules={modules}
 				cycles={cycles}
+				labels={labels}
 				shownCount={shownCount}
 				totalCount={issues.length}
 			/>
@@ -158,6 +163,7 @@ function RouteComponent() {
 					issues={visibleIssues}
 					states={visibleStates}
 					members={members}
+					labels={labels}
 					workspaceId={workspaceId}
 					sorting={{
 						sort,
@@ -238,6 +244,7 @@ function RouteComponent() {
 												assignee={members.find(
 													(member) => member.userId === issue.assignee,
 												)}
+												labels={labelsOf(labels, issue.labelIds)}
 											/>
 										))}
 								</StateColumn>

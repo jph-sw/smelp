@@ -7,6 +7,7 @@ import { type IssueType, isIssueType } from "./issue-types";
 export type BoardFilters = {
 	q?: string;
 	assignee?: string[];
+	label?: string[];
 	state?: string;
 	type?: IssueType;
 	priority?: IssuePriority;
@@ -36,7 +37,7 @@ type FilterableIssue = Pick<
 	| "cycleId"
 	| "moduleId"
 	| "dueDate"
->;
+> & { labelIds: string[] };
 
 type FilterContext = {
 	today: string;
@@ -62,6 +63,7 @@ export function parseBoardFilters(
 	return {
 		q: asString(search.q),
 		assignee: asIdList(search.assignee),
+		label: asIdList(search.label),
 		state: asString(search.state),
 		type: isIssueType(search.type) ? search.type : undefined,
 		priority: isIssuePriority(search.priority) ? search.priority : undefined,
@@ -126,6 +128,12 @@ export function matchesFilters(
 	) {
 		return false;
 	}
+	if (
+		filters.label &&
+		!filters.label.some((label) => issue.labelIds.includes(label))
+	) {
+		return false;
+	}
 	if (filters.due) {
 		const group = states.find((state) => state.id === issue.state)?.group;
 		const isDue = filters.due === "overdue" ? isOverdue : isDueThisWeek;
@@ -144,6 +152,7 @@ export function isFiltered(filters: BoardFilters) {
 	return Boolean(
 		filters.q ||
 			filters.assignee ||
+			filters.label ||
 			filters.state ||
 			filters.type ||
 			filters.priority ||

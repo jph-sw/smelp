@@ -3,6 +3,7 @@ import {
 	LayerIcon,
 	People,
 	Setting07Icon,
+	Tag01Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
@@ -55,6 +56,15 @@ function RouteComponent() {
 					>
 						<HugeiconsIcon icon={LayerIcon} className="size-3.5" />
 						States
+					</Link>
+					<Link
+						to="/$id/settings/projects/$projectId/labels"
+						params={params}
+						activeOptions={{ exact: true }}
+						className={settingsNavLinkClassName}
+					>
+						<HugeiconsIcon icon={Tag01Icon} className="size-3.5" />
+						Labels
 					</Link>
 					<Link
 						to="/$id/settings/projects/$projectId/github"

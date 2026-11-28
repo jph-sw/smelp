@@ -8,6 +8,7 @@ import {
 	NO_CYCLE,
 	NO_MODULE,
 } from "#/lib/board-filters";
+import type { Label } from "#/lib/data/label";
 import { isIssuePriority } from "#/lib/issue-priorities";
 import { isIssueType } from "#/lib/issue-types";
 import { cn } from "#/lib/utils";
@@ -24,6 +25,7 @@ import {
 	SelectValueWithIcon,
 } from "../ui/select";
 import { AssigneeFilter } from "./assignee-filter";
+import { LabelFilter } from "./label-filter";
 
 const ALL = "all";
 const FILTER_CONTROL =
@@ -76,6 +78,7 @@ export function BoardFilterBar({
 	states,
 	modules,
 	cycles,
+	labels,
 	shownCount,
 	totalCount,
 }: {
@@ -85,6 +88,7 @@ export function BoardFilterBar({
 	states: tables["state"][];
 	modules: { id: string; name: string }[];
 	cycles: { id: string; name: string }[];
+	labels: Label[];
 	shownCount: number;
 	totalCount: number;
 }) {
@@ -120,6 +124,14 @@ export function BoardFilterBar({
 					onChange={(assignee) => onChange({ ...filters, assignee })}
 					className={cn(FILTER_CONTROL, "max-w-56")}
 				/>
+				{labels.length > 0 && (
+					<LabelFilter
+						value={filters.label}
+						labels={labels}
+						onChange={(label) => onChange({ ...filters, label })}
+						className={cn(FILTER_CONTROL, "max-w-56")}
+					/>
+				)}
 				<FilterSelect
 					label="Filter by state"
 					value={filters.state}
