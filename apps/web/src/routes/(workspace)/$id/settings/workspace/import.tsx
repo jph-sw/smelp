@@ -64,6 +64,8 @@ type ProjectEdit = {
 	access: "public" | "private";
 };
 
+type SprintEdit = { include: boolean; startDate: string; endDate: string };
+
 const ID_PROBLEMS: Record<string, string> = {
 	invalid: "Use 2 to 5 letters or digits, starting with a letter.",
 	taken: "This id is already in use. Choose another.",
@@ -96,6 +98,16 @@ function seedFrom(next: JiraDryRun) {
 		u: Object.fromEntries(
 			next.users.map((user) => [user.key, user.userId]),
 		) as Record<string, string | null>,
+		t: Object.fromEntries(
+			next.sprints.map((sprint) => [
+				sprint.name,
+				{
+					include: sprint.startDate !== null,
+					startDate: sprint.startDate ?? "",
+					endDate: sprint.endDate ?? "",
+				},
+			]),
+		) as Record<string, SprintEdit>,
 	};
 }
 
@@ -120,6 +132,7 @@ function RouteComponent() {
 	const [projects, setProjects] = useState<Record<string, ProjectEdit>>({});
 	const [statuses, setStatuses] = useState<Record<string, StateTarget>>({});
 	const [users, setUsers] = useState<Record<string, string | null>>({});
+	const [sprints, setSprints] = useState<Record<string, SprintEdit>>({});
 	// What the server chose on its own, so only the importer's changes are sent back.
 	const [baseline, setBaseline] = useState<{
 		s: Record<string, StateTarget>;
@@ -140,12 +153,18 @@ function RouteComponent() {
 		p = projects,
 		s = statuses,
 		u = users,
+		t = sprints,
 		base = baseline,
 	): JiraImportMapping => ({
 		projects: p,
 		// Only what the importer changed: the rest is the server's own default.
 		statuses: changedFrom(s, base.s),
 		users: changedFrom(u, base.u),
+		sprints: Object.fromEntries(
+			Object.entries(t).flatMap(([name, { include, startDate, endDate }]) =>
+				include ? [[name, { startDate, endDate }]] : [],
+			),
+		),
 		...(baseUrl.trim() ? { jiraBaseUrl: baseUrl.trim() } : {}),
 	});
 	const mappingKey = JSON.stringify(buildMapping());
@@ -158,6 +177,7 @@ function RouteComponent() {
 		const p = keepEdits ? { ...fresh.p, ...projects } : fresh.p;
 		const s = keepEdits ? { ...fresh.s, ...statuses } : fresh.s;
 		const u = keepEdits ? { ...fresh.u, ...users } : fresh.u;
+		const t = keepEdits ? { ...fresh.t, ...sprints } : fresh.t;
 		const base = keepEdits
 			? {
 					s: { ...fresh.s, ...baseline.s },
@@ -168,8 +188,9 @@ function RouteComponent() {
 		setProjects(p);
 		setStatuses(s);
 		setUsers(u);
+		setSprints(t);
 		setBaseline(base);
-		setChecked(JSON.stringify(buildMapping(p, s, u, base)));
+		setChecked(JSON.stringify(buildMapping(p, s, u, t, base)));
 	};
 
 	const check = async () => {
@@ -259,10 +280,10 @@ function RouteComponent() {
 					<AlertTitle>Import finished</AlertTitle>
 					<AlertDescription>
 						{result.totals.projects} project(s), {result.totals.workItems} work
-						items, {result.totals.comments} comments and{" "}
-						{result.totals.relations} relations were created. The projects are
-						private unless you chose otherwise, and only the importer and the
-						people matched to Jira users are members.
+						items, {result.totals.cycles} cycle(s), {result.totals.comments}{" "}
+						comments and {result.totals.relations} relations were created. The
+						projects are private unless you chose otherwise, and only the
+						importer and the people matched to Jira users are members.
 					</AlertDescription>
 				</Alert>
 				<div className="flex flex-col gap-1">
@@ -304,8 +325,10 @@ function RouteComponent() {
 					<p className="text-xs/relaxed text-muted-foreground">
 						Upload a Jira CSV export ("Export Excel CSV (all fields)" in the
 						issue search). Projects, work items, sub-tasks, assignees, story
-						points, comments and issue links come across. Attachments don't.
-						You'll see exactly what will be created before anything is saved.
+						points, comments, issue links and sprints come across. Attachments
+						don't. The export has no sprint dates, so you give them when you
+						review the import. You'll see exactly what will be created before
+						anything is saved.
 					</p>
 				</div>
 				<label className="flex flex-col gap-1 text-xs font-medium">
@@ -473,7 +496,8 @@ function RouteComponent() {
 							<p className="text-xs text-muted-foreground">
 								{project.workItems} work items ({project.subItems} sub-items),{" "}
 								{project.comments} comments, {project.relations} relations,{" "}
-								{project.labels} labels, {project.members} member(s) added
+								{project.labels} labels, {project.cycles} cycle(s),{" "}
+								{project.members} member(s) added
 								{project.states.length > 0 &&
 									`. States: ${project.states.join(", ")}`}
 							</p>
@@ -526,6 +550,72 @@ function RouteComponent() {
 					The original Jira status stays in each item's description.
 				</p>
 			</section>
+
+			{plan.sprints.length > 0 && (
+				<section className="flex flex-col gap-2">
+					<SectionTitle>Jira sprints to cycles</SectionTitle>
+					{plan.sprints.map((sprint) => {
+						const edit = sprints[sprint.name];
+						if (!edit) return null;
+						const patch = (change: Partial<SprintEdit>) =>
+							setSprints({
+								...sprints,
+								[sprint.name]: { ...edit, ...change },
+							});
+						return (
+							<div
+								key={sprint.name}
+								className="flex flex-col gap-2 rounded-md border p-3"
+							>
+								<div className="flex items-center gap-3">
+									<Switch
+										aria-label={`Import ${sprint.name}`}
+										checked={edit.include}
+										onCheckedChange={(include) => patch({ include })}
+									/>
+									<div className="flex min-w-0 flex-1 flex-col">
+										<span className="text-sm font-medium [overflow-wrap:anywhere]">
+											{sprint.name}
+										</span>
+										<span className="text-xs text-muted-foreground">
+											{sprint.items} item(s)
+										</span>
+									</div>
+								</div>
+								{edit.include && (
+									<div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+										<label className="flex flex-col gap-1 text-xs text-muted-foreground">
+											Start
+											<Input
+												type="date"
+												aria-label={`Start of ${sprint.name}`}
+												value={edit.startDate}
+												onChange={(e) => patch({ startDate: e.target.value })}
+											/>
+										</label>
+										<label className="flex flex-col gap-1 text-xs text-muted-foreground">
+											End
+											<Input
+												type="date"
+												aria-label={`End of ${sprint.name}`}
+												value={edit.endDate}
+												min={edit.startDate || undefined}
+												onChange={(e) => patch({ endDate: e.target.value })}
+											/>
+										</label>
+									</div>
+								)}
+							</div>
+						);
+					})}
+					<p className="text-xs text-muted-foreground">
+						Each sprint you switch on becomes a cycle in every project with
+						items in it. An item carried over between sprints goes into its last
+						one. Sprints you leave off are skipped, and their items come across
+						without a cycle.
+					</p>
+				</section>
+			)}
 
 			<section className="flex flex-col gap-2">
 				<SectionTitle>Jira users to people in this workspace</SectionTitle>
@@ -619,9 +709,10 @@ function RouteComponent() {
 								<AlertDialogTitle>Import into this workspace?</AlertDialogTitle>
 								<AlertDialogDescription>
 									This creates {plan.totals.projects} project(s) with{" "}
-									{plan.totals.workItems} work items, {plan.totals.comments}{" "}
-									comments and {plan.totals.relations} relations. It's all or
-									nothing. To undo it, delete the projects.
+									{plan.totals.workItems} work items, {plan.totals.cycles}{" "}
+									cycle(s), {plan.totals.comments} comments and{" "}
+									{plan.totals.relations} relations. It's all or nothing. To
+									undo it, delete the projects.
 								</AlertDialogDescription>
 							</AlertDialogHeader>
 							<AlertDialogFooter>
