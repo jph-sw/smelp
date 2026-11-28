@@ -1,5 +1,7 @@
 import type { IssuePriority, IssueType, tables } from "@smelp/db";
 import { generateNKeysBetween } from "fractional-indexing";
+import * as v from "valibot";
+import { Day } from "./day";
 import type { JiraIssue, JiraLink, ParsedJira } from "./jira-csv";
 
 // Turns parsed Jira data plus the importer's choices into (a) the dry run shown before
@@ -41,6 +43,8 @@ export type Mapping = {
 	statuses?: Record<string, StateTarget>;
 	/** Jira user key -> smelp user id, or null to leave them unmatched. */
 	users?: Record<string, string | null>;
+	/** Jira sprint name -> its dates. A sprint left out is not imported. */
+	sprints?: Record<string, { startDate: string; endDate: string }>;
 	/** Where the Jira site lives, to add a link back on each item. */
 	jiraBaseUrl?: string;
 };
@@ -84,6 +88,7 @@ export type DryRunProject = {
 	webLinks: number;
 	labels: number;
 	members: number;
+	cycles: number;
 };
 
 export type DryRun = {
@@ -102,6 +107,13 @@ export type DryRun = {
 		userId: string | null;
 		matchedBy: "email" | "name" | "chosen" | null;
 	}[];
+	/** Sprints that hold items, in the order the file first names them. */
+	sprints: {
+		name: string;
+		items: number;
+		startDate: string | null;
+		endDate: string | null;
+	}[];
 	candidates: { id: string; displayName: string; email: string }[];
 	totals: {
 		projects: number;
@@ -109,6 +121,7 @@ export type DryRun = {
 		subItems: number;
 		comments: number;
 		relations: number;
+		cycles: number;
 	};
 	warnings: string[];
 	/** Problems that stop the import until fixed. */
@@ -121,6 +134,7 @@ export type ProjectWrite = {
 	project: tables["project"];
 	counter: tables["project_counter"];
 	states: tables["state"][];
+	cycles: tables["cycle"][];
 	record: tables["import_record"];
 	issues: tables["issue"][];
 	comments: tables["comment"][];
@@ -565,6 +579,36 @@ export function buildPlan(
 		);
 	}
 
+	// ---- Sprints ----------------------------------------------------------------
+	// An item carried over from sprint to sprint lists them all. It ends up in the last.
+	const sprintOf = (issue: JiraIssue) => issue.sprints.at(-1);
+	const sprintItems = new Map<string, number>();
+	for (const issue of items) {
+		const sprint = sprintOf(issue);
+		if (sprint) sprintItems.set(sprint, (sprintItems.get(sprint) ?? 0) + 1);
+	}
+	const sprintDates = new Map<string, { startDate: string; endDate: string }>();
+	let skippedSprints = 0;
+	for (const name of sprintItems.keys()) {
+		const dates = mapping.sprints?.[name];
+		if (!dates) {
+			skippedSprints++;
+		} else if (!v.is(Day, dates.startDate) || !v.is(Day, dates.endDate)) {
+			errors.push(
+				`Sprint "${name}": give it a start and an end date, or leave it out.`,
+			);
+		} else if (dates.endDate < dates.startDate) {
+			errors.push(`Sprint "${name}" ends before it starts.`);
+		} else {
+			sprintDates.set(name, dates);
+		}
+	}
+	if (skippedSprints > 0) {
+		warnings.push(
+			`${skippedSprints} sprint(s) have no dates and are skipped. Their items come across without a cycle.`,
+		);
+	}
+
 	// ---- Rows to write ----------------------------------------------------------
 	const importerId = ctx.importerId;
 	const writes: ProjectWrite[] = [];
@@ -591,6 +635,34 @@ export function buildPlan(
 		}));
 		const stateId = (t: StateTarget) =>
 			states.find((s) => s.value === t)?.id as string;
+
+		const cycles = new Map<string, tables["cycle"]>();
+		for (const issue of projectItems) {
+			const sprint = sprintOf(issue);
+			const dates = sprint ? sprintDates.get(sprint) : undefined;
+			if (!sprint || !dates || cycles.has(sprint)) continue;
+			cycles.set(sprint, {
+				id: crypto.randomUUID(),
+				projectId: p.id,
+				name: sprint,
+				startDate: dates.startDate,
+				endDate: dates.endDate,
+				goal: null,
+				createdBy: importerId,
+				createdAt: ctx.now,
+			});
+		}
+		const byStart = [...cycles.values()].sort((a, b) =>
+			a.startDate.localeCompare(b.startDate),
+		);
+		for (const [index, a] of byStart.entries()) {
+			for (const b of byStart.slice(index + 1)) {
+				if (b.startDate > a.endDate) break;
+				errors.push(
+					`Sprints "${a.name}" and "${b.name}" overlap in project ${p.id}. Cycles in a project can't share a day.`,
+				);
+			}
+		}
 
 		const memberIds = new Set<string>();
 		const rows: tables["issue"][] = [];
@@ -645,8 +717,8 @@ export function buildPlan(
 				parentId: parentOf.has(issue.key)
 					? issueId(byKey.get(parentOf.get(issue.key) as string) as JiraIssue)
 					: null,
-				// Sprints aren't imported, and Jira has no modules.
-				cycleId: null,
+				cycleId: cycles.get(sprintOf(issue) ?? "")?.id ?? null,
+				// Jira has no modules.
 				moduleId: null,
 				dueDate: issue.dueDate,
 				estimate: issue.estimate,
@@ -765,6 +837,7 @@ export function buildPlan(
 				lastNumber: Math.max(...projectItems.map((i) => i.number)),
 			},
 			states,
+			cycles: byStart,
 			record: {
 				id: crypto.randomUUID(),
 				workspaceId: ctx.workspaceId,
@@ -808,6 +881,7 @@ export function buildPlan(
 			webLinks: write?.webLinks.length ?? 0,
 			labels: write?.labels.length ?? 0,
 			members: write ? write.members.length : 0,
+			cycles: write?.cycles.length ?? 0,
 		};
 	});
 
@@ -834,6 +908,12 @@ export function buildPlan(
 				};
 			})
 			.sort((a, b) => a.name.localeCompare(b.name)),
+		sprints: [...sprintItems].map(([name, count]) => ({
+			name,
+			items: count,
+			startDate: mapping.sprints?.[name]?.startDate ?? null,
+			endDate: mapping.sprints?.[name]?.endDate ?? null,
+		})),
 		candidates: ctx.candidates.map((c) => ({
 			id: c.id,
 			displayName: c.displayName,
@@ -848,6 +928,7 @@ export function buildPlan(
 			),
 			comments: writes.reduce((n, w) => n + w.comments.length, 0),
 			relations: relations.length,
+			cycles: writes.reduce((n, w) => n + w.cycles.length, 0),
 		},
 		warnings,
 		errors,

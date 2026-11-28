@@ -59,6 +59,8 @@ export type JiraIssue = {
 	reporter: string | null;
 	reporterId: string | null;
 	labels: string[];
+	/** Every sprint the item was in, in file order. Jira repeats the column per sprint. */
+	sprints: string[];
 	parentId: string | null;
 	parentKey: string | null;
 	comments: JiraComment[];
@@ -332,6 +334,7 @@ export function parseJiraCsv(text: string): ParsedJira {
 		parentId: columns.one("parent id"),
 		parent: columns.one("parent"),
 		labels: columns.all("labels"),
+		sprints: columns.all("sprint"),
 		comments: columns.all("comment"),
 		attachments: columns.all("attachment"),
 	};
@@ -471,6 +474,7 @@ export function parseJiraCsv(text: string): ParsedJira {
 			labels: col.labels
 				.flatMap((index) => cell(row, index).split(/\s+/))
 				.filter(Boolean),
+			sprints: col.sprints.map((index) => cell(row, index, 64)).filter(Boolean),
 			parentId: cell(row, col.parentId) || null,
 			parentKey: parentKey
 				? `${(parentKey[1] as string).toUpperCase()}-${Number(parentKey[2])}`
