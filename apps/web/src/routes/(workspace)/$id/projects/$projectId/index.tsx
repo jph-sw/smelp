@@ -4,7 +4,7 @@ import {
 	useQueryClient,
 	useSuspenseQuery,
 } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { openCreateIssueDialog } from "#/components/issue/create-issue-dialog-store";
 import { BoardFilterBar } from "#/components/kanban/board-filters";
@@ -16,6 +16,7 @@ import { IssueList } from "#/components/project/issue-list";
 import { ProjectHeader } from "#/components/project/project-header";
 import { usePageTitle } from "#/hooks/use-page-title";
 import {
+	CURRENT_CYCLE,
 	isFiltered,
 	matchesFilters,
 	parseBoardSearch,
@@ -122,8 +123,10 @@ function RouteComponent() {
 	});
 
 	const today = localDay();
+	const currentCycleId =
+		cycles.find((cycle) => cycle.status === "current")?.id ?? null;
 	const visibleIssues = issues.filter((issue) =>
-		matchesFilters(issue, filters, { today, states }),
+		matchesFilters(issue, filters, { today, states, currentCycleId }),
 	);
 	const visibleStates = filters.state
 		? states.filter((state) => state.id === filters.state)
@@ -155,7 +158,20 @@ function RouteComponent() {
 			/>
 			{isFiltered(filters) && shownCount === 0 && (
 				<p className="px-4 pt-3 text-sm text-muted-foreground">
-					No work items match these filters.
+					{filters.cycle === CURRENT_CYCLE && !currentCycleId ? (
+						<>
+							No cycle is running right now.{" "}
+							<Link
+								to="/$id/projects/$projectId/cycles"
+								params={{ id: workspaceId, projectId }}
+								className="underline underline-offset-3"
+							>
+								See cycles
+							</Link>
+						</>
+					) : (
+						"No work items match these filters."
+					)}
 				</p>
 			)}
 			{view === "list" ? (
