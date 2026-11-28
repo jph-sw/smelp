@@ -17,6 +17,7 @@ import {
 	CycleProgress,
 	CycleStatusBadge,
 } from "#/components/cycle/cycle-parts";
+import { CyclePlanner } from "#/components/cycle/cycle-planner";
 import { openCreateIssueDialog } from "#/components/issue/create-issue-dialog-store";
 import { ArchivedBanner } from "#/components/project/archived-banner";
 import { IssueList } from "#/components/project/issue-list";
@@ -73,6 +74,9 @@ export const Route = createFileRoute(
 	"/(workspace)/$id/projects/$projectId/cycles/$cycleId",
 )({
 	component: RouteComponent,
+	validateSearch: (search: Record<string, unknown>): { plan?: true } => ({
+		plan: search.plan === true || undefined,
+	}),
 	loader: async ({
 		context: { queryClient },
 		params: { projectId, cycleId },
@@ -176,6 +180,7 @@ function MoveUnfinished({
 
 function RouteComponent() {
 	const { projectId, cycleId, id: workspaceId } = Route.useParams();
+	const search = Route.useSearch();
 	const navigate = useNavigate();
 	const queryClient = useQueryClient();
 	const { data: cycle } = useSuspenseQuery(cycleQueryOptions({ cycleId }));
@@ -191,6 +196,8 @@ function RouteComponent() {
 	const [isEditOpen, setIsEditOpen] = useState(false);
 
 	const items = issues.filter((issue) => issue.cycleId === cycleId);
+	const canPlan = canWrite && !isArchived && cycle.status !== "completed";
+	const isPlanning = canPlan && search.plan === true;
 	const unfinishedCount =
 		cycle.progress.total - cycle.progress.completed - cycle.progress.cancelled;
 
@@ -252,25 +259,40 @@ function RouteComponent() {
 						{formatRange(cycle)}
 					</span>
 					{canWrite && (
-						<Button
-							variant="outline"
-							className="ms-auto"
-							onClick={() =>
-								openCreateIssueDialog({
-									workspaceId,
-									projectId,
-									projectName: project.name,
-									destination: {
-										kind: "cycle",
-										id: cycle.id,
-										name: cycle.name,
-									},
-								})
-							}
-						>
-							<HugeiconsIcon icon={PlusSignIcon} />
-							New work item
-						</Button>
+						<div className="ms-auto flex items-center gap-2">
+							{canPlan && (
+								<Button
+									variant={isPlanning ? "default" : "outline"}
+									onClick={() =>
+										navigate({
+											to: ".",
+											search: { plan: isPlanning ? undefined : true },
+											replace: true,
+										})
+									}
+								>
+									{isPlanning ? "Done planning" : "Plan"}
+								</Button>
+							)}
+							<Button
+								variant="outline"
+								onClick={() =>
+									openCreateIssueDialog({
+										workspaceId,
+										projectId,
+										projectName: project.name,
+										destination: {
+											kind: "cycle",
+											id: cycle.id,
+											name: cycle.name,
+										},
+									})
+								}
+							>
+								<HugeiconsIcon icon={PlusSignIcon} />
+								New work item
+							</Button>
+						</div>
 					)}
 					{canManage && !isArchived && (
 						<div className="flex items-center gap-2">
@@ -332,10 +354,17 @@ function RouteComponent() {
 					/>
 				)}
 			</div>
-			{items.length === 0 ? (
+			{isPlanning ? (
+				<CyclePlanner
+					workspaceId={workspaceId}
+					projectId={projectId}
+					cycleId={cycleId}
+				/>
+			) : items.length === 0 ? (
 				<p className="p-4 text-sm text-muted-foreground">
-					No work items in this cycle yet. Add them from a work item's side
-					panel.
+					{canPlan
+						? "No work items in this cycle yet. Choose Plan to add them from the backlog."
+						: "No work items in this cycle yet. Add them from a work item's side panel."}
 				</p>
 			) : (
 				<IssueList
