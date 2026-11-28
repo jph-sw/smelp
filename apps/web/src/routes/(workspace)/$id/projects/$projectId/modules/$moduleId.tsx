@@ -46,6 +46,7 @@ import { toast } from "#/components/ui/toast";
 import { usePageTitle } from "#/hooks/use-page-title";
 import { invalidateCycles } from "#/lib/data/cycle";
 import { issuesQueryOptions, updateIssue } from "#/lib/data/issue";
+import { labelsQueryOptions } from "#/lib/data/label";
 import {
 	deleteModule,
 	moduleQueryKeys,
@@ -73,6 +74,7 @@ export const Route = createFileRoute(
 			queryClient.ensureQueryData(projectQueryOptions({ projectId })),
 			queryClient.ensureQueryData(statesQueryOptions({ projectId })),
 			queryClient.ensureQueryData(issuesQueryOptions({ projectId })),
+			queryClient.ensureQueryData(labelsQueryOptions({ projectId })),
 			queryClient.ensureQueryData(projectMembersQueryOptions({ projectId })),
 			queryClient.ensureQueryData(modulesQueryOptions({ projectId })),
 		]);
@@ -96,6 +98,7 @@ function RouteComponent() {
 
 	const { data: states } = useSuspenseQuery(statesQueryOptions({ projectId }));
 	const { data: issues } = useSuspenseQuery(issuesQueryOptions({ projectId }));
+	const { data: labels } = useSuspenseQuery(labelsQueryOptions({ projectId }));
 	const { members, canWrite, canManage, isArchived } =
 		useProjectAccess(projectId);
 
@@ -298,6 +301,7 @@ function RouteComponent() {
 					<div className="flex flex-col sm:px-5">
 						<IssueList
 							issues={items}
+							labels={labels}
 							states={states}
 							members={members}
 							workspaceId={workspaceId}

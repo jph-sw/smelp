@@ -59,6 +59,7 @@ import {
 	updateCycle,
 } from "#/lib/data/cycle";
 import { issuesQueryOptions } from "#/lib/data/issue";
+import { labelsQueryOptions } from "#/lib/data/label";
 import { moduleQueryKeys } from "#/lib/data/module";
 import { projectQueryOptions } from "#/lib/data/project";
 import {
@@ -86,6 +87,7 @@ export const Route = createFileRoute(
 			queryClient.ensureQueryData(cyclesQueryOptions({ projectId })),
 			queryClient.ensureQueryData(statesQueryOptions({ projectId })),
 			queryClient.ensureQueryData(issuesQueryOptions({ projectId })),
+			queryClient.ensureQueryData(labelsQueryOptions({ projectId })),
 			queryClient.ensureQueryData(projectMembersQueryOptions({ projectId })),
 		]);
 	},
@@ -183,6 +185,7 @@ function RouteComponent() {
 	);
 	const { data: states } = useSuspenseQuery(statesQueryOptions({ projectId }));
 	const { data: issues } = useSuspenseQuery(issuesQueryOptions({ projectId }));
+	const { data: labels } = useSuspenseQuery(labelsQueryOptions({ projectId }));
 	const { members, canWrite, canManage, isArchived } =
 		useProjectAccess(projectId);
 	const [isEditOpen, setIsEditOpen] = useState(false);
@@ -332,6 +335,7 @@ function RouteComponent() {
 			) : (
 				<IssueList
 					issues={items}
+					labels={labels}
 					states={states}
 					members={members}
 					workspaceId={workspaceId}
