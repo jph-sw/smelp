@@ -2,6 +2,24 @@
 
 Each release is a git tag. To upgrade, follow [Upgrade](README.md#upgrade) in the README.
 
+## 0.15.0 (2026-11-28)
+
+Work items get labels and story point estimates, and creating them takes fewer steps.
+
+- **Labels:** each project has its own labels, which admins create, rename, recolor and delete in project settings. Members set them on an item's Labels property. Board cards and list rows show them, and the board has a Label filter that is kept in the URL. A Jira import now creates real labels instead of a `Labels:` line in the description.
+- **Estimates:** a work item can have an estimate in story points, any number from 0 to 1000. Board cards show it as a badge, and a cycle page totals its points and how many are done, leaving out cancelled items. A Jira import reads the Story Points column, and the MCP tools read and set estimates.
+- **Create in place:** board columns have a + button, and cycle and module pages have a New work item button, so a new item starts in that state, cycle or module. The dialog names where the item will land.
+- **Create another:** Ctrl or Cmd+Enter in the description creates the item. With Create another on, the dialog stays open, clears the text, keeps type, priority and assignee, and puts focus back in the title. The success toast has an Open action.
+- **Assign to me:** a link next to the assignee picker, on the item page and in the create dialog, assigns the item to you in one click.
+- **Keyboard shortcuts:** press C to create a work item in the project on screen, and ? to list every shortcut. On a Mac, the sidebar toggle is now Command+B only.
+- **Sorting on phones:** the list view has a sort menu and a reverse button on small screens, and shows each item's due date, in red when it's overdue.
+- **Fixed:** a workspace member reading a public project they aren't in can open its work items, instead of getting Access denied. They're offered Join project instead of a comment box the server would refuse.
+- **Fixed:** text typed while Create another saves is kept.
+- **Fixed:** Escape in the description editor closes the New work item dialog.
+- **Fixed:** choosing Link in the rich-text editor focuses the link field.
+
+Upgrading runs two database changes automatically: they add an estimate to work items and tables for labels. Existing items start with no estimate and no labels. Back up first, as the README describes.
+
 ## 0.14.0 (2026-11-18)
 
 Work items link to each other, notifications open at their comment, and unsent text is kept.
