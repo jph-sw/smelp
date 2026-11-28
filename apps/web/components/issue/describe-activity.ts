@@ -74,6 +74,10 @@ export function describeActivity(
 			return `marked this as ${RELATION_PHRASES[entry.newValue ?? ""] ?? "related to"} ${relatedLabel(entry)}`;
 		case "issue.relation_removed":
 			return `removed the relation to ${relatedLabel(entry)}`;
+		case "issue.label_added":
+			return `added the label ${entry.newValue}`;
+		case "issue.label_removed":
+			return `removed the label ${entry.oldValue}`;
 		case "issue.link_added":
 			return entry.newValue
 				? `added the link "${entry.newValue}"`
