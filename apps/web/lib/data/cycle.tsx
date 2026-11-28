@@ -14,6 +14,13 @@ export const cycleQueryOptions = ({ cycleId }: { cycleId: string }) =>
 		queryFn: () => orpc.cycles.findOne({ id: cycleId }),
 	});
 
+// Under the cycle's key, so everything that refreshes the cycle refreshes this too.
+export const cycleBurnupQueryOptions = ({ cycleId }: { cycleId: string }) =>
+	queryOptions({
+		queryKey: ["cycle", cycleId, "burnup"],
+		queryFn: () => orpc.cycles.burnup({ id: cycleId }),
+	});
+
 export const createCycle = (input: {
 	projectId: string;
 	name: string;
