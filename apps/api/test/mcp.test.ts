@@ -197,6 +197,7 @@ test("lists the tools an agent works with", async () => {
 		"create_work_item",
 		"create_workspace",
 		"get_work_item",
+		"list_labels",
 		"list_my_work_items",
 		"list_projects",
 		"list_states",
@@ -292,6 +293,41 @@ describe("working on an item", () => {
 		await ada.client.issue.setLabels({ id: created.key, labelIds });
 		const item = await value(agent, "get_work_item", { key: created.key });
 		expect(item.labels).toEqual(["Backend", "urgent-fix"]);
+	});
+
+	test("lists the project's labels and sets them by name", async () => {
+		for (const name of ["frontend", "docs"]) {
+			await ada.client.labels.create({
+				projectId: PROJECT,
+				name,
+				color: "#22aa66",
+			});
+		}
+		const labels = await value(agent, "list_labels", { project: PROJECT });
+		expect(labels).toContainEqual({ name: "frontend", color: "#22aa66" });
+		expect(labels).toContainEqual({ name: "docs", color: "#22aa66" });
+
+		const created = await value(agent, "create_work_item", {
+			project: PROJECT,
+			title: "Polish the board",
+			labels: ["Frontend", " frontend "],
+		});
+		expect(created.labels).toEqual(["frontend"]);
+		expect(
+			(await value(agent, "get_work_item", { key: created.key })).labels,
+		).toEqual(["frontend"]);
+
+		const added = await value(agent, "update_work_item", {
+			key: created.key,
+			labels: [...created.labels, "docs"],
+		});
+		expect(added.labels.sort()).toEqual(["docs", "frontend"]);
+
+		const cleared = await value(agent, "update_work_item", {
+			key: created.key,
+			labels: [],
+		});
+		expect(cleared.labels).toEqual([]);
 	});
 
 	test("unassigns with null, and shows up for the assignee", async () => {
@@ -568,6 +604,58 @@ describe("errors come back as tool errors", () => {
 		expect(result.text).toContain("Grace");
 	});
 
+	test("an unknown label names the project's labels", async () => {
+		const refused = await call(agent, "create_work_item", {
+			project: PROJECT,
+			title: "Half-labelled ghost",
+			labels: ["Backend", "nope"],
+		});
+		expect(refused.isError).toBe(true);
+		expect(refused.text).toContain('No label "nope"');
+		expect(refused.text).toContain("Backend");
+		expect(
+			await value(agent, "search_work_items", { query: "Half-labelled ghost" }),
+		).toEqual([]);
+
+		const item = await value(agent, "create_work_item", {
+			project: PROJECT,
+			title: "Labelled later",
+		});
+		const update = await call(agent, "update_work_item", {
+			key: item.key,
+			title: "Renamed with a bad label",
+			labels: ["nope"],
+		});
+		expect(update.isError).toBe(true);
+		expect(update.text).toContain('No label "nope"');
+		expect((await value(agent, "get_work_item", { key: item.key })).title).toBe(
+			"Labelled later",
+		);
+	});
+
+	test("a project with no labels says how to add them", async () => {
+		const founder = await createUser("Labeller");
+		const founderAgent = await connect(founder.token);
+		const workspace = await value(founderAgent, "create_workspace", {
+			name: "No labels",
+		});
+		await value(founderAgent, "create_project", {
+			workspace: workspace.id,
+			key: "NOL",
+			name: "Unlabelled",
+		});
+		expect(
+			await value(founderAgent, "list_labels", { project: "NOL" }),
+		).toEqual([]);
+		const result = await call(founderAgent, "create_work_item", {
+			project: "NOL",
+			title: "Tag me",
+			labels: ["frontend"],
+		});
+		expect(result.isError).toBe(true);
+		expect(result.text).toContain("NOL has no labels");
+	});
+
 	test("a project or item the caller can't see", async () => {
 		const hidden = await outsider.client.issue.create({
 			title: "Secret",
@@ -586,6 +674,7 @@ describe("errors come back as tool errors", () => {
 			["add_comment", { key: hidden.id, body: "Let me in" }],
 			["create_work_item", { project: HIDDEN_PROJECT, title: "Sneaky" }],
 			["list_states", { project: HIDDEN_PROJECT }],
+			["list_labels", { project: HIDDEN_PROJECT }],
 			["get_work_item", { key: "MCP-9999" }],
 		] as const) {
 			const result = await call(agent, name, args);

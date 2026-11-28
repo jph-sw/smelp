@@ -18,6 +18,7 @@ type Api = ReturnType<typeof apiFor>;
 
 type State = Awaited<ReturnType<Api["states"]["find"]>>[number];
 type Member = Awaited<ReturnType<Api["projectMembers"]["find"]>>[number];
+type Label = Awaited<ReturnType<Api["labels"]["find"]>>[number];
 
 // The header tells an MCP client where to start signing in with OAuth (RFC 9728).
 const unauthorized = (base: string, tokenSent: boolean) =>
@@ -107,6 +108,19 @@ function stateNamed(states: State[], name: string, project: string) {
 	);
 }
 
+function labelsNamed(labels: Label[], names: string[], project: string) {
+	const ids = names.map((name) => {
+		const label = labels.find((candidate) => same(candidate.name, name));
+		if (label) return label.id;
+		throw invalid(
+			labels.length === 0
+				? `${project} has no labels. A project admin adds them in project settings.`
+				: `No label "${name}" in ${project}. Labels: ${labels.map((l) => l.name).join(", ")}`,
+		);
+	});
+	return [...new Set(ids)];
+}
+
 function memberNamed(members: Member[], name: string, project: string) {
 	const matches = members.filter((member) =>
 		[member.displayName, member.fullName, member.email].some(
@@ -146,6 +160,12 @@ const Estimate = z
 	.min(0)
 	.max(1000)
 	.describe("Story points, any number from 0 to 1000, like 3 or 0.5");
+const LabelNames = z
+	.array(z.string())
+	.max(50)
+	.describe(
+		"Label names from list_labels. The list replaces the item's labels, and an empty list removes them all, so to add a label pass the item's current labels plus the new one.",
+	);
 const IssueType = z
 	.enum(DEFAULTS.ISSUE_TYPES)
 	.describe(
@@ -362,6 +382,23 @@ function createServer(api: Api, appUrl: string) {
 	);
 
 	server.registerTool(
+		"list_labels",
+		{
+			annotations: { readOnlyHint: true },
+			description:
+				"A project's labels, by name. Work items take these names as labels. Project admins add labels in project settings.",
+			inputSchema: { project: ProjectKey },
+		},
+		({ project }) =>
+			respond(async () =>
+				(await api.labels.find({ projectId: project })).map((label) => ({
+					name: label.name,
+					color: label.color,
+				})),
+			),
+	);
+
+	server.registerTool(
 		"search_work_items",
 		{
 			annotations: { readOnlyHint: true },
@@ -449,6 +486,7 @@ function createServer(api: Api, appUrl: string) {
 				assignee: AssigneeName.optional(),
 				dueDate: DueDate.optional(),
 				estimate: Estimate.optional(),
+				labels: LabelNames.optional(),
 			},
 		},
 		({
@@ -461,6 +499,7 @@ function createServer(api: Api, appUrl: string) {
 			assignee,
 			dueDate,
 			estimate,
+			labels,
 		}) =>
 			respond(async () => {
 				const { project, states, members } = await projectContext(projectKey);
@@ -468,6 +507,13 @@ function createServer(api: Api, appUrl: string) {
 					? stateNamed(states, state, project.id)
 					: (states.find((candidate) => candidate.isDefault) ?? states[0]);
 				if (!initial) throw invalid(`${project.id} has no states`);
+				const labelIds = labels?.length
+					? labelsNamed(
+							await api.labels.find({ projectId: project.id }),
+							labels,
+							project.id,
+						)
+					: [];
 				const created = await api.issue.create({
 					projectId: project.id,
 					workspaceId: project.workspaceId,
@@ -482,6 +528,9 @@ function createServer(api: Api, appUrl: string) {
 					dueDate,
 					estimate,
 				});
+				if (labelIds.length > 0) {
+					await api.issue.setLabels({ id: created.id, labelIds });
+				}
 				return workItem(created.id);
 			}),
 	);
@@ -490,7 +539,7 @@ function createServer(api: Api, appUrl: string) {
 		"update_work_item",
 		{
 			description:
-				"Change a work item. Only the fields you pass change. A description replaces the whole old one.",
+				"Change a work item. Only the fields you pass change. A description replaces the whole old one, and so does a list of labels.",
 			inputSchema: {
 				key: Key,
 				title: z.string().optional(),
@@ -513,6 +562,7 @@ function createServer(api: Api, appUrl: string) {
 					.describe(
 						"Story points, any number from 0 to 1000, like 3 or 0.5, or null to remove the estimate",
 					),
+				labels: LabelNames.optional(),
 			},
 		},
 		({
@@ -525,10 +575,19 @@ function createServer(api: Api, appUrl: string) {
 			assignee,
 			dueDate,
 			estimate,
+			labels,
 		}) =>
 			respond(async () => {
 				const issue = await api.issue.find({ issueId: key });
 				const { states, members } = await projectContext(issue.projectId);
+				const labelIds =
+					labels === undefined
+						? undefined
+						: labelsNamed(
+								await api.labels.find({ projectId: issue.projectId }),
+								labels,
+								issue.projectId,
+							);
 				await api.issue.update({
 					id: issue.id,
 					title,
@@ -546,6 +605,9 @@ function createServer(api: Api, appUrl: string) {
 					dueDate,
 					estimate,
 				});
+				if (labelIds !== undefined) {
+					await api.issue.setLabels({ id: issue.id, labelIds });
+				}
 				return workItem(issue.id);
 			}),
 	);
