@@ -397,6 +397,36 @@ describe("working on an item", () => {
 		expect(refused.isError).toBe(true);
 	});
 
+	test("sets, changes and clears the estimate", async () => {
+		const created = await value(agent, "create_work_item", {
+			project: PROJECT,
+			title: "Estimate me",
+			estimate: 0.5,
+		});
+		expect(created.estimate).toBe(0.5);
+
+		const changed = await value(agent, "update_work_item", {
+			key: created.key,
+			estimate: 13,
+		});
+		expect(changed.estimate).toBe(13);
+		expect(
+			(await value(agent, "get_work_item", { key: created.key })).estimate,
+		).toBe(13);
+
+		const cleared = await value(agent, "update_work_item", {
+			key: created.key,
+			estimate: null,
+		});
+		expect(cleared.estimate).toBeNull();
+
+		const refused = await call(agent, "update_work_item", {
+			key: created.key,
+			estimate: -2,
+		});
+		expect(refused.isError).toBe(true);
+	});
+
 	test("search finds items by title or key", async () => {
 		const created = await value(agent, "create_work_item", {
 			project: PROJECT,

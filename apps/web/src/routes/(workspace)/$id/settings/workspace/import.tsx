@@ -303,9 +303,9 @@ function RouteComponent() {
 					<h2 className="text-sm font-semibold">Import from Jira</h2>
 					<p className="text-xs/relaxed text-muted-foreground">
 						Upload a Jira CSV export ("Export Excel CSV (all fields)" in the
-						issue search). Projects, work items, sub-tasks, assignees, comments
-						and issue links come across. Attachments don't. You'll see exactly
-						what will be created before anything is saved.
+						issue search). Projects, work items, sub-tasks, assignees, story
+						points, comments and issue links come across. Attachments don't.
+						You'll see exactly what will be created before anything is saved.
 					</p>
 				</div>
 				<label className="flex flex-col gap-1 text-xs font-medium">
