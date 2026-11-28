@@ -1,4 +1,5 @@
 import type { IssuePriority, IssueType, tables } from "@smelp/db";
+import { generateNKeysBetween } from "fractional-indexing";
 import type { JiraIssue, JiraLink, ParsedJira } from "./jira-csv";
 
 // Turns parsed Jira data plus the importer's choices into (a) the dry run shown before
@@ -599,7 +600,9 @@ export function buildPlan(
 		const labels = new Map<string, tables["label"]>();
 		const issueLabels: tables["issue_label"][] = [];
 
-		for (const issue of projectItems) {
+		// The project is new, so its backlog order is the order of the file.
+		const ranks = generateNKeysBetween(null, null, projectItems.length);
+		for (const [index, issue] of projectItems.entries()) {
 			const assignee = person(issue.assignee, issue.assigneeId);
 			const reporter = person(issue.reporter, issue.reporterId);
 			const assigneeId = userIdOf(assignee);
@@ -647,6 +650,7 @@ export function buildPlan(
 				moduleId: null,
 				dueDate: issue.dueDate,
 				estimate: issue.estimate,
+				rank: ranks[index] as string,
 				workspaceId: ctx.workspaceId,
 				projectId: p.id,
 				createdAt: created,

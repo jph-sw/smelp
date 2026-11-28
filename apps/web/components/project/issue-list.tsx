@@ -1,4 +1,8 @@
-import { ArrowDown02Icon, ArrowUp02Icon } from "@hugeicons/core-free-icons";
+import {
+	ArrowDown02Icon,
+	ArrowUp02Icon,
+	MoreHorizontal,
+} from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { ProjectMember, tables } from "@smelp/db";
 import { Link } from "@tanstack/react-router";
@@ -17,6 +21,7 @@ import {
 	sortIssues,
 } from "#/lib/issue-list-sort";
 import { ISSUE_PRIORITY_INFO } from "#/lib/issue-priorities";
+import type { Placement } from "#/lib/rank";
 import { cn, initials } from "#/lib/utils";
 import { IssuePriorityIcon } from "../issue/issue-priority-icon";
 import { IssueTypeIcon } from "../issue/issue-type-icon";
@@ -27,6 +32,7 @@ import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuGroup,
+	DropdownMenuItem,
 	DropdownMenuLabel,
 	DropdownMenuRadioGroup,
 	DropdownMenuRadioItem,
@@ -46,6 +52,13 @@ type ListSorting = {
 	onChange: (sort: ListSort | undefined) => void;
 };
 
+// Top and bottom are the whole project's, so they hold whatever the filters hide.
+type ListReorder = {
+	firstId: string;
+	lastId: string;
+	onMove: (id: string, placement: Placement) => void;
+};
+
 const COLUMNS: Record<ListSortColumn, { label: string; className?: string }> = {
 	key: { label: "Key", className: "w-28 lg:w-30" },
 	title: { label: "Title" },
@@ -62,8 +75,10 @@ const ABOVE_ROW_LINK = "relative z-10 cursor-pointer";
 const CELL_HOVER = "transition-colors duration-150 group-hover:bg-muted";
 
 // The row's link covers the row and would hide the cells' tooltips, so anything
-// with a tooltip sits above the link and passes its clicks on.
+// with a tooltip sits above the link and passes its clicks on. The move menu's
+// clicks stay its own, since its popup opens inside the row.
 function followRowLink(event: ReactMouseEvent<HTMLTableRowElement>) {
+	if ((event.target as Element).closest("button, [role=menu]")) return;
 	const link = event.currentTarget.querySelector("a");
 	if (link && !link.contains(event.target as Node)) {
 		link.dispatchEvent(new MouseEvent("click", event.nativeEvent));
@@ -108,7 +123,7 @@ function ColumnHeader({
 	);
 }
 
-const BOARD_ORDER = "board";
+const RANK_ORDER = "rank";
 
 // Below sm the header row is hidden, so this bar is the sort control there.
 function CompactSortBar({
@@ -126,25 +141,23 @@ function CompactSortBar({
 				<DropdownMenuTrigger
 					render={<Button variant="ghost" size="sm" className="text-xs" />}
 				>
-					{active
-						? `Sort: ${COLUMNS[active.column].label}`
-						: "Sort: Board order"}
+					{active ? `Sort: ${COLUMNS[active.column].label}` : "Sort: Rank"}
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="start" className="min-w-40">
 					<DropdownMenuGroup>
 						<DropdownMenuLabel>Sort by</DropdownMenuLabel>
 						<DropdownMenuRadioGroup
-							value={active?.column ?? BOARD_ORDER}
+							value={active?.column ?? RANK_ORDER}
 							onValueChange={(value) => {
-								if (value === BOARD_ORDER) return onChange(undefined);
+								if (value === RANK_ORDER) return onChange(undefined);
 								const column = value as ListSortColumn;
 								if (column !== active?.column) {
 									onChange(nextListSort(undefined, column));
 								}
 							}}
 						>
-							<DropdownMenuRadioItem value={BOARD_ORDER} closeOnSelect>
-								Board order
+							<DropdownMenuRadioItem value={RANK_ORDER} closeOnSelect>
+								Rank
 							</DropdownMenuRadioItem>
 							{LIST_SORT_COLUMNS.map((column) => (
 								<DropdownMenuRadioItem
@@ -177,8 +190,64 @@ function CompactSortBar({
 	);
 }
 
-// The board's items as a table, in the board's order unless `sorting` says
-// otherwise. With `sorting`, the column headers change the order.
+function MoveMenu({
+	issueId,
+	above,
+	below,
+	reorder,
+}: {
+	issueId: string;
+	above: string | undefined;
+	below: string | undefined;
+	reorder: ListReorder;
+}) {
+	const moves: Record<string, Placement | undefined> = {
+		top: issueId === reorder.firstId ? undefined : { before: reorder.firstId },
+		up: above ? { before: above } : undefined,
+		down: below ? { after: below } : undefined,
+		bottom: issueId === reorder.lastId ? undefined : { after: reorder.lastId },
+	};
+	return (
+		<span className={ABOVE_ROW_LINK}>
+			<DropdownMenu
+				onAction={(value) => {
+					const placement = moves[value];
+					if (placement) reorder.onMove(issueId, placement);
+				}}
+			>
+				<DropdownMenuTrigger
+					render={
+						<Button
+							variant="ghost"
+							size="icon-sm"
+							aria-label={`Move ${issueId} in the backlog`}
+						/>
+					}
+				>
+					<HugeiconsIcon icon={MoreHorizontal} className="size-4" />
+				</DropdownMenuTrigger>
+				<DropdownMenuContent align="end" className="min-w-40">
+					<DropdownMenuItem value="top" disabled={!moves.top}>
+						Move to top
+					</DropdownMenuItem>
+					<DropdownMenuItem value="up" disabled={!moves.up}>
+						Move up
+					</DropdownMenuItem>
+					<DropdownMenuItem value="down" disabled={!moves.down}>
+						Move down
+					</DropdownMenuItem>
+					<DropdownMenuItem value="bottom" disabled={!moves.bottom}>
+						Move to bottom
+					</DropdownMenuItem>
+				</DropdownMenuContent>
+			</DropdownMenu>
+		</span>
+	);
+}
+
+// The board's items as a table, in backlog order unless `sorting` says
+// otherwise. With `sorting`, the column headers change the order. With
+// `reorder`, each row in backlog order has a menu to move it.
 export function IssueList({
 	issues,
 	states,
@@ -186,6 +255,7 @@ export function IssueList({
 	labels = [],
 	workspaceId,
 	sorting,
+	reorder,
 }: {
 	issues: (tables["issue"] & { labelIds?: string[] })[];
 	states: tables["state"][];
@@ -193,9 +263,11 @@ export function IssueList({
 	labels?: Label[];
 	workspaceId: string;
 	sorting?: ListSorting;
+	reorder?: ListReorder;
 }) {
 	const rows = sortIssues(issues, sorting?.sort, { states, members });
 	const today = localDay();
+	const moving = sorting?.sort === undefined ? reorder : undefined;
 
 	if (rows.length === 0) return null;
 
@@ -211,10 +283,15 @@ export function IssueList({
 						{LIST_SORT_COLUMNS.map((column) => (
 							<ColumnHeader key={column} column={column} sorting={sorting} />
 						))}
+						{moving && (
+							<TableHead className="h-8 w-10">
+								<span className="sr-only">Move</span>
+							</TableHead>
+						)}
 					</TableRow>
 				</TableHeader>
 				<TableBody>
-					{rows.map((issue) => {
+					{rows.map((issue, index) => {
 						const state = states.find((s) => s.id === issue.state);
 						const assignee = members.find(
 							(member) => member.userId === issue.assignee,
@@ -302,7 +379,7 @@ export function IssueList({
 									className={cn(
 										COLUMNS.assignee.className,
 										CELL_HOVER,
-										"max-sm:rounded-e-md",
+										!moving && "max-sm:rounded-e-md",
 									)}
 								>
 									<span
@@ -354,7 +431,7 @@ export function IssueList({
 									className={cn(
 										COLUMNS.due.className,
 										CELL_HOVER,
-										"rounded-e-md",
+										!moving && "rounded-e-md",
 									)}
 								>
 									{issue.dueDate && (
@@ -376,6 +453,16 @@ export function IssueList({
 										</span>
 									)}
 								</TableCell>
+								{moving && (
+									<TableCell className={cn("w-10", CELL_HOVER, "rounded-e-md")}>
+										<MoveMenu
+											issueId={issue.id}
+											above={rows[index - 1]?.id}
+											below={rows[index + 1]?.id}
+											reorder={moving}
+										/>
+									</TableCell>
+								)}
 							</TableRow>
 						);
 					})}
