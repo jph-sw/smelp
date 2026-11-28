@@ -14,6 +14,9 @@ const WORKSPACE = "cycle_tests";
 const PROJECT = "CYC";
 const OTHER_PROJECT = "CYO";
 const PRIVATE_PROJECT = "CYP";
+// The burn-up tests need a current cycle that started days ago, so they get
+// their own project rather than claiming those days in another.
+const BURNUP_PROJECT = "CYB";
 
 const expectCode = (call: Promise<unknown>, code: string) =>
 	expect(call).rejects.toMatchObject({ code });
@@ -59,6 +62,13 @@ let counter = 0;
 function window() {
 	counter += 1;
 	const start = 1000 + counter * 20;
+	return { startDate: day(start), endDate: day(start + 9) };
+}
+
+// The same, but long over, so the cycle is completed.
+function pastWindow() {
+	counter += 1;
+	const start = -1000 - counter * 20;
 	return { startDate: day(start), endDate: day(start + 9) };
 }
 
@@ -113,6 +123,7 @@ beforeAll(async () => {
 		[PROJECT, "public"],
 		[OTHER_PROJECT, "public"],
 		[PRIVATE_PROJECT, "private"],
+		[BURNUP_PROJECT, "public"],
 	] as const) {
 		await admin.client.project.create({
 			id,
@@ -132,6 +143,7 @@ beforeAll(async () => {
 	await addMember(PROJECT, guest.id, "guest");
 	await addMember(OTHER_PROJECT, member.id, "member");
 	await addMember(PRIVATE_PROJECT, member.id, "member");
+	await addMember(BURNUP_PROJECT, member.id, "member");
 });
 
 describe("cycles", () => {
@@ -772,7 +784,7 @@ describe("burn-up", () => {
 	// and the logs the API wrote on creation are swapped for the seeded ones.
 	async function seed(item: Seed, logs: SeedLog[]) {
 		const issue = await admin.client.issue.create(
-			newIssue(item.title, "Backlog", OTHER_PROJECT),
+			newIssue(item.title, "Backlog", BURNUP_PROJECT),
 		);
 		for (let attempt = 0; ; attempt++) {
 			const [row] = await sql`
@@ -786,7 +798,7 @@ describe("burn-up", () => {
 		await sql`DELETE FROM activity_logs WHERE entityId = ${issue.id}`;
 		await sql`
 			UPDATE issue SET
-				state = ${states[OTHER_PROJECT]?.[item.state]},
+				state = ${states[BURNUP_PROJECT]?.[item.state]},
 				cycleId = ${item.cycleId},
 				estimate = ${item.estimate}
 			WHERE id = ${issue.id}
@@ -820,7 +832,7 @@ describe("burn-up", () => {
 			string,
 		];
 		const cycle = await admin.client.cycles.create(
-			newCycle("Burnup", { startDate: d0, endDate: day(6) }, OTHER_PROJECT),
+			newCycle("Burnup", { startDate: d0, endDate: day(6) }, BURNUP_PROJECT),
 		);
 		const before = at(day(-10), 9);
 		const created = { action: "created", createdAt: before };
@@ -832,8 +844,8 @@ describe("burn-up", () => {
 		};
 		const status = (from: string, to: string, createdAt: number) => ({
 			field: "status",
-			oldValue: states[OTHER_PROJECT]?.[from],
-			newValue: states[OTHER_PROJECT]?.[to],
+			oldValue: states[BURNUP_PROJECT]?.[from],
+			newValue: states[BURNUP_PROJECT]?.[to],
 			createdAt,
 		});
 
@@ -891,7 +903,7 @@ describe("burn-up", () => {
 		]);
 		// In another cycle of the project the whole time.
 		const other = await admin.client.cycles.create(
-			newCycle("Unrelated", window(), OTHER_PROJECT),
+			newCycle("Unrelated", window(), BURNUP_PROJECT),
 		);
 		await seed(
 			{ title: "Unrelated", state: "Done", cycleId: other.id, estimate: 40 },
@@ -924,7 +936,7 @@ describe("burn-up", () => {
 			string,
 		];
 		const cycle = await admin.client.cycles.create(
-			newCycle("Unestimated", { startDate: d0, endDate: d2 }, OTHER_PROJECT),
+			newCycle("Unestimated", { startDate: d0, endDate: d2 }, BURNUP_PROJECT),
 		);
 		const joined = {
 			field: "cycle",
@@ -938,7 +950,7 @@ describe("burn-up", () => {
 				joined,
 				{
 					field: "status",
-					oldValue: states[OTHER_PROJECT]?.Todo,
+					oldValue: states[BURNUP_PROJECT]?.Todo,
 					createdAt: at(d1, 12),
 				},
 			],
@@ -1016,5 +1028,151 @@ describe("burn-up", () => {
 				newCycleId: b.id,
 			},
 		]);
+	});
+});
+
+describe("velocity", () => {
+	let cancelledState: string;
+	beforeAll(async () => {
+		cancelledState = (
+			await admin.client.state.create({
+				projectId: PROJECT,
+				name: "Abandoned",
+				color: "#888888",
+				group: "cancelled",
+			})
+		).id;
+	});
+
+	async function fill(cycleId: string) {
+		const make = (title: string, state: string, estimate: number) =>
+			member.client.issue.create({
+				...newIssue(title),
+				state,
+				cycleId,
+				estimate,
+			});
+		const ids = states[PROJECT] as Record<string, string>;
+		return {
+			done: await make("V-done", ids.Done as string, 3),
+			doing: await make("V-doing", ids["In Progress"] as string, 5),
+			dropped: await make("V-dropped", cancelledState, 8),
+		};
+	}
+
+	const frozen = {
+		committed: { items: 2, points: 8 },
+		completed: { items: 1, points: 3 },
+	};
+
+	const velocityOf = async (cycleId: string) => ({
+		one: (await member.client.cycles.findOne({ id: cycleId })).velocity,
+		listed: (await member.client.cycles.find({ projectId: PROJECT })).find(
+			(c) => c.id === cycleId,
+		)?.velocity,
+	});
+
+	test("a completed cycle keeps its numbers after moves and edits", async () => {
+		const past = await admin.client.cycles.create(
+			newCycle("Sprint past", pastWindow()),
+		);
+		const next = await admin.client.cycles.create(newCycle("Sprint next"));
+		const { done, dropped } = await fill(past.id);
+
+		expect(await velocityOf(past.id)).toEqual({ one: frozen, listed: frozen });
+
+		expect(
+			(
+				await member.client.cycles.moveUnfinished({
+					fromCycleId: past.id,
+					toCycleId: next.id,
+				})
+			).moved,
+		).toBe(1);
+		await member.client.issue.update({ id: done.id, estimate: 13 });
+		await member.client.issue.update({
+			id: dropped.id,
+			state: states[PROJECT]?.Done,
+		});
+
+		expect(await velocityOf(past.id)).toEqual({ one: frozen, listed: frozen });
+		// Progress still follows the items as they are now.
+		const { progress } = await member.client.cycles.findOne({ id: past.id });
+		expect(progress.points).toEqual({ total: 21, completed: 21 });
+	});
+
+	test("a cycle that hasn't ended has no velocity", async () => {
+		const upcoming = await admin.client.cycles.create(newCycle("Not yet"));
+		await fill(upcoming.id);
+		expect(await velocityOf(upcoming.id)).toEqual({ one: null, listed: null });
+
+		const endsToday = await admin.client.cycles.create(
+			newCycle(
+				"Ends today",
+				{ startDate: day(-3), endDate: day(0) },
+				OTHER_PROJECT,
+			),
+		);
+		expect(endsToday.status).toBe("current");
+		expect(endsToday.velocity).toBeNull();
+	});
+
+	test("moving items out of a completed cycle nobody read freezes it first", async () => {
+		const past = await admin.client.cycles.create(
+			newCycle("Unread", pastWindow()),
+		);
+		const next = await admin.client.cycles.create(newCycle("Unread next"));
+		await fill(past.id);
+
+		await member.client.cycles.moveUnfinished({
+			fromCycleId: past.id,
+			toCycleId: next.id,
+		});
+		expect(await velocityOf(past.id)).toEqual({ one: frozen, listed: frozen });
+		// Moving out of a cycle that isn't over doesn't freeze it.
+		const after = await admin.client.cycles.create(newCycle("Unread after"));
+		await member.client.cycles.moveUnfinished({
+			fromCycleId: next.id,
+			toCycleId: after.id,
+		});
+		expect(
+			(await member.client.cycles.findOne({ id: next.id })).velocity,
+		).toBeNull();
+	});
+
+	test("an empty completed cycle shows zeros until it gets items", async () => {
+		const past = await admin.client.cycles.create(
+			newCycle("Backfilled", pastWindow()),
+		);
+		expect(past.velocity).toEqual({
+			committed: { items: 0, points: 0 },
+			completed: { items: 0, points: 0 },
+		});
+		await fill(past.id);
+		expect(await velocityOf(past.id)).toEqual({ one: frozen, listed: frozen });
+	});
+
+	test("moving a completed cycle's end into the future clears its velocity", async () => {
+		const dates = pastWindow();
+		const past = await admin.client.cycles.create(newCycle("Reopened", dates));
+		const { done } = await fill(past.id);
+		expect(
+			(await member.client.cycles.findOne({ id: past.id })).velocity,
+		).toEqual(frozen);
+
+		// Another day in the past keeps the frozen numbers.
+		await member.client.issue.update({ id: done.id, estimate: 13 });
+		const moved = await admin.client.cycles.update({
+			id: past.id,
+			endDate: dates.startDate,
+		});
+		expect(moved.velocity).toEqual(frozen);
+
+		const reopened = await admin.client.cycles.update({
+			id: past.id,
+			...window(),
+		});
+		expect(reopened.status).toBe("upcoming");
+		expect(reopened.velocity).toBeNull();
 	});
 });

@@ -9,8 +9,11 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { CycleForm } from "#/components/cycle/cycle-form";
 import {
+	averageVelocity,
 	CycleProgress,
 	CycleStatusBadge,
+	measuredCycles,
+	VelocityChart,
 } from "#/components/cycle/cycle-parts";
 import { ArchivedBanner } from "#/components/project/archived-banner";
 import { ProjectHeader } from "#/components/project/project-header";
@@ -30,6 +33,7 @@ import {
 	useProjectAccess,
 } from "#/lib/data/project-members";
 import { toastError } from "#/lib/errors";
+import { formatPoints, roundPoints } from "#/lib/points";
 
 export const Route = createFileRoute(
 	"/(workspace)/$id/projects/$projectId/cycles/",
@@ -79,6 +83,8 @@ function RouteComponent() {
 			items: cycles.filter((cycle) => cycle.status === "completed").reverse(),
 		},
 	].filter((group) => group.items.length > 0);
+	const measured = measuredCycles(cycles);
+	const average = averageVelocity(measured);
 
 	return (
 		<div className="flex h-full w-full min-h-0 flex-col overflow-hidden">
@@ -119,6 +125,14 @@ function RouteComponent() {
 								: ""}
 						</p>
 					)}
+					{measured.length > 0 && (
+						<section className="flex flex-col gap-2">
+							<h2 className="text-sm font-medium text-muted-foreground">
+								Velocity
+							</h2>
+							<VelocityChart cycles={measured} />
+						</section>
+					)}
 					{groups.map((group) => (
 						<section key={group.title} className="flex flex-col gap-2">
 							<h2 className="text-sm font-medium text-muted-foreground">
@@ -147,6 +161,20 @@ function RouteComponent() {
 												</p>
 											)}
 											<CycleProgress progress={cycle.progress} />
+											{cycle.status === "upcoming" && average && (
+												<p className="text-xs text-muted-foreground">
+													{formatPoints(cycle.progress.points.total)} planned ·
+													velocity {roundPoints(average.points)}
+												</p>
+											)}
+											{cycle.velocity &&
+												cycle.velocity.committed.points > 0 && (
+													<p className="text-xs text-muted-foreground">
+														Completed{" "}
+														{roundPoints(cycle.velocity.completed.points)} of{" "}
+														{formatPoints(cycle.velocity.committed.points)}
+													</p>
+												)}
 										</Link>
 									</li>
 								))}
