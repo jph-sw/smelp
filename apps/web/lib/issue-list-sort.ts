@@ -1,5 +1,6 @@
 import type { ProjectMember, tables } from "@smelp/db";
 import { ISSUE_PRIORITIES } from "./issue-priorities";
+import { byRank } from "./rank";
 
 export const LIST_SORT_COLUMNS = [
 	"key",
@@ -16,7 +17,7 @@ export type ListSort = ListSortColumn | `-${ListSortColumn}`;
 
 type SortableIssue = Pick<
 	tables["issue"],
-	"id" | "title" | "state" | "assignee" | "priority" | "dueDate" | "updatedAt"
+	"id" | "title" | "state" | "assignee" | "priority" | "dueDate" | "rank"
 >;
 
 type SortContext = {
@@ -112,7 +113,8 @@ function compareValues(a: SortValue, b: SortValue, descending: boolean) {
 	return descending ? -order : order;
 }
 
-// Ties keep the board's order whichever way the column runs.
+// Without a sort, items run in the project's backlog order, across states. A
+// column's ties keep the board's order whichever way the column runs.
 export function sortIssues<Issue extends SortableIssue>(
 	issues: readonly Issue[],
 	sort: ListSort | undefined,
@@ -135,9 +137,10 @@ export function sortIssues<Issue extends SortableIssue>(
 		}))
 		.sort(
 			(a, b) =>
-				compareValues(a.value, b.value, active?.descending ?? false) ||
-				stateIndex(a.issue) - stateIndex(b.issue) ||
-				b.issue.updatedAt - a.issue.updatedAt,
+				(active
+					? compareValues(a.value, b.value, active.descending) ||
+						stateIndex(a.issue) - stateIndex(b.issue)
+					: 0) || byRank(a.issue, b.issue),
 		)
 		.map(({ issue }) => issue);
 }

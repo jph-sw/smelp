@@ -17,7 +17,7 @@ const issue = (
 		assignee: string | null;
 		priority: IssuePriority;
 		dueDate: string | null;
-		updatedAt: number;
+		rank: string;
 	}> = {},
 ) => ({
 	id,
@@ -26,7 +26,7 @@ const issue = (
 	assignee: null,
 	priority: "none" as IssuePriority,
 	dueDate: null,
-	updatedAt: 0,
+	rank: "a0",
 	...fields,
 });
 
@@ -117,32 +117,37 @@ describe("sortIssues", () => {
 	test("ties keep the default order in both directions", () => {
 		const dueDate = "2026-11-20";
 		const issues = [
-			issue("OLD", { dueDate, updatedAt: 1 }),
-			issue("LATER-COLUMN", { dueDate, state: "done", updatedAt: 9 }),
-			issue("NEW", { dueDate, updatedAt: 5 }),
+			issue("LOW", { dueDate, rank: "a2" }),
+			issue("LATER-COLUMN", { dueDate, state: "done", rank: "a0" }),
+			issue("HIGH", { dueDate, rank: "a1" }),
 		];
-		const expected = ["NEW", "OLD", "LATER-COLUMN"];
+		const expected = ["HIGH", "LOW", "LATER-COLUMN"];
 		expect(sortedIds(issues, "due")).toEqual(expected);
 		expect(sortedIds(issues, "-due")).toEqual(expected);
 	});
 
 	test("items without a value keep the default order too", () => {
 		const issues = [
-			issue("OLD", { updatedAt: 1 }),
-			issue("NEW", { updatedAt: 5 }),
+			issue("LOW", { rank: "a5" }),
+			issue("HIGH", { rank: "a1" }),
 			issue("DATED", { dueDate: "2026-11-20" }),
 		];
-		expect(sortedIds(issues, "-due")).toEqual(["DATED", "NEW", "OLD"]);
+		expect(sortedIds(issues, "-due")).toEqual(["DATED", "HIGH", "LOW"]);
 	});
 
-	test("without a sort, items follow column order and then newest update", () => {
+	test("without a sort, items follow the backlog's rank across states", () => {
 		const issues = [
-			issue("A", { state: "done", updatedAt: 9 }),
-			issue("B", { updatedAt: 1 }),
-			issue("C", { state: "doing", updatedAt: 3 }),
-			issue("D", { updatedAt: 2 }),
+			issue("A", { state: "done", rank: "a1" }),
+			issue("B", { rank: "a3" }),
+			issue("C", { state: "doing", rank: "Zz" }),
+			issue("D", { rank: "a1V" }),
 		];
-		expect(sortedIds(issues)).toEqual(["D", "B", "C", "A"]);
+		expect(sortedIds(issues)).toEqual(["C", "A", "D", "B"]);
+	});
+
+	test("items sharing a rank run by key", () => {
+		const issues = [issue("B", { rank: "a1" }), issue("A", { rank: "a1" })];
+		expect(sortedIds(issues)).toEqual(["A", "B"]);
 	});
 
 	test("drops items whose state isn't shown and leaves the input alone", () => {

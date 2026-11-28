@@ -38,6 +38,7 @@
 		"@ui-sdk/react": "0.1.0-beta.1",
 		"clsx": "^2.1.1",
 		"cn": "^0.2.5",
+		"fractional-indexing": "^4.0.0",
 		"marked": "17.0.6",
 		"react": "^19.2.8",
 		"react-dom": "^19.2.8",
