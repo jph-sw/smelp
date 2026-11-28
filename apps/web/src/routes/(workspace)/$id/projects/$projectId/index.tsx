@@ -149,6 +149,7 @@ function RouteComponent() {
 				states={states}
 				modules={modules}
 				cycles={cycles}
+				labels={labels}
 				shownCount={shownCount}
 				totalCount={issues.length}
 			/>
