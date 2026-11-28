@@ -26,6 +26,10 @@ export function StateColumn({
 
 	const { ref } = useDroppable({
 		id: state.id,
+		type: "column",
+		accept: "issue",
+		// Low, so a card under the pointer wins over the column around it.
+		collisionPriority: 1,
 	});
 
 	useDragDropMonitor({

@@ -480,6 +480,39 @@ describe("working on an item", () => {
 		});
 		expect(byKey[0].title).toBe("Searchable needle");
 	});
+
+	test("reorders the backlog, and a project's search follows that order", async () => {
+		const keys: string[] = [];
+		for (const title of ["Ordered one", "Ordered two", "Ordered three"]) {
+			keys.push(
+				(await value(agent, "create_work_item", { project: PROJECT, title }))
+					.key,
+			);
+		}
+		const [one, , three] = keys;
+		const moved = await value(agent, "update_work_item", {
+			key: three,
+			after: one,
+		});
+		expect(moved.title).toBe("Ordered three");
+
+		const found = await value(agent, "search_work_items", {
+			query: "Ordered",
+			project: PROJECT,
+		});
+		expect(found.map((item: { title: string }) => item.title)).toEqual([
+			"Ordered one",
+			"Ordered three",
+			"Ordered two",
+		]);
+
+		const refused = await call(agent, "update_work_item", {
+			key: three,
+			before: one,
+			after: one,
+		});
+		expect(refused.isError).toBe(true);
+	});
 });
 
 describe("setting up a workspace", () => {

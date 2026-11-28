@@ -27,7 +27,7 @@ export const findIssues = base
 		);
 
 		const issues =
-			(await sql`SELECT * FROM issue WHERE projectId = ${input.projectId} ORDER BY updatedAt DESC`) as tables["issue"][];
+			(await sql`SELECT * FROM issue WHERE projectId = ${input.projectId} ORDER BY rank, id`) as tables["issue"][];
 		const labelIds = await labelIdsByIssue(input.projectId);
 
 		return issues.map((issue) => ({
@@ -76,7 +76,7 @@ const escapeLike = (text: string) => text.replace(/[!%_]/g, "!$&");
 
 export type SearchResult = Pick<
 	tables["issue"],
-	"id" | "title" | "projectId" | "assignee" | "updatedAt"
+	"id" | "title" | "projectId" | "assignee" | "updatedAt" | "rank"
 > & {
 	projectName: string;
 	stateName: string;
@@ -105,6 +105,7 @@ async function findReadableIssues(
 			issue.projectId,
 			issue.assignee,
 			issue.updatedAt,
+			issue.rank,
 			project.name AS projectName,
 			project.archivedAt IS NOT NULL AS projectArchived,
 			state.name AS stateName,

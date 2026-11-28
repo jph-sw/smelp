@@ -95,6 +95,15 @@ async function respond(work: () => Promise<unknown>): Promise<CallToolResult> {
 	}
 }
 
+function byRank(
+	a: { rank: string; id: string },
+	b: { rank: string; id: string },
+) {
+	if (a.rank !== b.rank) return a.rank < b.rank ? -1 : 1;
+	if (a.id !== b.id) return a.id < b.id ? -1 : 1;
+	return 0;
+}
+
 const invalid = (message: string) => new ORPCError("BAD_REQUEST", { message });
 
 const same = (a: string, b: string) =>
@@ -403,7 +412,7 @@ function createServer(api: Api, appUrl: string) {
 		{
 			annotations: { readOnlyHint: true },
 			description:
-				"Find work items whose title contains the text, or whose key is exactly it. Newest changes first, at most 50.",
+				"Find work items whose title contains the text, or whose key is exactly it, at most 50. Within one project they come in the project's backlog order, top first. Across projects, newest changes first.",
 			inputSchema: {
 				query: z.string().min(2).max(200),
 				project: ProjectKey.optional().describe(
@@ -422,7 +431,7 @@ function createServer(api: Api, appUrl: string) {
 				return results
 					.flat()
 					.filter((item) => !project || item.projectId === project)
-					.sort((a, b) => b.updatedAt - a.updatedAt)
+					.sort(project ? byRank : (a, b) => b.updatedAt - a.updatedAt)
 					.slice(0, 50)
 					.map((item) => ({
 						key: item.id,
@@ -539,7 +548,7 @@ function createServer(api: Api, appUrl: string) {
 		"update_work_item",
 		{
 			description:
-				"Change a work item. Only the fields you pass change. A description replaces the whole old one, and so does a list of labels.",
+				"Change a work item. Only the fields you pass change. A description replaces the whole old one, and so does a list of labels. To reorder the project's backlog, pass before or after with another item's key: the item moves directly above or below it, and nothing else about it changes.",
 			inputSchema: {
 				key: Key,
 				title: z.string().optional(),
@@ -563,6 +572,12 @@ function createServer(api: Api, appUrl: string) {
 						"Story points, any number from 0 to 1000, like 3 or 0.5, or null to remove the estimate",
 					),
 				labels: LabelNames.optional(),
+				before: Key.optional().describe(
+					"Put this item directly above this other item's key in the project's backlog order. Pass before or after, not both.",
+				),
+				after: Key.optional().describe(
+					"Put this item directly below this other item's key in the project's backlog order. Pass before or after, not both.",
+				),
 			},
 		},
 		({
@@ -576,6 +591,8 @@ function createServer(api: Api, appUrl: string) {
 			dueDate,
 			estimate,
 			labels,
+			before,
+			after,
 		}) =>
 			respond(async () => {
 				const issue = await api.issue.find({ issueId: key });
@@ -604,6 +621,8 @@ function createServer(api: Api, appUrl: string) {
 							: memberNamed(members, assignee, issue.projectId).userId,
 					dueDate,
 					estimate,
+					before,
+					after,
 				});
 				if (labelIds !== undefined) {
 					await api.issue.setLabels({ id: issue.id, labelIds });

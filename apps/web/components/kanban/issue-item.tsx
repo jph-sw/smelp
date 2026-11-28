@@ -1,4 +1,5 @@
-import { useDraggable } from "@dnd-kit/react";
+import { defaultCollisionDetection } from "@dnd-kit/collision";
+import { useSortable } from "@dnd-kit/react/sortable";
 import { MoreHorizontal } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { ProjectMember, tables } from "@smelp/db";
@@ -22,8 +23,26 @@ import {
 	DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 
+// A card that overlaps the pointer's column only at its edge would outrank that
+// column, which has a lower priority so cards inside it win. Cards in other columns
+// stay out of it, so a drop into another column's empty space lands there.
+const inPointerColumn: typeof defaultCollisionDetection = (input) => {
+	const pointer = input.dragOperation.position.current;
+	const bounds = input.droppable.shape?.boundingRectangle;
+	if (
+		pointer &&
+		bounds &&
+		(pointer.x < bounds.left || pointer.x > bounds.right)
+	) {
+		return null;
+	}
+	return defaultCollisionDetection(input);
+};
+
 export function IssueItem({
 	issue,
+	column,
+	index,
 	workspaceId,
 	assignee,
 	labels = [],
@@ -33,6 +52,10 @@ export function IssueItem({
 	onMove,
 }: {
 	issue: tables["issue"];
+	/** The state whose column shows it, which differs from its own while dragged. */
+	column: string;
+	/** Its place in that column, top first. */
+	index: number;
 	workspaceId: string;
 	assignee?: ProjectMember;
 	labels?: Label[];
@@ -42,8 +65,13 @@ export function IssueItem({
 	states?: tables["state"][];
 	onMove?: (stateId: string) => void;
 }) {
-	const { ref, isDragging } = useDraggable({
+	const { ref, isDragging } = useSortable({
 		id: issue.id,
+		index,
+		group: column,
+		type: "issue",
+		accept: "issue",
+		collisionDetector: inPointerColumn,
 		disabled: !draggable,
 	});
 	const canMove = Boolean(draggable && states && onMove);

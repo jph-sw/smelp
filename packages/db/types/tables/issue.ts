@@ -25,6 +25,8 @@ export type issue = {
 	dueDate: string | null;
 	/** Story points. */
 	estimate: number | null;
+	/** Fractional-indexing key for the project's hand-set order. Sort by rank, then id. */
+	rank: string;
 	workspaceId: string;
 	projectId: string;
 	createdAt: number;
