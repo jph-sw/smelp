@@ -98,6 +98,8 @@ const HEADER = [
 	"Comment",
 	"Parent id",
 	"Parent",
+	"Sprint",
+	"Sprint",
 ];
 
 type Row = {
@@ -122,6 +124,8 @@ type Row = {
 	comments?: string[];
 	attachments?: string;
 	parent?: [id: string, key: string];
+	/** One cell per sprint the item was in, oldest first. */
+	sprints?: string[];
 };
 
 function quote(value: string) {
@@ -175,6 +179,9 @@ function jiraCsv(rows: Row[], options: { bom?: boolean; eol?: string } = {}) {
 		}
 		put("Parent id", row.parent?.[0]);
 		put("Parent", row.parent?.[1]);
+		for (const [nth, sprint] of (row.sprints ?? []).entries()) {
+			put("Sprint", sprint, nth);
+		}
 		return cells.map(quote).join(",");
 	});
 	return (
@@ -1335,5 +1342,167 @@ describe("jira import: all or nothing", () => {
 		}
 		expect(await count("auth_space", "id = 'ZQH'")).toBe(0);
 		expect(await count("issue", "projectId = 'ZQH'")).toBe(0);
+	});
+});
+
+describe("jira import: sprints", () => {
+	// SPA-2 was carried over from Sprint 1 into Sprint 2.
+	const twoSprints = () =>
+		jiraCsv([
+			{ summary: "Early", key: "SPA-1", sprints: ["Sprint 1"] },
+			{ summary: "Carried", key: "SPA-2", sprints: ["Sprint 1", "Sprint 2"] },
+			{ summary: "Late", key: "SPA-3", sprints: ["Sprint 2"] },
+			{ summary: "Unplanned", key: "SPA-4" },
+		]);
+	const dates = {
+		"Sprint 1": { startDate: "2026-01-05", endDate: "2026-01-16" },
+		"Sprint 2": { startDate: "2026-01-19", endDate: "2026-01-30" },
+	};
+	const cycleOf = async (issueId: string) =>
+		(await admin.client.issue.find({ issueId })).cycleId;
+
+	test("each sprint becomes a cycle holding its items", async () => {
+		const csv = twoSprints();
+		const plan = await admin.client.jiraImport.preview({
+			workspaceId: WORKSPACE,
+			csv,
+			mapping: { sprints: dates },
+		});
+		expect(plan.errors).toEqual([]);
+		expect(plan.totals.cycles).toBe(2);
+		expect(plan.projects.find((p) => p.jiraKey === "SPA")?.cycles).toBe(2);
+
+		const result = await admin.client.jiraImport.apply({
+			workspaceId: WORKSPACE,
+			csv,
+			mapping: { sprints: dates },
+		});
+		expect(result.totals.cycles).toBe(2);
+
+		const cycles = await admin.client.cycles.find({ projectId: "SPA" });
+		expect(
+			cycles.map(({ name, startDate, endDate }) => ({
+				name,
+				startDate,
+				endDate,
+			})),
+		).toEqual([
+			{ name: "Sprint 1", ...dates["Sprint 1"] },
+			{ name: "Sprint 2", ...dates["Sprint 2"] },
+		]);
+		const [first = null, second = null] = cycles.map((cycle) => cycle.id);
+		expect(
+			await Promise.all(["SPA-1", "SPA-2", "SPA-3", "SPA-4"].map(cycleOf)),
+		).toEqual([first, second, second, null]);
+	});
+
+	test("the dry run lists the sprints, and ones without dates are skipped", async () => {
+		const csv = twoSprints().replaceAll("SPA", "SPB");
+		const plan = await admin.client.jiraImport.preview({
+			workspaceId: WORKSPACE,
+			csv,
+			mapping: { sprints: { "Sprint 2": dates["Sprint 2"] } },
+		});
+		expect(plan.sprints).toEqual([
+			{ name: "Sprint 1", items: 1, startDate: null, endDate: null },
+			{ name: "Sprint 2", items: 2, ...dates["Sprint 2"] },
+		]);
+		expect(plan.warnings).toContain(
+			"1 sprint(s) have no dates and are skipped. Their items come across without a cycle.",
+		);
+
+		await admin.client.jiraImport.apply({
+			workspaceId: WORKSPACE,
+			csv,
+			mapping: {},
+		});
+		expect(await admin.client.cycles.find({ projectId: "SPB" })).toEqual([]);
+		expect(await Promise.all(["SPB-1", "SPB-2", "SPB-3"].map(cycleOf))).toEqual(
+			[null, null, null],
+		);
+	});
+
+	test("sprints that overlap, even by one day, are refused with nothing saved", async () => {
+		const csv = twoSprints().replaceAll("SPA", "SPC");
+		const touching = {
+			"Sprint 1": dates["Sprint 1"],
+			"Sprint 2": { startDate: "2026-01-16", endDate: "2026-01-30" },
+		};
+		const plan = await admin.client.jiraImport.preview({
+			workspaceId: WORKSPACE,
+			csv,
+			mapping: { sprints: touching },
+		});
+		expect(plan.errors).toEqual([
+			'Sprints "Sprint 1" and "Sprint 2" overlap in project SPC. Cycles in a project can\'t share a day.',
+		]);
+
+		const before = await count("cycle");
+		await expectCode(
+			admin.client.jiraImport.apply({
+				workspaceId: WORKSPACE,
+				csv,
+				mapping: { sprints: touching },
+			}),
+			"BAD_REQUEST",
+		);
+		expect(await count("cycle")).toBe(before);
+		expect(await count("project", "id = 'SPC'")).toBe(0);
+	});
+
+	test("missing or backwards dates are errors", async () => {
+		const csv = twoSprints().replaceAll("SPA", "SPD");
+		const plan = await admin.client.jiraImport.preview({
+			workspaceId: WORKSPACE,
+			csv,
+			mapping: {
+				sprints: {
+					"Sprint 1": { startDate: "", endDate: "2026-01-16" },
+					"Sprint 2": { startDate: "2026-01-30", endDate: "2026-01-19" },
+				},
+			},
+		});
+		expect(plan.errors).toEqual([
+			'Sprint "Sprint 1": give it a start and an end date, or leave it out.',
+			'Sprint "Sprint 2" ends before it starts.',
+		]);
+		const invalid = await admin.client.jiraImport.preview({
+			workspaceId: WORKSPACE,
+			csv,
+			mapping: {
+				sprints: {
+					"Sprint 1": { startDate: "2026-02-30", endDate: "2026-03-01" },
+				},
+			},
+		});
+		expect(invalid.errors).toEqual([
+			'Sprint "Sprint 1": give it a start and an end date, or leave it out.',
+		]);
+	});
+
+	test("a sprint across two projects becomes a cycle in each", async () => {
+		const csv = jiraCsv([
+			{ summary: "Here", key: "SPE-1", sprints: ["Shared"] },
+			{ summary: "There", key: "SPF-1", sprints: ["Shared"] },
+		]);
+		const shared = { startDate: "2026-02-02", endDate: "2026-02-13" };
+		const plan = await admin.client.jiraImport.preview({
+			workspaceId: WORKSPACE,
+			csv,
+			mapping: { sprints: { Shared: shared } },
+		});
+		expect(plan.errors).toEqual([]);
+		expect(plan.sprints).toEqual([{ name: "Shared", items: 2, ...shared }]);
+
+		await admin.client.jiraImport.apply({
+			workspaceId: WORKSPACE,
+			csv,
+			mapping: { sprints: { Shared: shared } },
+		});
+		for (const project of ["SPE", "SPF"]) {
+			const cycles = await admin.client.cycles.find({ projectId: project });
+			expect(cycles).toMatchObject([{ name: "Shared", ...shared }]);
+			expect(await cycleOf(`${project}-1`)).toBe(cycles[0]?.id ?? null);
+		}
 	});
 });

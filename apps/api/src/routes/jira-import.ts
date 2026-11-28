@@ -41,6 +41,16 @@ const MappingInput = v.object({
 			v.nullable(v.pipe(v.string(), v.maxLength(100))),
 		),
 	),
+	// Dates stay loose here, so a bad one comes back as a dry-run error.
+	sprints: v.optional(
+		v.record(
+			v.pipe(v.string(), v.maxLength(64)),
+			v.object({
+				startDate: v.pipe(v.string(), v.maxLength(10)),
+				endDate: v.pipe(v.string(), v.maxLength(10)),
+			}),
+		),
+	),
 	jiraBaseUrl: v.optional(v.pipe(v.string(), v.trim(), v.maxLength(500))),
 });
 
@@ -158,6 +168,9 @@ export const applyJiraImport = base
 					await tx`INSERT INTO project ${tx(write.project)}`;
 					await tx`INSERT INTO project_counter ${tx(write.counter)}`;
 					await tx`INSERT INTO state ${tx(write.states)}`;
+					for (const rows of chunks(write.cycles, 400)) {
+						await tx`INSERT INTO cycle ${tx(rows)}`;
+					}
 					await tx`INSERT INTO import_record ${tx(write.record)}`;
 					for (const rows of chunks(write.issues, 200)) {
 						await tx`INSERT INTO issue ${tx(rows)}`;
