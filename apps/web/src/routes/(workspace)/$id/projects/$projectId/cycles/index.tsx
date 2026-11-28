@@ -1,13 +1,8 @@
 import { PlusSignIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import {
-	useMutation,
-	useQueryClient,
-	useSuspenseQuery,
-} from "@tanstack/react-query";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
-import { CycleForm } from "#/components/cycle/cycle-form";
+import { CreateCycleDialog } from "#/components/cycle/create-cycle-dialog";
 import {
 	averageVelocity,
 	CycleProgress,
@@ -17,22 +12,14 @@ import {
 } from "#/components/cycle/cycle-parts";
 import { ArchivedBanner } from "#/components/project/archived-banner";
 import { ProjectHeader } from "#/components/project/project-header";
-import { Button } from "#/components/ui/button";
-import {
-	Dialog,
-	DialogContent,
-	DialogHeader,
-	DialogTitle,
-	DialogTrigger,
-} from "#/components/ui/dialog";
 import { usePageTitle } from "#/hooks/use-page-title";
-import { createCycle, cyclesQueryOptions, formatRange } from "#/lib/data/cycle";
+import { cyclesQueryOptions, formatRange } from "#/lib/data/cycle";
 import { projectQueryOptions } from "#/lib/data/project";
 import {
 	projectMembersQueryOptions,
 	useProjectAccess,
 } from "#/lib/data/project-members";
-import { toastError } from "#/lib/errors";
+import { nextCycle } from "#/lib/next-cycle";
 import { formatPoints, roundPoints } from "#/lib/points";
 
 export const Route = createFileRoute(
@@ -49,7 +36,6 @@ export const Route = createFileRoute(
 
 function RouteComponent() {
 	const { projectId, id: workspaceId } = Route.useParams();
-	const queryClient = useQueryClient();
 	const { data: project } = useSuspenseQuery(
 		projectQueryOptions({ projectId }),
 	);
@@ -57,16 +43,7 @@ function RouteComponent() {
 	const { data: cycles } = useSuspenseQuery(cyclesQueryOptions({ projectId }));
 	// Creating cycles takes what project states take: a project admin.
 	const { canManage, isArchived } = useProjectAccess(projectId);
-	const [isCreateOpen, setIsCreateOpen] = useState(false);
-
-	const { mutate: create, isPending } = useMutation({
-		mutationFn: createCycle,
-		onSuccess: async () => {
-			setIsCreateOpen(false);
-			await queryClient.invalidateQueries({ queryKey: ["cycles", projectId] });
-		},
-		onError: (error) => toastError(error, "Couldn't create the cycle."),
-	});
+	const next = nextCycle(cycles);
 
 	// What is running comes first, then what is ahead, then what is over.
 	const groups = [
@@ -99,22 +76,22 @@ function RouteComponent() {
 					<div className="flex items-center justify-between gap-2">
 						<h1 className="text-lg font-medium">Cycles</h1>
 						{canManage && !isArchived && (
-							<Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-								<DialogTrigger render={<Button />}>
+							<div className="flex items-center gap-2">
+								{next && (
+									<CreateCycleDialog
+										projectId={projectId}
+										title="Next cycle"
+										variant="outline"
+										initial={next}
+									>
+										Next cycle
+									</CreateCycleDialog>
+								)}
+								<CreateCycleDialog projectId={projectId} title="New cycle">
 									<HugeiconsIcon icon={PlusSignIcon} />
 									New cycle
-								</DialogTrigger>
-								<DialogContent>
-									<DialogHeader>
-										<DialogTitle>New cycle</DialogTitle>
-									</DialogHeader>
-									<CycleForm
-										submitLabel="Create cycle"
-										isPending={isPending}
-										onSubmit={(values) => create({ projectId, ...values })}
-									/>
-								</DialogContent>
-							</Dialog>
+								</CreateCycleDialog>
+							</div>
 						)}
 					</div>
 					{cycles.length === 0 && (
