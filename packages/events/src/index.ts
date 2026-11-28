@@ -4,6 +4,7 @@ import "../lib/subscriber";
 export type {
 	DomainEvent,
 	DomainEventType,
+	LabelChange,
 	ModuleChange,
 	ProjectChange,
 	StateChange,

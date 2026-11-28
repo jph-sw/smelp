@@ -93,6 +93,13 @@ import {
 	searchIssues,
 } from "./routes/issues";
 import { applyJiraImport, previewJiraImport } from "./routes/jira-import";
+import {
+	createLabel,
+	deleteLabel,
+	findLabels,
+	setIssueLabels,
+	updateLabel,
+} from "./routes/label";
 import { createLink, deleteLink, findLinks, updateLink } from "./routes/link";
 import {
 	createModule,
@@ -247,6 +254,7 @@ export const router = {
 		delete: deleteIssue,
 		watchers: findWatchers,
 		setWatching,
+		setLabels: setIssueLabels,
 	},
 	issueRelations: {
 		find: findIssueRelations,
@@ -285,6 +293,12 @@ export const router = {
 		create: createModule,
 		update: updateModule,
 		delete: deleteModule,
+	},
+	labels: {
+		find: findLabels,
+		create: createLabel,
+		update: updateLabel,
+		delete: deleteLabel,
 	},
 	comments: {
 		find: findComments,

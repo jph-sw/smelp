@@ -32,6 +32,7 @@ type MemberRef = { userId: string; userName: string | null; role: string };
 export type ProjectChange = "name" | "description" | "icon" | "access";
 export type ModuleChange = "name" | "description" | "lead" | "targetDate";
 export type StateChange = "name" | "color" | "group" | "isDefault";
+export type LabelChange = "name" | "color";
 
 export type DomainEvent =
 	| Event<"issue.created", IssueRef>
@@ -100,6 +101,15 @@ export type DomainEvent =
 				oldValue: string | null;
 				newValue: string | null;
 				relatedId: string;
+			}
+	  >
+	| Event<
+			"issue.label_added" | "issue.label_removed",
+			IssueRef & {
+				field: "label";
+				// The label's name, kept so the log reads well after a rename or delete.
+				oldValue: string | null;
+				newValue: string | null;
 			}
 	  >
 	| Event<"issue.link_added", LinkChange>
@@ -198,6 +208,24 @@ export type DomainEvent =
 	  >
 	| Event<
 			"module.deleted",
+			{ projectId: string; projectName: string; name: string }
+	  >
+	| Event<
+			"label.created",
+			{ projectId: string; projectName: string; name: string }
+	  >
+	| Event<
+			"label.updated",
+			{
+				projectId: string;
+				projectName: string;
+				name: string;
+				oldName: string;
+				changes: LabelChange[];
+			}
+	  >
+	| Event<
+			"label.deleted",
 			{ projectId: string; projectName: string; name: string }
 	  >
 	| Event<"workspace.member_invited", { email: string | null; role: string }>

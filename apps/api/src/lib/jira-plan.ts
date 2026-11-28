@@ -81,6 +81,7 @@ export type DryRunProject = {
 	comments: number;
 	relations: number;
 	webLinks: number;
+	labels: number;
 	members: number;
 };
 
@@ -123,6 +124,8 @@ export type ProjectWrite = {
 	issues: tables["issue"][];
 	comments: tables["comment"][];
 	webLinks: tables["issue_link"][];
+	labels: tables["label"][];
+	issueLabels: tables["issue_label"][];
 };
 
 export type Plan = {
@@ -138,6 +141,18 @@ const DESCRIPTION_MAX = 20_000;
 const COMMENT_MAX = 10_000;
 const PROJECT_DESCRIPTION_MAX = 2_000;
 const FOOTER_MAX = 2_000;
+const LABEL_NAME_MAX = 32;
+// Jira labels have no color, so each one gets the next of these in turn.
+const LABEL_COLORS = [
+	"#3b82f6",
+	"#22c55e",
+	"#f97316",
+	"#a855f7",
+	"#ef4444",
+	"#14b8a6",
+	"#eab308",
+	"#ec4899",
+];
 const TRUNCATED = "\n\n[...truncated]";
 
 const nameKey = (name: string) =>
@@ -580,6 +595,9 @@ export function buildPlan(
 		const rows: tables["issue"][] = [];
 		const comments: tables["comment"][] = [];
 		const webLinks: tables["issue_link"][] = [];
+		// One label per name, whatever its case in Jira. The first spelling wins.
+		const labels = new Map<string, tables["label"]>();
+		const issueLabels: tables["issue_label"][] = [];
 
 		for (const issue of projectItems) {
 			const assignee = person(issue.assignee, issue.assigneeId);
@@ -659,6 +677,27 @@ export function buildPlan(
 				});
 			}
 
+			const onItem = new Set<string>();
+			for (const jiraLabel of issue.labels) {
+				const name = clip(jiraLabel.trim(), LABEL_NAME_MAX).trim();
+				if (!name) continue;
+				const key = name.toLowerCase();
+				let label = labels.get(key);
+				if (!label) {
+					label = {
+						id: crypto.randomUUID(),
+						projectId: p.id,
+						name,
+						color: LABEL_COLORS[labels.size % LABEL_COLORS.length] as string,
+						createdAt: ctx.now,
+					};
+					labels.set(key, label);
+				}
+				if (onItem.has(label.id)) continue;
+				onItem.add(label.id);
+				issueLabels.push({ issueId: id, labelId: label.id });
+			}
+
 			if (baseUrl) {
 				webLinks.push({
 					id: crypto.randomUUID(),
@@ -735,6 +774,8 @@ export function buildPlan(
 			issues: rows,
 			comments,
 			webLinks,
+			labels: [...labels.values()],
+			issueLabels,
 		});
 	}
 	if (datedNow > 0) {
@@ -761,6 +802,7 @@ export function buildPlan(
 			comments: write?.comments.length ?? 0,
 			relations: relationCountByProject.get(p.jira.key) ?? 0,
 			webLinks: write?.webLinks.length ?? 0,
+			labels: write?.labels.length ?? 0,
 			members: write ? write.members.length : 0,
 		};
 	});
@@ -876,9 +918,6 @@ function footerOf(
 	if (extra.reporter) lines.push(`Reporter: ${clip(extra.reporter.name, 100)}`);
 	if (extra.assignee) {
 		lines.push(`Jira assignee: ${clip(extra.assignee.name, 100)}`);
-	}
-	if (issue.labels.length > 0) {
-		lines.push(`Labels: ${clip(issue.labels.join(", "), 300)}`);
 	}
 	if (issue.attachments > 0) {
 		lines.push(`Attachments in Jira (not imported): ${issue.attachments}`);

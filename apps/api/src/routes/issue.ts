@@ -14,6 +14,7 @@ import {
 } from "../lib/attachments";
 import { Day } from "../lib/day";
 import { Estimate, pointsText } from "../lib/estimate";
+import { labelIdsOfIssue } from "../lib/labels";
 import { displayNameOf } from "../lib/names";
 import { watch } from "../lib/watchers";
 import { base } from "../orpc";
@@ -160,7 +161,7 @@ export const findIssue = base
 			| undefined;
 		if (!issue) throw new ORPCError("NOT_FOUND");
 
-		return issue;
+		return { ...issue, labelIds: await labelIdsOfIssue(issue.id) };
 	});
 
 export const updateIssue = base

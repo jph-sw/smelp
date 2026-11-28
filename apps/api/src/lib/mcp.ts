@@ -173,11 +173,14 @@ function createServer(api: Api, appUrl: string) {
 
 	async function workItem(key: string) {
 		const issue = await api.issue.find({ issueId: key });
-		const [{ states, members }, comments, relations] = await Promise.all([
-			projectContext(issue.projectId),
-			api.comments.find({ issueId: key }),
-			api.issueRelations.find({ issueId: key }),
-		]);
+		const [{ states, members }, comments, relations, labels] =
+			await Promise.all([
+				projectContext(issue.projectId),
+				api.comments.find({ issueId: key }),
+				api.issueRelations.find({ issueId: key }),
+				api.labels.find({ projectId: issue.projectId }),
+			]);
+		const labelName = new Map(labels.map((label) => [label.id, label.name]));
 		const nameOf = (userId: string | null) =>
 			userId === null
 				? null
@@ -193,6 +196,7 @@ function createServer(api: Api, appUrl: string) {
 			project: issue.projectId,
 			parent: issue.parentId,
 			dueDate: issue.dueDate,
+			labels: issue.labelIds.flatMap((id) => labelName.get(id) ?? []),
 			estimate: issue.estimate,
 			url: itemUrl(issue.workspaceId, issue.id),
 			createdBy: issue.createdByName,
@@ -424,7 +428,7 @@ function createServer(api: Api, appUrl: string) {
 		{
 			annotations: { readOnlyHint: true },
 			description:
-				"A work item with its Markdown description, related items and Markdown comments, oldest comment first.",
+				"A work item with its labels, Markdown description, related items and Markdown comments, oldest comment first.",
 			inputSchema: { key: Key },
 		},
 		({ key }) => respond(() => workItem(key)),

@@ -158,10 +158,12 @@ function toFeedEvent(row: FeedRow, canSeeInviteEmails: boolean): FeedEvent {
 			break;
 		case "issue.attachment_added":
 		case "issue.attachment_removed":
+		case "issue.label_added":
+		case "issue.label_removed":
 		case "issue.link_added":
 		case "issue.link_updated":
 		case "issue.link_removed":
-			// The file name or the link's title; untitled links have none.
+			// The file name, the label's name or the link's title; untitled links have none.
 			details = { name: row.newValue ?? row.oldValue };
 			break;
 		case "issue.pull_request_linked":
@@ -206,9 +208,12 @@ function toFeedEvent(row: FeedRow, canSeeInviteEmails: boolean): FeedEvent {
 			break;
 		case "module.created":
 		case "module.deleted":
+		case "label.created":
+		case "label.deleted":
 			details = { name: text("name") };
 			break;
 		case "module.updated":
+		case "label.updated":
 			details = {
 				name: text("name"),
 				oldName: text("oldName"),

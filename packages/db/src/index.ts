@@ -37,6 +37,7 @@ import {
 import type { issue_link } from "../types/tables/issue_link";
 import type { issue_relation } from "../types/tables/issue_relation";
 import type { issue_watcher } from "../types/tables/issue_watcher";
+import type { issue_label, label } from "../types/tables/label";
 import type { schema_migrations } from "../types/tables/migration";
 import type { module } from "../types/tables/module";
 import type { notification } from "../types/tables/notification";
@@ -200,6 +201,8 @@ export type tables = {
 	import_record: import_record;
 	module: module;
 	cycle: cycle;
+	label: label;
+	issue_label: issue_label;
 };
 
 export const DEFAULTS = {

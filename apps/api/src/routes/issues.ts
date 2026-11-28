@@ -8,6 +8,7 @@ import {
 	requireWorkspacePermission,
 	resolveViewer,
 } from "../lib/access";
+import { labelIdsByIssue } from "../lib/labels";
 import { base } from "../orpc";
 
 const sql = new DB().sqlite;
@@ -27,8 +28,12 @@ export const findIssues = base
 
 		const issues =
 			(await sql`SELECT * FROM issue WHERE projectId = ${input.projectId} ORDER BY updatedAt DESC`) as tables["issue"][];
+		const labelIds = await labelIdsByIssue(input.projectId);
 
-		return issues;
+		return issues.map((issue) => ({
+			...issue,
+			labelIds: labelIds.get(issue.id) ?? [],
+		}));
 	});
 
 export const findMyIssues = base

@@ -230,6 +230,18 @@ export function ActivitySentence({
 					<Strong>{d.relatedId ?? "another work item"}</Strong>
 				</>
 			);
+		case "issue.label_added":
+			return (
+				<>
+					added the label <Strong>{d.name}</Strong> to {issue}
+				</>
+			);
+		case "issue.label_removed":
+			return (
+				<>
+					removed the label <Strong>{d.name}</Strong> from {issue}
+				</>
+			);
 		case "issue.link_added":
 			return d.name ? (
 				<>
@@ -411,6 +423,34 @@ export function ActivitySentence({
 			return (
 				<>
 					deleted the module <Strong>{d.name}</Strong> in {project}
+				</>
+			);
+		case "label.created":
+			return (
+				<>
+					created the label <Strong>{d.name}</Strong> in {project}
+				</>
+			);
+		case "label.updated": {
+			const changes = d.changes ?? [];
+			if (changes.length === 1 && changes[0] === "name") {
+				return (
+					<>
+						renamed the label <Strong>{d.oldName}</Strong> to{" "}
+						<Strong>{d.name}</Strong> in {project}
+					</>
+				);
+			}
+			return (
+				<>
+					updated the label <Strong>{d.name}</Strong> in {project}
+				</>
+			);
+		}
+		case "label.deleted":
+			return (
+				<>
+					deleted the label <Strong>{d.name}</Strong> in {project}
 				</>
 			);
 		case "workspace.created":

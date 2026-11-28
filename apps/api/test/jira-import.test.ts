@@ -538,7 +538,13 @@ describe("jira import: apply", () => {
 		expect(one.description).toContain("Ping @Ada Lovelace");
 		expect(one.description).toContain("Imported from Jira: ZQA-1");
 		expect(one.description).toContain("Jira status: In Progress");
-		expect(one.description).toContain("Labels: backend, auth");
+		expect(one.description).not.toContain("Labels:");
+		// Jira labels become the project's own labels, on the items that had them.
+		const labels = await admin.client.labels.find({ projectId: "ZQA" });
+		const labelNames = (ids: string[]) =>
+			ids.map((id) => labels.find((label) => label.id === id)?.name);
+		expect(labelNames(one.labelIds)).toEqual(["auth", "backend"]);
+		for (const label of labels) expect(label.color).toMatch(/^#[0-9a-f]{6}$/);
 		expect(one.description).toContain("Attachments in Jira (not imported): 1");
 		expect(one.description).not.toContain("spec.pdf");
 
@@ -873,6 +879,42 @@ describe("jira import: mapping", () => {
 			),
 		);
 		expect(dueDates).toEqual(["2026-11-20", "2026-11-21", null, null]);
+	});
+
+	test("Jira labels become one project label per name, whatever the case", async () => {
+		const long = "x".repeat(40);
+		const csv = jiraCsv([
+			{ summary: "One", key: "LBJ-1", labels: ["Frontend", "customer"] },
+			{ summary: "Two", key: "LBJ-2", labels: ["frontend", "FRONTEND"] },
+			{ summary: "Three", key: "LBJ-3", labels: [long] },
+			{ summary: "None", key: "LBJ-4" },
+		]);
+		const plan = await admin.client.jiraImport.preview({
+			workspaceId: WORKSPACE,
+			csv,
+		});
+		expect(plan.projects.find((p) => p.jiraKey === "LBJ")?.labels).toBe(3);
+		await admin.client.jiraImport.apply({
+			workspaceId: WORKSPACE,
+			csv,
+			mapping: {},
+		});
+
+		const labels = await admin.client.labels.find({ projectId: "LBJ" });
+		expect(labels.map((label) => label.name)).toEqual([
+			"customer",
+			"Frontend",
+			"x".repeat(32),
+		]);
+		const nameOf = (id: string) =>
+			labels.find((label) => label.id === id)?.name;
+		const board = await admin.client.issues.find({ projectId: "LBJ" });
+		const labelsOn = (key: string) =>
+			(board.find((item) => item.id === key)?.labelIds ?? []).map(nameOf);
+		expect(labelsOn("LBJ-1")).toEqual(["customer", "Frontend"]);
+		expect(labelsOn("LBJ-2")).toEqual(["Frontend"]);
+		expect(labelsOn("LBJ-3")).toEqual(["x".repeat(32)]);
+		expect(labelsOn("LBJ-4")).toEqual([]);
 	});
 
 	test("keeps Jira story points from either column, and none when they can't be read", async () => {
