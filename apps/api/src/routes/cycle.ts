@@ -47,6 +47,132 @@ export type CycleSummary = tables["cycle"] & {
 	progress: CycleProgress;
 };
 
+export type CycleBurnup = {
+	unit: "points" | "items";
+	days: { day: string; scope: number; completed: number }[];
+};
+
+type Snapshot = { inCycle: boolean; estimate: number | null; group: string };
+
+export type BurnupItem = Snapshot & { id: string };
+
+export type BurnupLog = {
+	entityId: string;
+	action: string;
+	field: string | null;
+	oldValue: string | null;
+	/** Undefined for logs written before cycle changes carried ids. */
+	oldCycleId?: string | null;
+	createdAt: number;
+};
+
+type BurnupContext = {
+	cycle: Pick<tables["cycle"], "id" | "name">;
+	groupOf: Map<string, string>;
+};
+
+// How to step an item back over one of its logs, keyed by field (or action for
+// "created", which has no field).
+const UNDO: Record<
+	string,
+	(snapshot: Snapshot, log: BurnupLog, context: BurnupContext) => Snapshot
+> = {
+	status: (snapshot, log, { groupOf }) => ({
+		...snapshot,
+		group: groupOf.get(log.oldValue ?? "") ?? "unstarted",
+	}),
+	estimate: (snapshot, log) => {
+		const estimate = log.oldValue === null ? null : Number(log.oldValue);
+		return {
+			...snapshot,
+			estimate: Number.isFinite(estimate) ? estimate : null,
+		};
+	},
+	cycle: (snapshot, log, { cycle }) => ({
+		...snapshot,
+		inCycle:
+			log.oldCycleId === undefined
+				? log.oldValue === cycle.name
+				: log.oldCycleId === cycle.id,
+	}),
+	created: (snapshot) => ({ ...snapshot, inCycle: false }),
+};
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+function cycleDays(
+	cycle: Pick<tables["cycle"], "startDate" | "endDate">,
+	today: string,
+) {
+	const last = today < cycle.endDate ? today : cycle.endDate;
+	const days: string[] = [];
+	for (
+		let time = Date.parse(`${cycle.startDate}T00:00:00Z`);
+		new Date(time).toISOString().slice(0, 10) <= last;
+		time += DAY_MS
+	) {
+		days.push(new Date(time).toISOString().slice(0, 10));
+	}
+	return days;
+}
+
+/**
+ * Replays history backwards from the items' current rows. Each day is the state
+ * at its end in UTC. Logs must be newest first.
+ */
+export function burnup(
+	items: BurnupItem[],
+	logs: BurnupLog[],
+	days: string[],
+	context: BurnupContext,
+): CycleBurnup {
+	const logsOf = new Map<string, BurnupLog[]>();
+	for (const log of logs) {
+		const history = logsOf.get(log.entityId);
+		if (history) history.push(log);
+		else logsOf.set(log.entityId, [log]);
+	}
+	const totals = days.map(() => ({
+		points: { scope: 0, completed: 0 },
+		items: { scope: 0, completed: 0 },
+	}));
+
+	for (const { id, ...current } of items) {
+		const history = logsOf.get(id) ?? [];
+		let snapshot: Snapshot = current;
+		let next = 0;
+		for (let index = days.length - 1; index >= 0; index--) {
+			const dayEnd = Date.parse(`${days[index]}T00:00:00Z`) + DAY_MS;
+			for (; next < history.length; next++) {
+				const log = history[next] as BurnupLog;
+				if (log.createdAt < dayEnd) break;
+				const undo = UNDO[log.field ?? log.action];
+				if (undo) snapshot = undo(snapshot, log, context);
+			}
+			if (!snapshot.inCycle || snapshot.group === "cancelled") continue;
+			const total = totals[index] as (typeof totals)[number];
+			const points = snapshot.estimate ?? 0;
+			total.points.scope += points;
+			total.items.scope += 1;
+			if (snapshot.group === "completed") {
+				total.points.completed += points;
+				total.items.completed += 1;
+			}
+		}
+	}
+
+	const unit = totals.some((total) => total.points.scope > 0)
+		? "points"
+		: "items";
+	return {
+		unit,
+		days: days.map((day, index) => ({
+			day,
+			...(totals[index] as (typeof totals)[number])[unit],
+		})),
+	};
+}
+
 const todayUtc = () => new Date().toISOString().slice(0, 10);
 
 function cycleStatus(
@@ -184,6 +310,75 @@ export const findCycle = base
 		const cycle = await requireReadableCycle(context.headers, input.id);
 		const [summary] = await summarize([cycle]);
 		return summary as CycleSummary;
+	});
+
+export const findCycleBurnup = base
+	.input(v.object({ id: v.string() }))
+	.handler(async ({ input, context }): Promise<CycleBurnup> => {
+		const cycle = await requireReadableCycle(context.headers, input.id);
+		const days = cycleDays(cycle, todayUtc());
+		if (days.length === 0) return { unit: "items", days: [] };
+
+		// Items in the cycle now, and items that were in it at some point. Logs
+		// from before cycle changes carried ids only have the cycle's name.
+		const rows = (await sql`
+			SELECT issue.id, issue.cycleId, issue.estimate, state."group" AS "group"
+			FROM issue
+			LEFT JOIN state ON state.id = issue.state
+			WHERE issue.projectId = ${cycle.projectId}
+				AND (
+					issue.cycleId = ${cycle.id}
+					OR EXISTS (
+						SELECT 1 FROM activity_logs AS log
+						WHERE log.entityType = 'issue'
+							AND log.entityId = issue.id
+							AND log.field = 'cycle'
+							AND (
+								json_extract(log.metadata, '$.oldCycleId') = ${cycle.id}
+								OR json_extract(log.metadata, '$.newCycleId') = ${cycle.id}
+								OR (
+									json_type(log.metadata, '$.oldCycleId') IS NULL
+									AND (log.oldValue = ${cycle.name} OR log.newValue = ${cycle.name})
+								)
+							)
+					)
+				)
+		`) as (Pick<tables["issue"], "id" | "cycleId" | "estimate"> & {
+			group: string | null;
+		})[];
+		const items = rows.map((row) => ({
+			id: row.id,
+			inCycle: row.cycleId === cycle.id,
+			estimate: row.estimate,
+			group: row.group ?? "unstarted",
+		}));
+
+		const logs =
+			items.length === 0
+				? []
+				: (
+						(await sql`
+							SELECT entityId, action, field, oldValue, createdAt,
+								json_extract(metadata, '$.oldCycleId') AS oldCycleId,
+								json_type(metadata, '$.oldCycleId') IS NOT NULL AS hasCycleIds
+							FROM activity_logs
+							WHERE entityType = 'issue'
+								AND entityId IN ${sql(items.map((item) => item.id))}
+								AND (field IN ('status', 'estimate', 'cycle') OR action = 'created')
+							ORDER BY createdAt DESC, rowid DESC
+						`) as (BurnupLog & { hasCycleIds: number })[]
+					).map(({ hasCycleIds, ...log }) => ({
+						...log,
+						oldCycleId: hasCycleIds ? log.oldCycleId : undefined,
+					}));
+
+		const states = (await sql`
+			SELECT id, "group" FROM state WHERE projectId = ${cycle.projectId}
+		`) as Pick<tables["state"], "id" | "group">[];
+		return burnup(items, logs, days, {
+			cycle,
+			groupOf: new Map(states.map((state) => [state.id, state.group])),
+		});
 	});
 
 export const createCycle = base
