@@ -24,6 +24,7 @@ import {
 	REACTION_EMOJIS,
 } from "../types/tables/comment_reaction";
 import type { cycle } from "../types/tables/cycle";
+import type { cycle_snapshot } from "../types/tables/cycle_snapshot";
 import type {
 	issue_github_ref,
 	project_github_repo,
@@ -201,6 +202,7 @@ export type tables = {
 	import_record: import_record;
 	module: module;
 	cycle: cycle;
+	cycle_snapshot: cycle_snapshot;
 	label: label;
 	issue_label: issue_label;
 };

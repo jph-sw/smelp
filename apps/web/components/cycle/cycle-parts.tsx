@@ -89,3 +89,99 @@ export function CycleProgress({
 		</div>
 	);
 }
+
+type Velocity = NonNullable<Cycle["velocity"]>;
+type MeasuredCycle = Cycle & { velocity: Velocity };
+
+// A cycle nothing was planned into says nothing about the team's pace.
+export function measuredCycles(cycles: Cycle[]): MeasuredCycle[] {
+	return cycles.filter(
+		(cycle): cycle is MeasuredCycle =>
+			cycle.status === "completed" &&
+			cycle.velocity !== null &&
+			cycle.velocity.committed.points > 0,
+	);
+}
+
+// Takes the cycles oldest first, as the API lists them.
+export function averageVelocity(cycles: MeasuredCycle[]) {
+	const recent = cycles.slice(-3);
+	if (recent.length === 0) return null;
+	const total = recent.reduce(
+		(sum, cycle) => sum + cycle.velocity.completed.points,
+		0,
+	);
+	return {
+		points: Math.round((total / recent.length) * 10) / 10,
+		count: recent.length,
+	};
+}
+
+const lastCycles = (count: number) =>
+	count === 1 ? "the last cycle" : `the last ${count} cycles`;
+
+export function VelocityChart({ cycles }: { cycles: MeasuredCycle[] }) {
+	const shown = cycles.slice(-6);
+	const average = averageVelocity(cycles);
+	const max = Math.max(
+		...shown.map((cycle) =>
+			Math.max(
+				cycle.velocity.committed.points,
+				cycle.velocity.completed.points,
+			),
+		),
+	);
+	const height = (points: number) => `${(points / max) * 100}%`;
+
+	return (
+		<div className="flex flex-col gap-3 rounded-lg border p-3">
+			<div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+				{average && (
+					<span>
+						Average of {lastCycles(average.count)}:{" "}
+						<span className="font-medium text-foreground">
+							{formatPoints(average.points)}
+						</span>
+					</span>
+				)}
+				<span className="ms-auto flex items-center gap-3">
+					<span className="flex items-center gap-1.5">
+						<span className="size-2 rounded-sm bg-muted-foreground/30" />
+						Committed
+					</span>
+					<span className="flex items-center gap-1.5">
+						<span className="size-2 rounded-sm bg-primary" />
+						Completed
+					</span>
+				</span>
+			</div>
+			<ul className="sr-only">
+				{shown.map((cycle) => (
+					<li key={cycle.id}>
+						{cycle.name}: {roundPoints(cycle.velocity.completed.points)} of{" "}
+						{formatPoints(cycle.velocity.committed.points)} completed
+					</li>
+				))}
+			</ul>
+			<div aria-hidden className="flex gap-2">
+				{shown.map((cycle) => (
+					<div key={cycle.id} className="flex min-w-0 flex-1 flex-col gap-1">
+						<div className="flex h-24 items-end justify-center gap-0.5">
+							<div
+								className="w-3 rounded-t-sm bg-muted-foreground/30"
+								style={{ height: height(cycle.velocity.committed.points) }}
+							/>
+							<div
+								className="w-3 rounded-t-sm bg-primary"
+								style={{ height: height(cycle.velocity.completed.points) }}
+							/>
+						</div>
+						<span className="truncate text-center text-xs text-muted-foreground">
+							{cycle.name}
+						</span>
+					</div>
+				))}
+			</div>
+		</div>
+	);
+}
