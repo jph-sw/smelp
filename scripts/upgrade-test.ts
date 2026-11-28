@@ -399,6 +399,22 @@ try {
 			"the old work item joins a module",
 		);
 	}
+	const label = await rpc<{ id: string }>("labels/create", {
+		projectId: "UPG",
+		name: "upgraded",
+		color: "#3b82f6",
+	});
+	if (!missing(label.status)) {
+		check(label.status === 200, "the old project can get a label");
+		await ok("issue/setLabels", { id: issue.id, labelIds: [label.data.id] });
+		const tagged = await ok<{ labelIds: string[] }>("issue/find", {
+			issueId: issue.id,
+		});
+		check(
+			tagged.labelIds.includes(label.data.id),
+			"the old work item gets a label",
+		);
+	}
 	const jiraCsv = [
 		"Summary,Issue key,Issue id,Issue Type,Status,Project key,Project name,Status Category",
 		"Imported after the upgrade,UPJ-1,30001,Task,To Do,UPJ,Upgrade Jira,To Do",
