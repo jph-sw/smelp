@@ -205,8 +205,8 @@ const writes: Record<string, () => Promise<unknown>> = {
 		// Created through SQL, so the refusal is about deleting and not creating.
 		const id = crypto.randomUUID();
 		await sql`
-			INSERT INTO issue (id, title, description, state, type, workspaceId, projectId, createdBy, createdAt, updatedAt)
-			VALUES (${id}, 'Throwaway', '', ${first(stateIds)}, 'task', ${WORKSPACE}, ${PROJECT}, ${member.id}, 0, 0)
+			INSERT INTO issue (id, title, description, state, type, workspaceId, projectId, createdBy, createdAt, updatedAt, rank)
+			VALUES (${id}, 'Throwaway', '', ${first(stateIds)}, 'task', ${WORKSPACE}, ${PROJECT}, ${member.id}, 0, 0, 'a0')
 		`;
 		return member.client.issue.delete({ id });
 	},

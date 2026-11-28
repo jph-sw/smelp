@@ -16,6 +16,12 @@ import { Day } from "../lib/day";
 import { Estimate, pointsText } from "../lib/estimate";
 import { labelIdsOfIssue } from "../lib/labels";
 import { displayNameOf } from "../lib/names";
+import {
+	moveRank,
+	type Placement,
+	rankAtEnd,
+	requireValidPlacement,
+} from "../lib/rank";
 import { watch } from "../lib/watchers";
 import { base } from "../orpc";
 
@@ -179,10 +185,25 @@ export const updateIssue = base
 			cycleId: v.optional(v.nullable(NonEmpty)),
 			dueDate: v.optional(v.nullable(Day)),
 			estimate: v.optional(v.nullable(Estimate)),
+			before: v.optional(NonEmpty),
+			after: v.optional(NonEmpty),
 		}),
 	)
 	.handler(async ({ input, context }) => {
 		const caller = await requireUser(context.headers);
+
+		if (input.before !== undefined && input.after !== undefined) {
+			throw new ORPCError("BAD_REQUEST", {
+				message: "Move a work item before another one or after it, not both",
+			});
+		}
+		const placement: Placement | null =
+			input.before !== undefined
+				? { before: input.before }
+				: input.after !== undefined
+					? { after: input.after }
+					: null;
+		if (placement) requireValidPlacement(input.id, placement);
 
 		const oldIssue = (
 			await sql`SELECT * FROM issue WHERE id = ${input.id}`
@@ -238,7 +259,15 @@ export const updateIssue = base
 			!dueDateChanged &&
 			!estimateChanged
 		) {
-			return oldIssue;
+			if (!placement) return oldIssue;
+			// Reordering the backlog isn't an edit of the item: nothing is logged, and
+			// the item keeps its last change time.
+			return await sql.begin("IMMEDIATE", async (tx) => {
+				await moveRank(tx, oldIssue, placement);
+				return (
+					(await tx`SELECT * FROM issue WHERE id = ${oldIssue.id}`) as tables["issue"][]
+				)[0] as tables["issue"];
+			});
 		}
 
 		if (stateChanged) await requireStateInProject(next.state, project.id);
@@ -274,7 +303,8 @@ export const updateIssue = base
 		const setModule = moduleChanged ? 1 : 0;
 		// Same for the cycle: it must still exist in this project when the write happens.
 		const setCycle = cycleChanged ? 1 : 0;
-		const written = await sql`
+		const written = await sql.begin("IMMEDIATE", async (tx) => {
+			const rows = (await tx`
 			UPDATE issue SET
 				state = ${next.state},
 				title = ${next.title},
@@ -327,7 +357,12 @@ export const updateIssue = base
 					)
 				)
 			RETURNING id
-		`;
+		`) as { id: string }[];
+			if (rows.length > 0 && placement) {
+				await moveRank(tx, oldIssue, placement);
+			}
+			return rows;
+		});
 		if (written.length === 0) {
 			const stillThere = await sql`SELECT id FROM issue WHERE id = ${input.id}`;
 			if (stillThere.length === 0) throw new ORPCError("NOT_FOUND");
@@ -615,7 +650,7 @@ export const createIssue = base
 			await sql`SELECT * FROM project_counter WHERE projectId = ${input.projectId}`
 		)[0] as tables["project_counter"];
 
-		const issue: tables["issue"] = {
+		const draft: Omit<tables["issue"], "rank"> = {
 			id: `${project.id}-${project_counter.lastNumber + 1}`,
 			assignee: input.assignee || null,
 			state: input.state,
@@ -636,8 +671,16 @@ export const createIssue = base
 			updatedBy: caller.userId,
 		};
 
+		let issue: tables["issue"];
 		try {
-			await sql`INSERT INTO issue ${sql(issue)}`;
+			// In one transaction, so two items created at once don't share a rank. It
+			// takes the write lock before reading, so another process's write makes it
+			// wait instead of failing.
+			issue = await sql.begin("IMMEDIATE", async (tx) => {
+				const row = { ...draft, rank: await rankAtEnd(tx, project.id) };
+				await tx`INSERT INTO issue ${tx(row)}`;
+				return row;
+			});
 		} catch (e) {
 			if (e instanceof SQL.SQLiteError) {
 				if (e.code === "SQLITE_CONSTRAINT_PRIMARYKEY") {
