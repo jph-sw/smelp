@@ -284,7 +284,7 @@ function RouteComponent() {
 										<DialogTitle>Edit cycle</DialogTitle>
 									</DialogHeader>
 									<CycleForm
-										initial={cycle}
+										initial={{ ...cycle, goal: cycle.goal ?? "" }}
 										submitLabel="Save"
 										isPending={isUpdating}
 										onSubmit={(values) => update({ id: cycle.id, ...values })}
@@ -318,6 +318,11 @@ function RouteComponent() {
 						</div>
 					)}
 				</div>
+				{cycle.goal && (
+					<p className="whitespace-pre-wrap text-sm text-muted-foreground">
+						{cycle.goal}
+					</p>
+				)}
 				<CycleProgress progress={cycle.progress} showLegend />
 				{canWrite && (
 					<MoveUnfinished

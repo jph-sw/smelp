@@ -1,10 +1,16 @@
 import { useState } from "react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
+import { Textarea } from "../ui/textarea";
 
-export type CycleValues = { name: string; startDate: string; endDate: string };
+export type CycleValues = {
+	name: string;
+	startDate: string;
+	endDate: string;
+	goal: string;
+};
 
-// Name and dates of a cycle. The server has the final say on overlaps, so a
+// Name, dates and goal of a cycle. The server has the final say on overlaps, so a
 // refusal comes back through onSubmit as an error toast.
 export function CycleForm({
 	initial,
@@ -20,6 +26,7 @@ export function CycleForm({
 	const [name, setName] = useState(initial?.name ?? "");
 	const [startDate, setStartDate] = useState(initial?.startDate ?? "");
 	const [endDate, setEndDate] = useState(initial?.endDate ?? "");
+	const [goal, setGoal] = useState(initial?.goal ?? "");
 
 	const endsBeforeStart = Boolean(startDate && endDate && endDate < startDate);
 	const isComplete = Boolean(name.trim() && startDate && endDate);
@@ -30,7 +37,12 @@ export function CycleForm({
 			onSubmit={(event) => {
 				event.preventDefault();
 				if (isComplete && !endsBeforeStart) {
-					onSubmit({ name: name.trim(), startDate, endDate });
+					onSubmit({
+						name: name.trim(),
+						startDate,
+						endDate,
+						goal: goal.trim(),
+					});
 				}
 			}}
 		>
@@ -63,6 +75,15 @@ export function CycleForm({
 					/>
 				</label>
 			</div>
+			<label className="flex flex-col gap-1 text-xs text-muted-foreground">
+				Goal (optional)
+				<Textarea
+					value={goal}
+					maxLength={500}
+					placeholder="Why this cycle is worth doing"
+					onChange={(event) => setGoal(event.target.value)}
+				/>
+			</label>
 			{endsBeforeStart && (
 				<p className="text-xs text-destructive">
 					The cycle can't end before it starts.

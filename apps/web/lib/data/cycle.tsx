@@ -19,6 +19,7 @@ export const createCycle = (input: {
 	name: string;
 	startDate: string;
 	endDate: string;
+	goal: string;
 }) => orpc.cycles.create(input);
 
 export const updateCycle = (input: {
@@ -26,6 +27,7 @@ export const updateCycle = (input: {
 	name?: string;
 	startDate?: string;
 	endDate?: string;
+	goal?: string;
 }) => orpc.cycles.update(input);
 
 export const deleteCycle = (input: { id: string }) => orpc.cycles.delete(input);
