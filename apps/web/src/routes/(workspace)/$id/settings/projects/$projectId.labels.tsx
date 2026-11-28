@@ -102,6 +102,18 @@ function LabelList({ labels }: { labels: Label[] }) {
 	);
 }
 
+// Mirrors the palette the Jira import colors labels with, so each new label starts different.
+const LABEL_COLORS = [
+	"#3b82f6",
+	"#22c55e",
+	"#f97316",
+	"#a855f7",
+	"#ef4444",
+	"#14b8a6",
+	"#eab308",
+	"#ec4899",
+];
+
 function RouteComponent() {
 	usePageTitle("Project labels");
 	const { projectId } = Route.useParams();
@@ -110,7 +122,9 @@ function RouteComponent() {
 	const { canManage, isArchived } = useProjectAccess(projectId);
 
 	const [newName, setNewName] = useState("");
-	const [newColor, setNewColor] = useState("#3b82f6");
+	const [pickedColor, setPickedColor] = useState<string | null>(null);
+	const newColor =
+		pickedColor ?? LABEL_COLORS[labels.length % LABEL_COLORS.length];
 
 	const options = {
 		onSettled: () => invalidateLabels(queryClient, projectId),
@@ -121,7 +135,10 @@ function RouteComponent() {
 	const create = useMutation({
 		mutationFn: createLabel,
 		...options,
-		onSuccess: () => setNewName(""),
+		onSuccess: () => {
+			setNewName("");
+			setPickedColor(null);
+		},
 	});
 
 	if (!canManage) {
@@ -213,7 +230,7 @@ function RouteComponent() {
 					aria-label="New label color"
 					className={COLOR_INPUT}
 					value={newColor}
-					onChange={(event) => setNewColor(event.target.value)}
+					onChange={(event) => setPickedColor(event.target.value)}
 				/>
 				<Input
 					aria-label="New label name"
