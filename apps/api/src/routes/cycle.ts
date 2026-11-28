@@ -15,6 +15,8 @@ const sql = new DB().sqlite;
   - A project's cycles never overlap, not even on a single day. The API refuses
     a cycle that would, in the same statement that writes it.
   - Status comes from the dates, by today's date in UTC: upcoming, current, completed.
+  - A completed cycle's velocity is frozen the first time it is read with items
+    in it, or before its unfinished items move on, so later edits don't rewrite it.
   - Creating, editing and deleting cycles needs what project states need
     ("space:update", i.e. project admins). Putting items in cycles, and moving a
     cycle's unfinished items on, is ordinary work item editing ("content:write").
@@ -42,9 +44,17 @@ export type CycleProgress = {
 	points: { total: number; completed: number };
 };
 
+/** Frozen soon after the cycle ends. Committed leaves out cancelled items. */
+export type CycleVelocity = {
+	committed: { items: number; points: number };
+	completed: { items: number; points: number };
+};
+
 export type CycleSummary = tables["cycle"] & {
 	status: CycleStatus;
 	progress: CycleProgress;
+	/** Only for completed cycles. */
+	velocity: CycleVelocity | null;
 };
 
 const todayUtc = () => new Date().toISOString().slice(0, 10);
@@ -152,13 +162,67 @@ async function progressOf(cycleIds: string[]) {
 	return byCycle;
 }
 
+// Records what the cycles that are over hold now, unless they were frozen already.
+// An empty one waits, so a cycle created in the past can still be filled.
+async function freezeCompleted(db: SQL, cycleIds: string[], today: string) {
+	if (cycleIds.length === 0) return;
+	await db`
+		INSERT OR IGNORE INTO cycle_snapshot
+			(cycleId, committedItems, committedPoints, completedItems, completedPoints, frozenAt)
+		SELECT
+			cycle.id,
+			COUNT(CASE WHEN state."group" <> 'cancelled' THEN 1 END),
+			TOTAL(CASE WHEN state."group" <> 'cancelled' THEN issue.estimate END),
+			COUNT(CASE WHEN state."group" = 'completed' THEN 1 END),
+			TOTAL(CASE WHEN state."group" = 'completed' THEN issue.estimate END),
+			${Date.now()}
+		FROM cycle
+		LEFT JOIN issue ON issue.cycleId = cycle.id
+		LEFT JOIN state ON state.id = issue.state
+		WHERE cycle.id IN ${db(cycleIds)} AND cycle.endDate < ${today}
+		GROUP BY cycle.id
+		HAVING COUNT(issue.id) > 0
+	`;
+}
+
+const EMPTY_VELOCITY: CycleVelocity = {
+	committed: { items: 0, points: 0 },
+	completed: { items: 0, points: 0 },
+};
+
+// Call after freezeCompleted: a completed cycle still without a snapshot is empty.
+async function velocityOf(cycleIds: string[]) {
+	const byCycle = new Map<string, CycleVelocity>(
+		cycleIds.map((id) => [id, EMPTY_VELOCITY]),
+	);
+	if (cycleIds.length === 0) return byCycle;
+	const rows = (await sql`
+		SELECT * FROM cycle_snapshot WHERE cycleId IN ${sql(cycleIds)}
+	`) as tables["cycle_snapshot"][];
+	for (const row of rows) {
+		byCycle.set(row.cycleId, {
+			committed: { items: row.committedItems, points: row.committedPoints },
+			completed: { items: row.completedItems, points: row.completedPoints },
+		});
+	}
+	return byCycle;
+}
+
 async function summarize(cycles: tables["cycle"][]): Promise<CycleSummary[]> {
-	const progress = await progressOf(cycles.map((cycle) => cycle.id));
 	const today = todayUtc();
+	const completedIds = cycles
+		.filter((cycle) => cycleStatus(cycle, today) === "completed")
+		.map((cycle) => cycle.id);
+	await freezeCompleted(sql, completedIds, today);
+	const [progress, velocity] = await Promise.all([
+		progressOf(cycles.map((cycle) => cycle.id)),
+		velocityOf(completedIds),
+	]);
 	return cycles.map((cycle) => ({
 		...cycle,
 		status: cycleStatus(cycle, today),
 		progress: progress.get(cycle.id) as CycleProgress,
+		velocity: velocity.get(cycle.id) ?? null,
 	}));
 }
 
@@ -296,6 +360,16 @@ export const updateCycle = base
 			throw new ORPCError("CONFLICT", { message: OVERLAP_MESSAGE });
 		}
 
+		// A cycle moved back out of the past isn't over, so it has no velocity yet.
+		// One that stays in the past keeps the numbers it was frozen with.
+		if (input.startDate !== undefined || input.endDate !== undefined) {
+			await sql`
+				DELETE FROM cycle_snapshot
+				WHERE cycleId = ${input.id}
+					AND (SELECT endDate FROM cycle WHERE id = ${input.id}) >= ${todayUtc()}
+			`;
+		}
+
 		const cycle = (
 			await sql`SELECT * FROM cycle WHERE id = ${input.id}`
 		)[0] as tables["cycle"];
@@ -370,6 +444,7 @@ export const moveUnfinishedToCycle = base
 			if (!target) throw wrongTarget;
 			const source = (await tx`SELECT id FROM cycle WHERE id = ${from.id}`)[0];
 			if (!source) throw new ORPCError("NOT_FOUND");
+			await freezeCompleted(tx, [from.id], todayUtc());
 
 			// One statement picks and moves the items, so what is logged is exactly
 			// what moved, even if an item's state changes at the same moment.

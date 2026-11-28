@@ -62,6 +62,13 @@ function window() {
 	return { startDate: day(start), endDate: day(start + 9) };
 }
 
+// The same, but long over, so the cycle is completed.
+function pastWindow() {
+	counter += 1;
+	const start = -1000 - counter * 20;
+	return { startDate: day(start), endDate: day(start + 9) };
+}
+
 const newCycle = (name: string, dates = window(), projectId = PROJECT) => ({
 	projectId,
 	name,
@@ -746,5 +753,151 @@ describe("deleting a cycle", () => {
 		const rows = await activityOf(issue.id, 2);
 		expect(rows.at(-1)?.oldValue).toBe("Doomed");
 		expect(rows.at(-1)?.newValue).toBeNull();
+	});
+});
+
+describe("velocity", () => {
+	let cancelledState: string;
+	beforeAll(async () => {
+		cancelledState = (
+			await admin.client.state.create({
+				projectId: PROJECT,
+				name: "Abandoned",
+				color: "#888888",
+				group: "cancelled",
+			})
+		).id;
+	});
+
+	async function fill(cycleId: string) {
+		const make = (title: string, state: string, estimate: number) =>
+			member.client.issue.create({
+				...newIssue(title),
+				state,
+				cycleId,
+				estimate,
+			});
+		const ids = states[PROJECT] as Record<string, string>;
+		return {
+			done: await make("V-done", ids.Done as string, 3),
+			doing: await make("V-doing", ids["In Progress"] as string, 5),
+			dropped: await make("V-dropped", cancelledState, 8),
+		};
+	}
+
+	const frozen = {
+		committed: { items: 2, points: 8 },
+		completed: { items: 1, points: 3 },
+	};
+
+	const velocityOf = async (cycleId: string) => ({
+		one: (await member.client.cycles.findOne({ id: cycleId })).velocity,
+		listed: (await member.client.cycles.find({ projectId: PROJECT })).find(
+			(c) => c.id === cycleId,
+		)?.velocity,
+	});
+
+	test("a completed cycle keeps its numbers after moves and edits", async () => {
+		const past = await admin.client.cycles.create(
+			newCycle("Sprint past", pastWindow()),
+		);
+		const next = await admin.client.cycles.create(newCycle("Sprint next"));
+		const { done, dropped } = await fill(past.id);
+
+		expect(await velocityOf(past.id)).toEqual({ one: frozen, listed: frozen });
+
+		expect(
+			(
+				await member.client.cycles.moveUnfinished({
+					fromCycleId: past.id,
+					toCycleId: next.id,
+				})
+			).moved,
+		).toBe(1);
+		await member.client.issue.update({ id: done.id, estimate: 13 });
+		await member.client.issue.update({
+			id: dropped.id,
+			state: states[PROJECT]?.Done,
+		});
+
+		expect(await velocityOf(past.id)).toEqual({ one: frozen, listed: frozen });
+		// Progress still follows the items as they are now.
+		const { progress } = await member.client.cycles.findOne({ id: past.id });
+		expect(progress.points).toEqual({ total: 21, completed: 21 });
+	});
+
+	test("a cycle that hasn't ended has no velocity", async () => {
+		const upcoming = await admin.client.cycles.create(newCycle("Not yet"));
+		await fill(upcoming.id);
+		expect(await velocityOf(upcoming.id)).toEqual({ one: null, listed: null });
+
+		const endsToday = await admin.client.cycles.create(
+			newCycle(
+				"Ends today",
+				{ startDate: day(-3), endDate: day(0) },
+				OTHER_PROJECT,
+			),
+		);
+		expect(endsToday.status).toBe("current");
+		expect(endsToday.velocity).toBeNull();
+	});
+
+	test("moving items out of a completed cycle nobody read freezes it first", async () => {
+		const past = await admin.client.cycles.create(
+			newCycle("Unread", pastWindow()),
+		);
+		const next = await admin.client.cycles.create(newCycle("Unread next"));
+		await fill(past.id);
+
+		await member.client.cycles.moveUnfinished({
+			fromCycleId: past.id,
+			toCycleId: next.id,
+		});
+		expect(await velocityOf(past.id)).toEqual({ one: frozen, listed: frozen });
+		// Moving out of a cycle that isn't over doesn't freeze it.
+		const after = await admin.client.cycles.create(newCycle("Unread after"));
+		await member.client.cycles.moveUnfinished({
+			fromCycleId: next.id,
+			toCycleId: after.id,
+		});
+		expect(
+			(await member.client.cycles.findOne({ id: next.id })).velocity,
+		).toBeNull();
+	});
+
+	test("an empty completed cycle shows zeros until it gets items", async () => {
+		const past = await admin.client.cycles.create(
+			newCycle("Backfilled", pastWindow()),
+		);
+		expect(past.velocity).toEqual({
+			committed: { items: 0, points: 0 },
+			completed: { items: 0, points: 0 },
+		});
+		await fill(past.id);
+		expect(await velocityOf(past.id)).toEqual({ one: frozen, listed: frozen });
+	});
+
+	test("moving a completed cycle's end into the future clears its velocity", async () => {
+		const dates = pastWindow();
+		const past = await admin.client.cycles.create(newCycle("Reopened", dates));
+		const { done } = await fill(past.id);
+		expect(
+			(await member.client.cycles.findOne({ id: past.id })).velocity,
+		).toEqual(frozen);
+
+		// Another day in the past keeps the frozen numbers.
+		await member.client.issue.update({ id: done.id, estimate: 13 });
+		const moved = await admin.client.cycles.update({
+			id: past.id,
+			endDate: dates.startDate,
+		});
+		expect(moved.velocity).toEqual(frozen);
+
+		const reopened = await admin.client.cycles.update({
+			id: past.id,
+			...window(),
+		});
+		expect(reopened.status).toBe("upcoming");
+		expect(reopened.velocity).toBeNull();
 	});
 });
