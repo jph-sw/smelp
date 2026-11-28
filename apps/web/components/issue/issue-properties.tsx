@@ -141,6 +141,55 @@ function DueDateProperty({
 	);
 }
 
+function EstimateProperty({
+	estimate,
+	disabled,
+	onChange,
+}: {
+	estimate: number | null;
+	disabled: boolean;
+	onChange: (estimate: number | null) => void;
+}) {
+	return (
+		<div className="grid grid-cols-[5.5rem_1fr] items-center gap-2">
+			<span className="text-muted-foreground">Estimate</span>
+			<div className="flex min-w-0 items-center gap-1">
+				<Input
+					key={estimate ?? ""}
+					type="number"
+					inputMode="decimal"
+					min={0}
+					max={1000}
+					step="any"
+					aria-label="Estimate"
+					placeholder="Points"
+					defaultValue={estimate === null ? "" : String(estimate)}
+					disabled={disabled}
+					className="w-24 border-transparent bg-transparent px-2 hover:bg-accent"
+					onBlur={(event) => {
+						const input = event.currentTarget;
+						const text = input.value.trim();
+						const next = text === "" ? null : Number(text);
+						if (next !== null && !(next >= 0 && next <= 1000)) {
+							input.value = estimate === null ? "" : String(estimate);
+							return;
+						}
+						if (next !== estimate) onChange(next);
+					}}
+					onKeyDown={(event) => {
+						if (event.key === "Enter") event.currentTarget.blur();
+					}}
+				/>
+				{estimate !== null && (
+					<span className="text-muted-foreground">
+						{estimate === 1 ? "point" : "points"}
+					</span>
+				)}
+			</div>
+		</div>
+	);
+}
+
 function PersonAndTime({
 	label,
 	name,
@@ -191,6 +240,7 @@ export function IssueProperties({
 		moduleId?: string | null;
 		cycleId?: string | null;
 		dueDate?: string | null;
+		estimate?: number | null;
 	}) => void;
 }) {
 	const navigate = useNavigate();
@@ -282,6 +332,11 @@ export function IssueProperties({
 				)}
 				disabled={!canWrite}
 				onChange={(dueDate) => onUpdate({ dueDate })}
+			/>
+			<EstimateProperty
+				estimate={issue.estimate}
+				disabled={!canWrite}
+				onChange={(estimate) => onUpdate({ estimate })}
 			/>
 			<div className="grid grid-cols-[5.5rem_1fr] items-center gap-2">
 				<span className="text-muted-foreground">Parent</span>
