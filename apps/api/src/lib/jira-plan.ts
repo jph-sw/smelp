@@ -628,6 +628,7 @@ export function buildPlan(
 				cycleId: null,
 				moduleId: null,
 				dueDate: issue.dueDate,
+				estimate: issue.estimate,
 				workspaceId: ctx.workspaceId,
 				projectId: p.id,
 				createdAt: created,

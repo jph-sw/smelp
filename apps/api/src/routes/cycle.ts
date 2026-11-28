@@ -36,6 +36,8 @@ export type CycleProgress = {
 	started: number;
 	completed: number;
 	cancelled: number;
+	/** Story points. Cancelled items are left out of the total, like they are from the bar. */
+	points: { total: number; completed: number };
 };
 
 export type CycleSummary = tables["cycle"] & {
@@ -115,18 +117,20 @@ async function progressOf(cycleIds: string[]) {
 				started: 0,
 				completed: 0,
 				cancelled: 0,
+				points: { total: 0, completed: 0 },
 			},
 		]),
 	);
 	if (cycleIds.length === 0) return byCycle;
 
 	const rows = (await sql`
-		SELECT issue.cycleId AS cycleId, state."group" AS "group", COUNT(*) AS count
+		SELECT issue.cycleId AS cycleId, state."group" AS "group", COUNT(*) AS count,
+			TOTAL(issue.estimate) AS points
 		FROM issue
 		JOIN state ON state.id = issue.state
 		WHERE issue.cycleId IN ${sql(cycleIds)}
 		GROUP BY issue.cycleId, state."group"
-	`) as { cycleId: string; group: string; count: number }[];
+	`) as { cycleId: string; group: string; count: number; points: number }[];
 	for (const row of rows) {
 		const progress = byCycle.get(row.cycleId);
 		if (!progress) continue;
@@ -140,6 +144,8 @@ async function progressOf(cycleIds: string[]) {
 				? row.group
 				: "unstarted";
 		progress[key] += row.count;
+		if (key !== "cancelled") progress.points.total += row.points;
+		if (key === "completed") progress.points.completed += row.points;
 	}
 	return byCycle;
 }

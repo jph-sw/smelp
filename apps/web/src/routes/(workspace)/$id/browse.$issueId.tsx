@@ -240,7 +240,7 @@ function RouteComponent() {
 					["my-issues"],
 					...moduleQueryKeys(issue.projectId),
 				].map((queryKey) => queryClient.invalidateQueries({ queryKey })),
-				// Cycle progress follows an item's state and cycle.
+				// Cycle progress follows an item's state, cycle and estimate.
 				invalidateCycles(queryClient, issue.projectId),
 			]),
 	});

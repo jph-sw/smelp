@@ -29,8 +29,16 @@ const projects = [
 
 function DialogState() {
 	const { isOpen, params } = useCreateIssueDialogStore();
-	return <output>{isOpen ? `Creating in ${params.projectName}` : ""}</output>;
+	// Named, because ui-sdk's screen reader announcer also has the status role
+	// and can be in the body too.
+	return (
+		<output aria-label="Create dialog">
+			{isOpen ? `Creating in ${params.projectName}` : ""}
+		</output>
+	);
 }
+
+const dialogState = () => screen.getByRole("status", { name: "Create dialog" });
 
 async function renderSidebar(viewer: WorkspaceViewer) {
 	const root = createRootRoute();
@@ -78,7 +86,7 @@ describe("AppSidebar create shortcut", () => {
 	test("c opens the create dialog for the project", async () => {
 		const user = await renderSidebar(member);
 		await user.keyboard("c");
-		expect(screen.getByRole("status").textContent).toBe("Creating in Web");
+		expect(dialogState().textContent).toBe("Creating in Web");
 	});
 
 	test.each(["Title", "Notes", "Description"])(
@@ -86,14 +94,14 @@ describe("AppSidebar create shortcut", () => {
 		async (field) => {
 			const user = await renderSidebar(member);
 			await user.type(screen.getByLabelText(field), "c");
-			expect(screen.getByRole("status").textContent).toBe("");
+			expect(dialogState().textContent).toBe("");
 		},
 	);
 
 	test("public viewers get no shortcut", async () => {
 		const user = await renderSidebar({ mode: "public", user: null });
 		await user.keyboard("c");
-		expect(screen.getByRole("status").textContent).toBe("");
+		expect(dialogState().textContent).toBe("");
 	});
 
 	test("the button advertises the key", async () => {

@@ -79,6 +79,8 @@ const HEADER = [
 	"Created",
 	"Updated",
 	"Due date",
+	"Custom field (Story Points)",
+	"Custom field (Story point estimate)",
 	"Labels",
 	"Labels",
 	"Description",
@@ -871,6 +873,49 @@ describe("jira import: mapping", () => {
 			),
 		);
 		expect(dueDates).toEqual(["2026-11-20", "2026-11-21", null, null]);
+	});
+
+	test("keeps Jira story points from either column, and none when they can't be read", async () => {
+		const csv = jiraCsv([
+			{
+				summary: "Company-managed",
+				key: "ZQX-1",
+				cells: { "Custom field (Story Points)": "5.0" },
+			},
+			{
+				summary: "Team-managed",
+				key: "ZQX-2",
+				cells: { "Custom field (Story point estimate)": "0.5" },
+			},
+			{ summary: "Empty", key: "ZQX-3" },
+			{
+				summary: "Garbled",
+				key: "ZQX-4",
+				cells: { "Custom field (Story Points)": "lots" },
+			},
+			{
+				summary: "Negative",
+				key: "ZQX-5",
+				cells: { "Custom field (Story Points)": "-3" },
+			},
+			{
+				summary: "Too big",
+				key: "ZQX-6",
+				cells: { "Custom field (Story Points)": "5000" },
+			},
+		]);
+		await admin.client.jiraImport.apply({
+			workspaceId: WORKSPACE,
+			csv,
+			mapping: {},
+		});
+		const estimates = await Promise.all(
+			["ZQX-1", "ZQX-2", "ZQX-3", "ZQX-4", "ZQX-5", "ZQX-6"].map(
+				async (issueId) =>
+					(await admin.client.issue.find({ issueId })).estimate,
+			),
+		);
+		expect(estimates).toEqual([5, 0.5, null, null, null, null]);
 	});
 
 	test("an unmatched user can be left alone on purpose", async () => {

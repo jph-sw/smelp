@@ -484,9 +484,49 @@ describe("work items in cycles", () => {
 			started: 2,
 			completed: 1,
 			cancelled: 0,
+			points: { total: 0, completed: 0 },
 		});
 		const listed = await member.client.cycles.find({ projectId: PROJECT });
 		expect(listed.find((c) => c.id === cycle.id)?.progress.total).toBe(5);
+	});
+
+	test("progress totals story points, done and overall, without cancelled items", async () => {
+		const cancelled = await admin.client.state.create({
+			projectId: PROJECT,
+			name: "Won't do",
+			color: "#999999",
+			group: "cancelled",
+		});
+		const cycle = await admin.client.cycles.create(newCycle("Points"));
+		for (const [title, stateName, estimate] of [
+			["Three", "Done", 3],
+			["Five", "In Progress", 5],
+			["Eight", "Todo", 8],
+		] as const) {
+			await member.client.issue.create({
+				...newIssue(title, stateName),
+				cycleId: cycle.id,
+				estimate,
+			});
+		}
+		await member.client.issue.create({
+			...newIssue("Unestimated", "Todo"),
+			cycleId: cycle.id,
+		});
+		await member.client.issue.create({
+			...newIssue("Dropped"),
+			state: cancelled.id,
+			cycleId: cycle.id,
+			estimate: 13,
+		});
+
+		const { progress } = await member.client.cycles.findOne({ id: cycle.id });
+		expect(progress.points).toEqual({ total: 16, completed: 3 });
+		const listed = await member.client.cycles.find({ projectId: PROJECT });
+		expect(listed.find((c) => c.id === cycle.id)?.progress.points).toEqual({
+			total: 16,
+			completed: 3,
+		});
 	});
 
 	test("logs a cycle change in the item timeline and the workspace feed", async () => {

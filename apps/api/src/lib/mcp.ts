@@ -141,6 +141,11 @@ const DueDate = z
 	.describe(
 		'The day the work item should be done by, as YYYY-MM-DD, like "2026-11-20"',
 	);
+const Estimate = z
+	.number()
+	.min(0)
+	.max(1000)
+	.describe("Story points, any number from 0 to 1000, like 3 or 0.5");
 const IssueType = z
 	.enum(DEFAULTS.ISSUE_TYPES)
 	.describe(
@@ -188,6 +193,7 @@ function createServer(api: Api, appUrl: string) {
 			project: issue.projectId,
 			parent: issue.parentId,
 			dueDate: issue.dueDate,
+			estimate: issue.estimate,
 			url: itemUrl(issue.workspaceId, issue.id),
 			createdBy: issue.createdByName,
 			createdAt: date(issue.createdAt),
@@ -438,6 +444,7 @@ function createServer(api: Api, appUrl: string) {
 				state: StateName.optional(),
 				assignee: AssigneeName.optional(),
 				dueDate: DueDate.optional(),
+				estimate: Estimate.optional(),
 			},
 		},
 		({
@@ -449,6 +456,7 @@ function createServer(api: Api, appUrl: string) {
 			state,
 			assignee,
 			dueDate,
+			estimate,
 		}) =>
 			respond(async () => {
 				const { project, states, members } = await projectContext(projectKey);
@@ -468,6 +476,7 @@ function createServer(api: Api, appUrl: string) {
 						? memberNamed(members, assignee, project.id).userId
 						: undefined,
 					dueDate,
+					estimate,
 				});
 				return workItem(created.id);
 			}),
@@ -495,9 +504,24 @@ function createServer(api: Api, appUrl: string) {
 					.describe(
 						'The day the work item should be done by, as YYYY-MM-DD, like "2026-11-20", or null to remove it',
 					),
+				estimate: Estimate.nullable()
+					.optional()
+					.describe(
+						"Story points, any number from 0 to 1000, like 3 or 0.5, or null to remove the estimate",
+					),
 			},
 		},
-		({ key, title, description, type, priority, state, assignee, dueDate }) =>
+		({
+			key,
+			title,
+			description,
+			type,
+			priority,
+			state,
+			assignee,
+			dueDate,
+			estimate,
+		}) =>
 			respond(async () => {
 				const issue = await api.issue.find({ issueId: key });
 				const { states, members } = await projectContext(issue.projectId);
@@ -516,6 +540,7 @@ function createServer(api: Api, appUrl: string) {
 							? assignee
 							: memberNamed(members, assignee, issue.projectId).userId,
 					dueDate,
+					estimate,
 				});
 				return workItem(issue.id);
 			}),

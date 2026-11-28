@@ -98,6 +98,7 @@ export const updateIssue = (input: {
 	moduleId?: string | null;
 	cycleId?: string | null;
 	dueDate?: string | null;
+	estimate?: number | null;
 }) => orpc.issue.update(input);
 
 export const deleteIssue = ({ id }: { id: string }) =>

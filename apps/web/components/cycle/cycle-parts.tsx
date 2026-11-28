@@ -1,4 +1,5 @@
 import type { orpc } from "#/lib/orpc";
+import { formatPoints, roundPoints } from "#/lib/points";
 import { cn } from "#/lib/utils";
 
 export type Cycle = Awaited<ReturnType<typeof orpc.cycles.find>>[number];
@@ -71,6 +72,12 @@ export function CycleProgress({
 						<span>{notStarted} not started</span>
 						{progress.cancelled > 0 && (
 							<span>{progress.cancelled} cancelled</span>
+						)}
+						{progress.points.total > 0 && (
+							<span>
+								{formatPoints(progress.points.total)},{" "}
+								{roundPoints(progress.points.completed)} done
+							</span>
 						)}
 					</>
 				) : (

@@ -13,6 +13,7 @@ import {
 	removeAttachmentFiles,
 } from "../lib/attachments";
 import { Day } from "../lib/day";
+import { Estimate, pointsText } from "../lib/estimate";
 import { displayNameOf } from "../lib/names";
 import { watch } from "../lib/watchers";
 import { base } from "../orpc";
@@ -176,6 +177,7 @@ export const updateIssue = base
 			moduleId: v.optional(v.nullable(NonEmpty)),
 			cycleId: v.optional(v.nullable(NonEmpty)),
 			dueDate: v.optional(v.nullable(Day)),
+			estimate: v.optional(v.nullable(Estimate)),
 		}),
 	)
 	.handler(async ({ input, context }) => {
@@ -206,6 +208,8 @@ export const updateIssue = base
 				input.moduleId === undefined ? oldIssue.moduleId : input.moduleId,
 			cycleId: input.cycleId === undefined ? oldIssue.cycleId : input.cycleId,
 			dueDate: input.dueDate === undefined ? oldIssue.dueDate : input.dueDate,
+			estimate:
+				input.estimate === undefined ? oldIssue.estimate : input.estimate,
 		};
 
 		const stateChanged = next.state !== oldIssue.state;
@@ -218,6 +222,7 @@ export const updateIssue = base
 		const moduleChanged = next.moduleId !== oldIssue.moduleId;
 		const cycleChanged = next.cycleId !== oldIssue.cycleId;
 		const dueDateChanged = next.dueDate !== oldIssue.dueDate;
+		const estimateChanged = next.estimate !== oldIssue.estimate;
 
 		if (
 			!stateChanged &&
@@ -229,7 +234,8 @@ export const updateIssue = base
 			!parentChanged &&
 			!moduleChanged &&
 			!cycleChanged &&
-			!dueDateChanged
+			!dueDateChanged &&
+			!estimateChanged
 		) {
 			return oldIssue;
 		}
@@ -279,6 +285,7 @@ export const updateIssue = base
 				moduleId = CASE WHEN ${setModule} = 1 THEN ${next.moduleId} ELSE moduleId END,
 				cycleId = CASE WHEN ${setCycle} = 1 THEN ${next.cycleId} ELSE cycleId END,
 				dueDate = ${next.dueDate},
+				estimate = ${next.estimate},
 				updatedAt = ${Date.now()},
 				updatedBy = ${caller.userId}
 			WHERE id = ${input.id}
@@ -484,6 +491,19 @@ export const updateIssue = base
 			});
 		}
 
+		if (estimateChanged) {
+			eventBus.emit({
+				...event,
+				type: "issue.updated",
+				payload: {
+					...ref,
+					field: "estimate",
+					oldValue: pointsText(oldIssue.estimate),
+					newValue: pointsText(issue.estimate),
+				},
+			});
+		}
+
 		return issue;
 	});
 
@@ -560,6 +580,7 @@ export const createIssue = base
 			cycleId: v.optional(NonEmpty),
 			moduleId: v.optional(NonEmpty),
 			dueDate: v.optional(Day),
+			estimate: v.optional(Estimate),
 			workspaceId: v.string(),
 			projectId: v.string(),
 		}),
@@ -605,6 +626,7 @@ export const createIssue = base
 			moduleId: input.moduleId ?? null,
 			cycleId: input.cycleId ?? null,
 			dueDate: input.dueDate ?? null,
+			estimate: input.estimate ?? null,
 			workspaceId: project.workspaceId,
 			projectId: project.id,
 			createdAt: Date.now(),
@@ -720,6 +742,21 @@ export const createIssue = base
 					field: "dueDate",
 					oldValue: null,
 					newValue: issue.dueDate,
+				},
+			});
+		}
+		if (issue.estimate !== null) {
+			eventBus.emit({
+				type: "issue.updated",
+				entityId: issue.id,
+				actorId: caller.userId,
+				workspaceId: issue.workspaceId,
+				payload: {
+					title: issue.title,
+					projectId: issue.projectId,
+					field: "estimate",
+					oldValue: null,
+					newValue: pointsText(issue.estimate),
 				},
 			});
 		}
