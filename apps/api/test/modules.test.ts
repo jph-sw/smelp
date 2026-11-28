@@ -343,6 +343,7 @@ describe("work items in modules", () => {
 			inProgress: 1,
 			notStarted: 2,
 			cancelled: 0,
+			points: { total: 0, done: 0 },
 		});
 
 		// Moving an item to another state updates the counts.
@@ -365,6 +366,43 @@ describe("work items in modules", () => {
 		expect(
 			listed.filter((item) => item.moduleId === id).map((item) => item.id),
 		).not.toContain(doing.id);
+	});
+
+	test("totals the points of its items, leaving cancelled ones out", async () => {
+		const mod = await admin.client.modules.create({
+			projectId: PROJECT,
+			name: "Points",
+		});
+		const moduleId = mod?.id ?? "";
+		const empty = await admin.client.modules.create({
+			projectId: PROJECT,
+			name: "No points",
+		});
+		const wontDo = await admin.client.state.create({
+			projectId: PROJECT,
+			name: "Won't do",
+			color: "#999999",
+			group: "cancelled",
+		});
+		for (const [estimate, state] of [
+			[3, stateInGroup("completed")],
+			[5, stateInGroup("started")],
+			[8, stateInGroup("unstarted")],
+			[13, wontDo.id],
+		] as const) {
+			await member.client.issue.create({
+				...newIssue(`${estimate} points`, state),
+				moduleId,
+				estimate,
+			});
+		}
+
+		const progress = (await member.client.modules.get({ id: moduleId }))
+			.progress;
+		expect(progress.points).toEqual({ total: 16, done: 3 });
+		const none = (await member.client.modules.get({ id: empty?.id ?? "" }))
+			.progress;
+		expect(none.points).toEqual({ total: 0, done: 0 });
 	});
 
 	test("refuses a module from another project or one that doesn't exist", async () => {

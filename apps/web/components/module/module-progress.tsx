@@ -1,3 +1,4 @@
+import { formatPoints, roundPoints } from "#/lib/points";
 import { cn } from "#/lib/utils";
 
 export type ModuleProgress = {
@@ -6,6 +7,7 @@ export type ModuleProgress = {
 	inProgress: number;
 	notStarted: number;
 	cancelled: number;
+	points: { total: number; done: number };
 };
 
 // Cancelled items are neither left to do nor done, so they stay out of the percentage.
@@ -50,6 +52,12 @@ export function ModuleProgressBar({
 				<span>{progress.inProgress} in progress</span>
 				<span>{progress.notStarted} not started</span>
 				{progress.cancelled > 0 && <span>{progress.cancelled} cancelled</span>}
+				{progress.points.total > 0 && (
+					<span>
+						{formatPoints(progress.points.total)},{" "}
+						{roundPoints(progress.points.done)} done
+					</span>
+				)}
 			</p>
 		</div>
 	);
