@@ -473,7 +473,7 @@ function RouteComponent() {
 							<p className="text-xs text-muted-foreground">
 								{project.workItems} work items ({project.subItems} sub-items),{" "}
 								{project.comments} comments, {project.relations} relations,{" "}
-								{project.members} member(s) added
+								{project.labels} labels, {project.members} member(s) added
 								{project.states.length > 0 &&
 									`. States: ${project.states.join(", ")}`}
 							</p>

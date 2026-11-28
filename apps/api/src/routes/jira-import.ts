@@ -168,6 +168,12 @@ export const applyJiraImport = base
 					for (const rows of chunks(write.webLinks, 400)) {
 						await tx`INSERT INTO issue_link ${tx(rows)}`;
 					}
+					for (const rows of chunks(write.labels, 400)) {
+						await tx`INSERT INTO label ${tx(rows)}`;
+					}
+					for (const rows of chunks(write.issueLabels, 1000)) {
+						await tx`INSERT INTO issue_label ${tx(rows)}`;
+					}
 					const commenters = new Map<string, (string | null)[]>();
 					for (const comment of write.comments) {
 						const authors = commenters.get(comment.issueId) ?? [];
