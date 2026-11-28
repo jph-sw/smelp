@@ -5,7 +5,7 @@ import {
 	useSuspenseQuery,
 } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { openCreateIssueDialog } from "#/components/issue/create-issue-dialog-store";
 import { BoardFilterBar } from "#/components/kanban/board-filters";
 import { IssueItem } from "#/components/kanban/issue-item";
@@ -34,6 +34,15 @@ import {
 import { statesQueryOptions } from "#/lib/data/state";
 import { isOverdue, localDay } from "#/lib/due-date";
 import { toastError } from "#/lib/errors";
+import {
+	byRank,
+	type Columns,
+	columnsOf,
+	moveCard,
+	type Placement,
+	placementIn,
+	provisionalRank,
+} from "#/lib/rank";
 
 export const Route = createFileRoute("/(workspace)/$id/projects/$projectId/")({
 	component: RouteComponent,
@@ -88,22 +97,42 @@ function RouteComponent() {
 
 	const { mutate: moveIssue } = useMutation({
 		mutationFn: updateIssue,
-		onMutate: async ({ id, state }) => {
+		onMutate: async ({ id, state, before, after }) => {
 			await queryClient.cancelQueries({ queryKey: issuesQueryKey });
 
 			const previousIssues = queryClient.getQueryData(issuesQueryKey);
+			const placement: Placement | undefined = before
+				? { before }
+				: after
+					? { after }
+					: undefined;
 
+			queryClient.setQueryData(issuesQueryKey, (current) => {
+				if (!current) return current;
+				const rank = placement && provisionalRank(current, id, placement);
+				return current
+					.map((issue) =>
+						issue.id === id
+							? {
+									...issue,
+									...(state && { state, updatedAt: Date.now() }),
+									...(rank && { rank }),
+								}
+							: issue,
+					)
+					.sort(byRank);
+			});
+
+			return { previousIssues };
+		},
+		onSuccess: (saved) => {
 			queryClient.setQueryData(issuesQueryKey, (current) =>
 				current
 					?.map((issue) =>
-						issue.id === id && state
-							? { ...issue, state, updatedAt: Date.now() }
-							: issue,
+						issue.id === saved.id ? { ...issue, ...saved } : issue,
 					)
-					.sort((a, b) => b.updatedAt - a.updatedAt),
+					.sort(byRank),
 			);
-
-			return { previousIssues };
 		},
 		// Progress of cycles and modules follows the state of their items.
 		onSettled: () =>
@@ -131,6 +160,27 @@ function RouteComponent() {
 	const shownCount = visibleIssues.filter((issue) =>
 		visibleStates.some((state) => state.id === issue.state),
 	).length;
+
+	// While a card is dragged, the columns show where it would land.
+	const [dragColumns, setDragColumns] = useState<Columns | null>(null);
+	const dragColumnsRef = useRef<Columns | null>(null);
+	const pickedUpColumns = useRef<Columns | null>(null);
+	const showDragColumns = (next: Columns | null) => {
+		dragColumnsRef.current = next;
+		setDragColumns(next);
+	};
+	const columns =
+		dragColumns ??
+		columnsOf(
+			visibleIssues,
+			visibleStates.map((state) => state.id),
+		);
+	const issueById = new Map(issues.map((issue) => [issue.id, issue]));
+	// Filtering to a state must show it, whatever was collapsed.
+	const isCollapsed = (stateId: string) =>
+		!filters.state && collapsedStates.has(stateId);
+	const firstIssue = issues[0];
+	const lastIssue = issues.at(-1);
 
 	return (
 		<div className="flex h-full w-full min-h-0 flex-col overflow-hidden">
@@ -165,6 +215,15 @@ function RouteComponent() {
 					members={members}
 					labels={labels}
 					workspaceId={workspaceId}
+					reorder={
+						canWrite && firstIssue && lastIssue
+							? {
+									firstId: firstIssue.id,
+									lastId: lastIssue.id,
+									onMove: (id, placement) => moveIssue({ id, ...placement }),
+								}
+							: undefined
+					}
 					sorting={{
 						sort,
 						onChange: (next) =>
@@ -173,20 +232,60 @@ function RouteComponent() {
 				/>
 			) : (
 				<DragDropProvider
+					onDragStart={() => {
+						pickedUpColumns.current = columns;
+						showDragColumns(columns);
+					}}
+					onDragOver={(event) => {
+						// The columns follow the card through React, not by moving DOM nodes.
+						event.preventDefault();
+						const { source, target } = event.operation;
+						const current = dragColumnsRef.current;
+						// A collapsed column shows no cards, so the card can't be shown in it.
+						if (
+							!source ||
+							!target ||
+							!current ||
+							isCollapsed(String(target.id))
+						) {
+							return;
+						}
+						const next = moveCard(
+							current,
+							String(source.id),
+							String(target.id),
+						);
+						if (next !== current) showDragColumns(next);
+					}}
 					onDragEnd={(event) => {
-						if (event.canceled || !canWrite) return;
-
+						const dropped = dragColumnsRef.current;
+						showDragColumns(null);
 						const issueId = event.operation.source?.id;
-						const targetStateId = event.operation.target?.id;
+						if (event.canceled || !canWrite || !dropped || !issueId) return;
 
-						if (!issueId || !targetStateId) return;
-
-						const issue = issues.find((issue) => issue.id === issueId);
-						if (!issue || issue.state === targetStateId) return;
+						const issue = issueById.get(String(issueId));
+						const targetId = String(event.operation.target?.id);
+						if (issue && isCollapsed(targetId)) {
+							if (issue.state !== targetId) {
+								moveIssue({ id: issue.id, state: targetId });
+							}
+							return;
+						}
+						const pickedUp = pickedUpColumns.current;
+						const before = pickedUp && placementIn(pickedUp, String(issueId));
+						const after = placementIn(dropped, String(issueId));
+						if (!issue || !before || !after) return;
+						if (
+							after.stateId === before.stateId &&
+							after.index === before.index
+						) {
+							return;
+						}
 
 						moveIssue({
-							id: issueId.toString(),
-							state: targetStateId.toString(),
+							id: issue.id,
+							state: after.stateId === issue.state ? undefined : after.stateId,
+							...after.placement,
 						});
 					}}
 				>
@@ -204,8 +303,7 @@ function RouteComponent() {
 								<StateColumn
 									key={state.id}
 									state={state}
-									// Filtering to a state must show it, whatever was collapsed.
-									collapsed={!filters.state && collapsedStates.has(state.id)}
+									collapsed={isCollapsed(state.id)}
 									onToggleCollapsed={
 										filters.state
 											? undefined
@@ -227,13 +325,14 @@ function RouteComponent() {
 											: undefined
 									}
 								>
-									{visibleIssues
-										.filter((issue) => issue.state === state.id)
-										.sort((a, b) => b.updatedAt - a.updatedAt)
-										.map((issue) => (
+									{(columns[state.id] ?? [])
+										.flatMap((id) => issueById.get(id) ?? [])
+										.map((issue, index) => (
 											<IssueItem
 												issue={issue}
 												key={issue.id}
+												column={state.id}
+												index={index}
 												workspaceId={workspaceId}
 												draggable={canWrite}
 												overdue={isOverdue(issue.dueDate, state.group, today)}
