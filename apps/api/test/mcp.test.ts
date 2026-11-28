@@ -274,6 +274,26 @@ describe("working on an item", () => {
 		expect(stored.createdBy).toBe(ada.id);
 	});
 
+	test("names the item's labels", async () => {
+		const created = await value(agent, "create_work_item", {
+			project: PROJECT,
+			title: "Tagged for the agent",
+		});
+		expect(created.labels).toEqual([]);
+		const labelIds = [];
+		for (const name of ["urgent-fix", "Backend"]) {
+			const label = await ada.client.labels.create({
+				projectId: PROJECT,
+				name,
+				color: "#336699",
+			});
+			labelIds.push(label.id);
+		}
+		await ada.client.issue.setLabels({ id: created.key, labelIds });
+		const item = await value(agent, "get_work_item", { key: created.key });
+		expect(item.labels).toEqual(["Backend", "urgent-fix"]);
+	});
+
 	test("unassigns with null, and shows up for the assignee", async () => {
 		const created = await value(agent, "create_work_item", {
 			project: PROJECT,
