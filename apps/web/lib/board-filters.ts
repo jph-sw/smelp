@@ -24,6 +24,7 @@ const isDueFilter = (value: unknown): value is DueFilter =>
 
 export const UNASSIGNED = "unassigned";
 export const NO_CYCLE = "none";
+export const CURRENT_CYCLE = "current";
 export const NO_MODULE = "none";
 
 type FilterableIssue = Pick<
@@ -42,6 +43,7 @@ type FilterableIssue = Pick<
 type FilterContext = {
 	today: string;
 	states: Pick<tables["state"], "id" | "group">[];
+	currentCycleId: string | null;
 };
 
 const asString = (value: unknown) =>
@@ -111,7 +113,7 @@ const matchesRef = (
 export function matchesFilters(
 	issue: FilterableIssue,
 	filters: BoardFilters,
-	{ today, states }: FilterContext,
+	{ today, states, currentCycleId }: FilterContext,
 ) {
 	if (filters.q) {
 		const query = filters.q.toLowerCase();
@@ -143,7 +145,9 @@ export function matchesFilters(
 		(!filters.state || issue.state === filters.state) &&
 		(!filters.type || issue.type === filters.type) &&
 		(!filters.priority || issue.priority === filters.priority) &&
-		matchesRef(filters.cycle, NO_CYCLE, issue.cycleId) &&
+		(filters.cycle === CURRENT_CYCLE
+			? currentCycleId !== null && issue.cycleId === currentCycleId
+			: matchesRef(filters.cycle, NO_CYCLE, issue.cycleId)) &&
 		matchesRef(filters.module, NO_MODULE, issue.moduleId)
 	);
 }

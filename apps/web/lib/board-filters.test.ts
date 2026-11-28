@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import {
+	CURRENT_CYCLE,
 	isFiltered,
 	matchesFilters,
 	parseBoardFilters,
@@ -54,10 +55,16 @@ const states = [
 	{ id: "dropped", group: "cancelled" },
 ];
 
-const shown = (search: Record<string, unknown>, items = issues) => {
+const shown = (
+	search: Record<string, unknown>,
+	items = issues,
+	currentCycleId: string | null = null,
+) => {
 	const filters = parseBoardFilters(search);
 	return items
-		.filter((item) => matchesFilters(item, filters, { today: TODAY, states }))
+		.filter((item) =>
+			matchesFilters(item, filters, { today: TODAY, states, currentCycleId }),
+		)
 		.map((item) => item.id);
 };
 
@@ -209,6 +216,46 @@ describe("label filter", () => {
 				.label,
 		).toEqual(["frontend", "customer"]);
 		expect(parseBoardFilters({ label: [] }).label).toBeUndefined();
+	});
+});
+
+describe("current cycle filter", () => {
+	const sprints = [
+		issue("SPR-1", { cycleId: "sprint-1" }),
+		issue("SPR-2", { cycleId: "sprint-2" }),
+		issue("SPR-3", { cycleId: "sprint-2", type: "bug" }),
+		issue("SPR-4"),
+	];
+	const bookmark = { cycle: "current" };
+
+	test("shows only the items of the cycle running now", () => {
+		expect(shown(bookmark, sprints, "sprint-1")).toEqual(["SPR-1"]);
+	});
+
+	test("the same link follows the next cycle once it starts", () => {
+		expect(shown(bookmark, sprints, "sprint-2")).toEqual(["SPR-2", "SPR-3"]);
+	});
+
+	test("shows nothing while no cycle is running", () => {
+		expect(shown(bookmark, sprints, null)).toEqual([]);
+	});
+
+	test("combines with the other filters", () => {
+		expect(shown({ ...bookmark, type: "bug" }, sprints, "sprint-2")).toEqual([
+			"SPR-3",
+		]);
+	});
+
+	test("a chosen cycle and No cycle ignore which cycle is running", () => {
+		expect(shown({ cycle: "sprint-1" }, sprints, "sprint-2")).toEqual([
+			"SPR-1",
+		]);
+		expect(shown({ cycle: "none" }, sprints, "sprint-2")).toEqual(["SPR-4"]);
+	});
+
+	test("survives the URL and counts as a filter", () => {
+		expect(parseBoardFilters(bookmark).cycle).toBe(CURRENT_CYCLE);
+		expect(isFiltered(parseBoardFilters(bookmark))).toBe(true);
 	});
 });
 

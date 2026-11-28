@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useDebounce } from "#/hooks/use-debounce";
 import {
 	type BoardFilters,
+	CURRENT_CYCLE,
 	DUE_FILTERS,
 	isFiltered,
 	NO_CYCLE,
@@ -87,13 +88,18 @@ export function BoardFilterBar({
 	members: ProjectMember[];
 	states: tables["state"][];
 	modules: { id: string; name: string }[];
-	cycles: { id: string; name: string }[];
+	cycles: {
+		id: string;
+		name: string;
+		status: "upcoming" | "current" | "completed";
+	}[];
 	labels: Label[];
 	shownCount: number;
 	totalCount: number;
 }) {
 	const [search, setSearch] = useState(filters.q ?? "");
 	const debouncedSearch = useDebounce(search, 200);
+	const currentCycle = cycles.find((cycle) => cycle.status === "current");
 
 	// biome-ignore lint/correctness/useExhaustiveDependencies: only typing should write to the URL
 	useEffect(() => {
@@ -183,6 +189,12 @@ export function BoardFilterBar({
 						onChange={(cycle) => onChange({ ...filters, cycle })}
 						items={[
 							{ label: "All cycles", value: ALL },
+							{
+								label: currentCycle
+									? `Current cycle · ${currentCycle.name}`
+									: "Current cycle",
+								value: CURRENT_CYCLE,
+							},
 							{ label: "No cycle", value: NO_CYCLE },
 							...cycles.map((cycle) => ({
 								label: cycle.name,
