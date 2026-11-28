@@ -40,6 +40,7 @@ export type ModuleWithProgress = Pick<
 		inProgress: number;
 		notStarted: number;
 		cancelled: number;
+		points: { total: number; done: number };
 	};
 };
 
@@ -48,10 +49,13 @@ type ModuleRow = Omit<ModuleWithProgress, "progress"> & {
 	done: number;
 	inProgress: number;
 	cancelled: number;
+	pointsTotal: number;
+	pointsDone: number;
 };
 
 // Cancelled items are counted apart: they are neither work left nor work done.
-// Anything that isn't done, started or cancelled hasn't been started. The lead
+// Anything that isn't done, started or cancelled hasn't been started. Points
+// leave cancelled items out of the total, as cycles do. The lead
 // only shows while they are still a member of the project.
 async function loadModules(
 	projectId: string,
@@ -66,7 +70,9 @@ async function loadModules(
 			COUNT(issue.id) AS total,
 			COUNT(CASE WHEN state."group" = 'completed' THEN 1 END) AS done,
 			COUNT(CASE WHEN state."group" = 'started' THEN 1 END) AS inProgress,
-			COUNT(CASE WHEN state."group" = 'cancelled' THEN 1 END) AS cancelled
+			COUNT(CASE WHEN state."group" = 'cancelled' THEN 1 END) AS cancelled,
+			TOTAL(CASE WHEN state."group" <> 'cancelled' THEN issue.estimate END) AS pointsTotal,
+			TOTAL(CASE WHEN state."group" = 'completed' THEN issue.estimate END) AS pointsDone
 		FROM module
 		JOIN project ON project.id = module.projectId
 		LEFT JOIN auth_space_member lead_member
@@ -80,16 +86,27 @@ async function loadModules(
 		ORDER BY module.createdAt, module.rowid
 	`) as ModuleRow[];
 
-	return rows.map(({ total, done, inProgress, cancelled, ...rest }) => ({
-		...rest,
-		progress: {
+	return rows.map(
+		({
 			total,
 			done,
 			inProgress,
 			cancelled,
-			notStarted: total - done - inProgress - cancelled,
-		},
-	}));
+			pointsTotal,
+			pointsDone,
+			...rest
+		}) => ({
+			...rest,
+			progress: {
+				total,
+				done,
+				inProgress,
+				cancelled,
+				notStarted: total - done - inProgress - cancelled,
+				points: { total: pointsTotal, done: pointsDone },
+			},
+		}),
+	);
 }
 
 async function loadModule(projectId: string, moduleId: string) {
