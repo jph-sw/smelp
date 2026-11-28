@@ -12,6 +12,7 @@ import {
 	useNavigate,
 } from "@tanstack/react-router";
 import { useState } from "react";
+import { CreateCycleDialog } from "#/components/cycle/create-cycle-dialog";
 import { CycleBurnup } from "#/components/cycle/cycle-burnup";
 import { CycleForm } from "#/components/cycle/cycle-form";
 import {
@@ -71,6 +72,7 @@ import {
 } from "#/lib/data/project-members";
 import { statesQueryOptions } from "#/lib/data/state";
 import { toastError } from "#/lib/errors";
+import { nextCycle } from "#/lib/next-cycle";
 
 export const Route = createFileRoute(
 	"/(workspace)/$id/projects/$projectId/cycles/$cycleId",
@@ -195,6 +197,7 @@ function RouteComponent() {
 	const { data: states } = useSuspenseQuery(statesQueryOptions({ projectId }));
 	const { data: issues } = useSuspenseQuery(issuesQueryOptions({ projectId }));
 	const { data: labels } = useSuspenseQuery(labelsQueryOptions({ projectId }));
+	const { data: cycles } = useSuspenseQuery(cyclesQueryOptions({ projectId }));
 	const { members, canWrite, canManage, isArchived } =
 		useProjectAccess(projectId);
 	const [isEditOpen, setIsEditOpen] = useState(false);
@@ -204,6 +207,15 @@ function RouteComponent() {
 	const isPlanning = canPlan && search.plan === true;
 	const unfinishedCount =
 		cycle.progress.total - cycle.progress.completed - cycle.progress.cancelled;
+	// Offered only on the last cycle that has started, where wrapping up leads on
+	// to setting up the next one.
+	const next =
+		canManage &&
+		!isArchived &&
+		cycle.status !== "upcoming" &&
+		!cycles.some((other) => other.startDate > cycle.startDate)
+			? nextCycle(cycles)
+			: null;
 
 	const { mutate: update, isPending: isUpdating } = useMutation({
 		mutationFn: updateCycle,
@@ -351,12 +363,26 @@ function RouteComponent() {
 				)}
 				<CycleProgress progress={cycle.progress} showLegend />
 				{cycle.status !== "upcoming" && <CycleBurnup cycle={cycle} />}
-				{canWrite && (
-					<MoveUnfinished
-						cycleId={cycleId}
-						projectId={projectId}
-						unfinishedCount={unfinishedCount}
-					/>
+				{(canWrite || next) && (
+					<div className="flex flex-wrap items-center gap-2">
+						{canWrite && (
+							<MoveUnfinished
+								cycleId={cycleId}
+								projectId={projectId}
+								unfinishedCount={unfinishedCount}
+							/>
+						)}
+						{next && (
+							<CreateCycleDialog
+								projectId={projectId}
+								title="Next cycle"
+								variant="outline"
+								initial={next}
+							>
+								Next cycle
+							</CreateCycleDialog>
+						)}
+					</div>
 				)}
 			</div>
 			{isPlanning ? (
