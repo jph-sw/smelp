@@ -24,6 +24,8 @@ const sql = new DB().sqlite;
 // An empty id would be stored as-is and skip the checks that guard real ones.
 const NonEmpty = v.pipe(v.string(), v.minLength(1));
 const Name = v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(64));
+// Empty and null both mean "no goal" and are stored as NULL.
+const Goal = v.pipe(v.string(), v.trim(), v.maxLength(500));
 
 type WritePermission = "space:update" | "content:write";
 
@@ -192,6 +194,7 @@ export const createCycle = base
 				name: Name,
 				startDate: Day,
 				endDate: Day,
+				goal: v.optional(v.nullable(Goal)),
 			}),
 			v.forward(
 				v.check((input) => input.endDate >= input.startDate, BACKWARDS_MESSAGE),
@@ -209,10 +212,11 @@ export const createCycle = base
 		// The overlap check and the insert are one statement, so two requests for
 		// the same days can't both get in.
 		const created = (await sql`
-			INSERT INTO cycle (id, projectId, name, startDate, endDate, createdBy, createdAt)
+			INSERT INTO cycle (id, projectId, name, startDate, endDate, goal, createdBy, createdAt)
 			SELECT
 				${crypto.randomUUID()}, ${input.projectId}, ${input.name},
-				${input.startDate}, ${input.endDate}, ${caller.userId}, ${Date.now()}
+				${input.startDate}, ${input.endDate}, ${input.goal || null},
+				${caller.userId}, ${Date.now()}
 			WHERE NOT EXISTS (
 				SELECT 1 FROM cycle AS other
 				WHERE other.projectId = ${input.projectId}
@@ -235,6 +239,7 @@ export const updateCycle = base
 			name: v.optional(Name),
 			startDate: v.optional(Day),
 			endDate: v.optional(Day),
+			goal: v.optional(v.nullable(Goal)),
 		}),
 	)
 	.handler(async ({ input, context }) => {
@@ -250,6 +255,10 @@ export const updateCycle = base
 			throw new ORPCError("BAD_REQUEST", { message: BACKWARDS_MESSAGE });
 		}
 
+		// Unlike the other fields, a goal can be cleared, so COALESCE can't tell
+		// "leave it" from "clear it".
+		const setGoal = input.goal === undefined ? 0 : 1;
+
 		// The dates are merged with the stored ones inside the statement, so the
 		// overlap check sees exactly what will be written, and a concurrent change to
 		// the other date isn't overwritten with a stale one.
@@ -259,7 +268,8 @@ export const updateCycle = base
 				UPDATE cycle SET
 					name = COALESCE(${input.name ?? null}, name),
 					startDate = COALESCE(${input.startDate ?? null}, startDate),
-					endDate = COALESCE(${input.endDate ?? null}, endDate)
+					endDate = COALESCE(${input.endDate ?? null}, endDate),
+					goal = CASE WHEN ${setGoal} = 1 THEN ${input.goal || null} ELSE goal END
 				WHERE id = ${input.id}
 					AND NOT EXISTS (
 						SELECT 1 FROM cycle AS other
