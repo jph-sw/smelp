@@ -2,6 +2,7 @@ import type { ProjectMember, tables } from "@smelp/db";
 import { formatDay } from "#/lib/day";
 import { issuePriorityLabel } from "#/lib/issue-priorities";
 import { issueTypeLabel } from "#/lib/issue-types";
+import { formatPoints } from "#/lib/points";
 import { RELATION_PHRASES } from "#/lib/relations";
 
 const relatedLabel = (entry: { relatedId?: string | null }) =>
@@ -62,6 +63,13 @@ export function describeActivity(
 				return entry.newValue
 					? `set the due date to ${formatDay(entry.newValue)}`
 					: "removed the due date";
+			}
+			if (entry.field === "estimate") {
+				if (entry.newValue === null) return "removed the estimate";
+				const points = formatPoints(Number(entry.newValue));
+				return entry.oldValue === null
+					? `set the estimate to ${points}`
+					: `changed the estimate from ${entry.oldValue} to ${points}`;
 			}
 			return entry.field === "title"
 				? `renamed this to "${entry.newValue}"`

@@ -23,6 +23,8 @@ export type issue = {
 	cycleId: string | null;
 	/** A whole day as YYYY-MM-DD. */
 	dueDate: string | null;
+	/** Story points. */
+	estimate: number | null;
 	workspaceId: string;
 	projectId: string;
 	createdAt: number;

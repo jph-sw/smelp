@@ -61,6 +61,7 @@ export type DomainEvent =
 			IssueRef & {
 				// For "cycle" and "module" the values are names, kept so the log reads well after a rename or delete.
 				// For "dueDate" they are days as YYYY-MM-DD.
+				// For "estimate" they are story points, numbers written as strings.
 				field:
 					| "title"
 					| "description"
@@ -69,7 +70,8 @@ export type DomainEvent =
 					| "parent"
 					| "cycle"
 					| "module"
-					| "dueDate";
+					| "dueDate"
+					| "estimate";
 				oldValue: string | null;
 				newValue: string | null;
 			}

@@ -5,6 +5,7 @@ import type { ProjectMember, tables } from "@smelp/db";
 import { Link } from "@tanstack/react-router";
 import type { Label } from "#/lib/data/label";
 import { formatShortDay } from "#/lib/day";
+import { formatPoints, formatShortPoints } from "#/lib/points";
 import { cn, initials } from "#/lib/utils";
 import { IssuePriorityIcon } from "../issue/issue-priority-icon";
 import { IssueTypeIcon } from "../issue/issue-type-icon";
@@ -67,6 +68,14 @@ export function IssueItem({
 							canMove && "pointer-coarse:me-9",
 						)}
 					>
+						{issue.estimate !== null && (
+							<span
+								title={formatPoints(issue.estimate)}
+								className="rounded-full bg-muted px-1.5 text-xs font-medium text-muted-foreground tabular-nums"
+							>
+								{formatShortPoints(issue.estimate)}
+							</span>
+						)}
 						{issue.priority !== "none" && (
 							<IssuePriorityIcon priority={issue.priority} />
 						)}

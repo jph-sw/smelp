@@ -27,6 +27,7 @@ const FIELDS_WITH_VALUE = new Set([
 	"cycle",
 	"module",
 	"dueDate",
+	"estimate",
 ]);
 
 type FeedRow = Pick<
@@ -140,7 +141,10 @@ function toFeedEvent(row: FeedRow, canSeeInviteEmails: boolean): FeedEvent {
 		case "issue.updated":
 			details = {
 				field: row.field,
-				from: row.field === "module" ? row.oldValue : null,
+				from:
+					row.field === "module" || row.field === "estimate"
+						? row.oldValue
+						: null,
 				to: row.field && FIELDS_WITH_VALUE.has(row.field) ? row.newValue : null,
 			};
 			break;

@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { createRouterClient } from "@orpc/server";
 
 // Imported dynamically so setup.ts points the database at a temp file first.
@@ -88,6 +88,15 @@ beforeAll(async () => {
 		workspaceId: WORKSPACE,
 		public: true,
 	});
+});
+
+// Other test files share this database and expect a closed instance.
+afterAll(async () => {
+	await owner.client.workspace.update({
+		workspaceId: WORKSPACE,
+		public: false,
+	});
+	await admin.client.instance.update({ publicAccess: false });
 });
 
 describe("issues.resolveKeys", () => {

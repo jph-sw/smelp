@@ -384,6 +384,81 @@ describe("due dates", () => {
 	});
 });
 
+describe("estimates", () => {
+	test("a work item can be created with an estimate", async () => {
+		const created = await member.client.issue.create({
+			...newIssue(),
+			estimate: 0.5,
+		});
+		expect(
+			(await member.client.issue.find({ issueId: created.id })).estimate,
+		).toBe(0.5);
+		await Bun.sleep(30);
+
+		const activity = await guest.client.activity.findForIssue({
+			issueId: created.id,
+		});
+		expect(activity[1]).toMatchObject({
+			field: "estimate",
+			oldValue: null,
+			newValue: "0.5",
+		});
+	});
+
+	test("without an estimate it has none", async () => {
+		const created = await member.client.issue.create(newIssue());
+		expect(
+			(await member.client.issue.find({ issueId: created.id })).estimate,
+		).toBeNull();
+	});
+
+	test("setting, changing and clearing the estimate shows in the timeline", async () => {
+		const { id } = await member.client.issue.create(newIssue());
+		expect(
+			(await member.client.issue.update({ id, estimate: 3 })).estimate,
+		).toBe(3);
+		expect(
+			(await member.client.issue.update({ id, estimate: 5 })).estimate,
+		).toBe(5);
+		expect(
+			(await member.client.issue.update({ id, title: "Renamed" })).estimate,
+		).toBe(5);
+		expect(
+			(await member.client.issue.update({ id, estimate: null })).estimate,
+		).toBeNull();
+		await Bun.sleep(30);
+
+		const activity = await guest.client.activity.findForIssue({ issueId: id });
+		expect(
+			activity
+				.filter((entry) => entry.field === "estimate")
+				.map((entry) => [entry.oldValue, entry.newValue]),
+		).toEqual([
+			[null, "3"],
+			["3", "5"],
+			["5", null],
+		]);
+	});
+
+	test("rejects a negative or out-of-range estimate", async () => {
+		for (const estimate of [-1, 1001, Number.NaN]) {
+			await expectCode(
+				member.client.issue.create({ ...newIssue(), estimate }),
+				"BAD_REQUEST",
+			);
+		}
+		const { id } = await member.client.issue.create({
+			...newIssue(),
+			estimate: 8,
+		});
+		await expectCode(
+			member.client.issue.update({ id, estimate: -3 }),
+			"BAD_REQUEST",
+		);
+		expect((await member.client.issue.find({ issueId: id })).estimate).toBe(8);
+	});
+});
+
 describe("assigning on create", () => {
 	test("a project member can be assigned right away", async () => {
 		const created = await member.client.issue.create({

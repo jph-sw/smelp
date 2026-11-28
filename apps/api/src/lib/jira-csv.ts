@@ -52,6 +52,8 @@ export type JiraIssue = {
 	updatedAt: number | null;
 	/** YYYY-MM-DD. */
 	dueDate: string | null;
+	/** Story points. */
+	estimate: number | null;
 	assignee: string | null;
 	assigneeId: string | null;
 	reporter: string | null;
@@ -245,6 +247,21 @@ function columnsOf(header: string[]): Columns {
 	};
 }
 
+// Company-managed projects export "Story Points", team-managed ones "Story point
+// estimate", and a file mixing both kinds of project has both columns.
+const STORY_POINT_COLUMNS = [
+	"story points",
+	"custom field (story points)",
+	"custom field (story point estimate)",
+];
+
+function parseStoryPoints(value: string): number | null {
+	const match = value.trim().match(/^\d+(?:[.,]\d+)?$/);
+	if (!match) return null;
+	const points = Number(match[0].replace(",", "."));
+	return points <= 1000 ? points : null;
+}
+
 const ISSUE_KEY = /^([A-Za-z][A-Za-z0-9_]{0,99})-(\d{1,9})$/;
 
 export function parseJiraCsv(text: string): ParsedJira {
@@ -310,6 +327,7 @@ export function parseJiraCsv(text: string): ParsedJira {
 		created: columns.one("created"),
 		updated: columns.one("updated"),
 		dueDate: columns.one("due date"),
+		estimate: STORY_POINT_COLUMNS.flatMap(columns.all),
 		description: columns.one("description"),
 		parentId: columns.one("parent id"),
 		parent: columns.one("parent"),
@@ -442,6 +460,10 @@ export function parseJiraCsv(text: string): ParsedJira {
 			createdAt: date(col.created),
 			updatedAt: date(col.updated),
 			dueDate: parseJiraDay(cell(row, col.dueDate)),
+			estimate:
+				col.estimate
+					.map((index) => parseStoryPoints(cell(row, index)))
+					.find((points) => points !== null) ?? null,
 			assignee,
 			assigneeId,
 			reporter,

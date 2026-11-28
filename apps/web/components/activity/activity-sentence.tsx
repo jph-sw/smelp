@@ -4,6 +4,7 @@ import type { FeedEvent } from "#/lib/data/activity";
 import { formatDay } from "#/lib/day";
 import { issuePriorityLabel } from "#/lib/issue-priorities";
 import { issueTypeLabel } from "#/lib/issue-types";
+import { formatPoints } from "#/lib/points";
 import { RELATION_PHRASES } from "#/lib/relations";
 
 const linkClass =
@@ -165,6 +166,20 @@ export function ActivitySentence({
 					</>
 				) : (
 					<>removed the due date of {issue}</>
+				);
+			}
+			if (d.field === "estimate") {
+				if (!d.to) return <>removed the estimate of {issue}</>;
+				const points = formatPoints(Number(d.to));
+				return d.from ? (
+					<>
+						changed the estimate of {issue} from {d.from} to{" "}
+						<Strong>{points}</Strong>
+					</>
+				) : (
+					<>
+						set the estimate of {issue} to <Strong>{points}</Strong>
+					</>
 				);
 			}
 			if (d.field === "type") {
