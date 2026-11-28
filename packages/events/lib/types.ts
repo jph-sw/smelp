@@ -27,6 +27,14 @@ type PullRequestChange = IssueRef & {
 	repo: string;
 	githubLogin: string | null;
 };
+// The ids say which cycle it was even after a rename; the names keep the log readable.
+type CycleChange = IssueRef & {
+	field: "cycle";
+	oldValue: string | null;
+	newValue: string | null;
+	oldCycleId: string | null;
+	newCycleId: string | null;
+};
 type MemberRef = { userId: string; userName: string | null; role: string };
 
 export type ProjectChange = "name" | "description" | "icon" | "access";
@@ -59,7 +67,7 @@ export type DomainEvent =
 	| Event<
 			"issue.updated",
 			IssueRef & {
-				// For "cycle" and "module" the values are names, kept so the log reads well after a rename or delete.
+				// For "module" the values are names, kept so the log reads well after a rename or delete.
 				// For "dueDate" they are days as YYYY-MM-DD.
 				// For "estimate" they are story points, numbers written as strings.
 				field:
@@ -68,7 +76,6 @@ export type DomainEvent =
 					| "type"
 					| "priority"
 					| "parent"
-					| "cycle"
 					| "module"
 					| "dueDate"
 					| "estimate";
@@ -76,6 +83,7 @@ export type DomainEvent =
 				newValue: string | null;
 			}
 	  >
+	| Event<"issue.updated", CycleChange>
 	| Event<"issue.deleted", IssueRef>
 	| Event<
 			"issue.attachment_added",

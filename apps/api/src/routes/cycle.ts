@@ -340,6 +340,8 @@ export const deleteCycle = base
 					field: "cycle",
 					oldValue: cycle.name,
 					newValue: null,
+					oldCycleId: cycle.id,
+					newCycleId: null,
 				},
 			});
 		}
@@ -400,6 +402,8 @@ export const moveUnfinishedToCycle = base
 					field: "cycle",
 					oldValue: from.name,
 					newValue: target.name,
+					oldCycleId: from.id,
+					newCycleId: target.id,
 				},
 			});
 		}
