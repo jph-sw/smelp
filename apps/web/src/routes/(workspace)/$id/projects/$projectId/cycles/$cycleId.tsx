@@ -12,6 +12,7 @@ import {
 	useNavigate,
 } from "@tanstack/react-router";
 import { useState } from "react";
+import { CycleBurnup } from "#/components/cycle/cycle-burnup";
 import { CycleForm } from "#/components/cycle/cycle-form";
 import {
 	CycleProgress,
@@ -51,6 +52,7 @@ import {
 import { toast } from "#/components/ui/toast";
 import { usePageTitle } from "#/hooks/use-page-title";
 import {
+	cycleBurnupQueryOptions,
 	cycleQueryOptions,
 	cyclesQueryOptions,
 	deleteCycle,
@@ -93,6 +95,8 @@ export const Route = createFileRoute(
 			queryClient.ensureQueryData(issuesQueryOptions({ projectId })),
 			queryClient.ensureQueryData(labelsQueryOptions({ projectId })),
 			queryClient.ensureQueryData(projectMembersQueryOptions({ projectId })),
+			cycle.status !== "upcoming" &&
+				queryClient.ensureQueryData(cycleBurnupQueryOptions({ cycleId })),
 		]);
 	},
 });
@@ -346,6 +350,7 @@ function RouteComponent() {
 					</p>
 				)}
 				<CycleProgress progress={cycle.progress} showLegend />
+				{cycle.status !== "upcoming" && <CycleBurnup cycle={cycle} />}
 				{canWrite && (
 					<MoveUnfinished
 						cycleId={cycleId}

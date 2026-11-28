@@ -53,6 +53,7 @@ import {
 	createCycle,
 	deleteCycle,
 	findCycle,
+	findCycleBurnup,
 	findCycles,
 	moveUnfinishedToCycle,
 	updateCycle,
@@ -329,6 +330,7 @@ export const router = {
 	cycles: {
 		find: findCycles,
 		findOne: findCycle,
+		burnup: findCycleBurnup,
 		create: createCycle,
 		update: updateCycle,
 		delete: deleteCycle,

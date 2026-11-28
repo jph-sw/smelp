@@ -510,6 +510,8 @@ export const updateIssue = base
 					field: "cycle",
 					oldValue: oldCycleName,
 					newValue: newCycleName,
+					oldCycleId: oldIssue.cycleId,
+					newCycleId: issue.cycleId,
 				},
 			});
 		}
@@ -756,6 +758,8 @@ export const createIssue = base
 					field: "cycle",
 					oldValue: null,
 					newValue: newCycleName,
+					oldCycleId: null,
+					newCycleId: issue.cycleId,
 				},
 			});
 		}

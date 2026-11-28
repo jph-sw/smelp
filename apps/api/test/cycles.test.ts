@@ -14,6 +14,9 @@ const WORKSPACE = "cycle_tests";
 const PROJECT = "CYC";
 const OTHER_PROJECT = "CYO";
 const PRIVATE_PROJECT = "CYP";
+// The burn-up tests need a current cycle that started days ago, so they get
+// their own project rather than claiming those days in another.
+const BURNUP_PROJECT = "CYB";
 
 const expectCode = (call: Promise<unknown>, code: string) =>
 	expect(call).rejects.toMatchObject({ code });
@@ -120,6 +123,7 @@ beforeAll(async () => {
 		[PROJECT, "public"],
 		[OTHER_PROJECT, "public"],
 		[PRIVATE_PROJECT, "private"],
+		[BURNUP_PROJECT, "public"],
 	] as const) {
 		await admin.client.project.create({
 			id,
@@ -139,6 +143,7 @@ beforeAll(async () => {
 	await addMember(PROJECT, guest.id, "guest");
 	await addMember(OTHER_PROJECT, member.id, "member");
 	await addMember(PRIVATE_PROJECT, member.id, "member");
+	await addMember(BURNUP_PROJECT, member.id, "member");
 });
 
 describe("cycles", () => {
@@ -753,6 +758,276 @@ describe("deleting a cycle", () => {
 		const rows = await activityOf(issue.id, 2);
 		expect(rows.at(-1)?.oldValue).toBe("Doomed");
 		expect(rows.at(-1)?.newValue).toBeNull();
+	});
+});
+
+describe("burn-up", () => {
+	const at = (date: string, hour: number) =>
+		Date.parse(`${date}T${String(hour).padStart(2, "0")}:00:00Z`);
+
+	type Seed = {
+		title: string;
+		state: string;
+		cycleId: string | null;
+		estimate: number | null;
+	};
+	type SeedLog = {
+		action?: string;
+		field?: string;
+		oldValue?: string | null;
+		newValue?: string | null;
+		metadata?: Record<string, unknown>;
+		createdAt: number;
+	};
+
+	// Items with exactly the history given: the rows are set to their final state
+	// and the logs the API wrote on creation are swapped for the seeded ones.
+	async function seed(item: Seed, logs: SeedLog[]) {
+		const issue = await admin.client.issue.create(
+			newIssue(item.title, "Backlog", BURNUP_PROJECT),
+		);
+		for (let attempt = 0; ; attempt++) {
+			const [row] = await sql`
+				SELECT COUNT(*) AS count FROM activity_logs
+				WHERE entityId = ${issue.id} AND action = 'created'
+			`;
+			if (row.count > 0) break;
+			if (attempt > 200) throw new Error("The created event never arrived");
+			await Bun.sleep(10);
+		}
+		await sql`DELETE FROM activity_logs WHERE entityId = ${issue.id}`;
+		await sql`
+			UPDATE issue SET
+				state = ${states[BURNUP_PROJECT]?.[item.state]},
+				cycleId = ${item.cycleId},
+				estimate = ${item.estimate}
+			WHERE id = ${issue.id}
+		`;
+		for (const log of logs) {
+			const field = log.field ?? null;
+			await sql`INSERT INTO activity_logs ${sql({
+				id: crypto.randomUUID(),
+				workspaceId: WORKSPACE,
+				entityType: "issue",
+				entityId: issue.id,
+				action:
+					log.action ??
+					(field === "status" ? "status_changed" : "issue.updated"),
+				actorId: admin.id,
+				field,
+				oldValue: log.oldValue ?? null,
+				newValue: log.newValue ?? null,
+				metadata: JSON.stringify({ field, ...log.metadata }),
+				createdAt: log.createdAt,
+			})}`;
+		}
+		return issue;
+	}
+
+	test("replays history into daily scope and completed numbers", async () => {
+		const [d0, d1, d2, today] = [day(-3), day(-2), day(-1), day(0)] as [
+			string,
+			string,
+			string,
+			string,
+		];
+		const cycle = await admin.client.cycles.create(
+			newCycle("Burnup", { startDate: d0, endDate: day(6) }, BURNUP_PROJECT),
+		);
+		const before = at(day(-10), 9);
+		const created = { action: "created", createdAt: before };
+		const joined = {
+			field: "cycle",
+			newValue: "Burnup",
+			metadata: { oldCycleId: null, newCycleId: cycle.id },
+			createdAt: before + 1,
+		};
+		const status = (from: string, to: string, createdAt: number) => ({
+			field: "status",
+			oldValue: states[BURNUP_PROJECT]?.[from],
+			newValue: states[BURNUP_PROJECT]?.[to],
+			createdAt,
+		});
+
+		// In scope from the start, finished on day 2.
+		await seed(
+			{ title: "Early", state: "Done", cycleId: cycle.id, estimate: 3 },
+			[created, joined, status("Todo", "Done", at(d1, 12))],
+		);
+		// In scope from the start, finished on day 3.
+		await seed(
+			{ title: "Later", state: "Done", cycleId: cycle.id, estimate: 5 },
+			[created, joined, status("In Progress", "Done", at(d2, 15))],
+		);
+		// Created and added on day 2.
+		await seed(
+			{ title: "Added", state: "Todo", cycleId: cycle.id, estimate: 2 },
+			[
+				{ action: "created", createdAt: at(d1, 9) },
+				{ ...joined, createdAt: at(d1, 10) },
+			],
+		);
+		// Re-estimated from 1 to 8 on day 3.
+		await seed(
+			{ title: "Re-estimated", state: "Todo", cycleId: cycle.id, estimate: 8 },
+			[
+				created,
+				joined,
+				{
+					field: "estimate",
+					oldValue: "1",
+					newValue: "8",
+					createdAt: at(d2, 9),
+				},
+			],
+		);
+		// Taken out on day 3.
+		await seed(
+			{ title: "Removed", state: "Todo", cycleId: null, estimate: 4 },
+			[
+				created,
+				joined,
+				{
+					field: "cycle",
+					oldValue: "Burnup",
+					metadata: { oldCycleId: cycle.id, newCycleId: null },
+					createdAt: at(d2, 11),
+				},
+			],
+		);
+		// Logged before cycle changes carried ids: only the name says which cycle.
+		await seed({ title: "Legacy", state: "Todo", cycleId: null, estimate: 1 }, [
+			created,
+			{ field: "cycle", newValue: "Burnup", createdAt: before + 1 },
+			{ field: "cycle", oldValue: "Burnup", createdAt: at(d1, 14) },
+		]);
+		// In another cycle of the project the whole time.
+		const other = await admin.client.cycles.create(
+			newCycle("Unrelated", window(), BURNUP_PROJECT),
+		);
+		await seed(
+			{ title: "Unrelated", state: "Done", cycleId: other.id, estimate: 40 },
+			[
+				created,
+				{
+					field: "cycle",
+					newValue: "Unrelated",
+					metadata: { oldCycleId: null, newCycleId: other.id },
+					createdAt: before + 1,
+				},
+			],
+		);
+
+		expect(await member.client.cycles.burnup({ id: cycle.id })).toEqual({
+			unit: "points",
+			days: [
+				{ day: d0, scope: 14, completed: 0 },
+				{ day: d1, scope: 15, completed: 3 },
+				{ day: d2, scope: 18, completed: 8 },
+				{ day: today, scope: 18, completed: 8 },
+			],
+		});
+	});
+
+	test("counts items when nothing is estimated, through the last day", async () => {
+		const [d0, d1, d2] = [day(-50), day(-49), day(-48)] as [
+			string,
+			string,
+			string,
+		];
+		const cycle = await admin.client.cycles.create(
+			newCycle("Unestimated", { startDate: d0, endDate: d2 }, BURNUP_PROJECT),
+		);
+		const joined = {
+			field: "cycle",
+			newValue: "Unestimated",
+			metadata: { oldCycleId: null, newCycleId: cycle.id },
+			createdAt: at(day(-60), 9),
+		};
+		await seed(
+			{ title: "Count 1", state: "Done", cycleId: cycle.id, estimate: null },
+			[
+				joined,
+				{
+					field: "status",
+					oldValue: states[BURNUP_PROJECT]?.Todo,
+					createdAt: at(d1, 12),
+				},
+			],
+		);
+		await seed(
+			{ title: "Count 2", state: "Todo", cycleId: cycle.id, estimate: null },
+			[joined],
+		);
+
+		expect(await member.client.cycles.burnup({ id: cycle.id })).toEqual({
+			unit: "items",
+			days: [
+				{ day: d0, scope: 2, completed: 0 },
+				{ day: d1, scope: 2, completed: 1 },
+				{ day: d2, scope: 2, completed: 1 },
+			],
+		});
+	});
+
+	test("is empty for an upcoming cycle", async () => {
+		const cycle = await admin.client.cycles.create(newCycle("Not yet"));
+		const issue = await member.client.issue.create({
+			...newIssue("Planned"),
+			cycleId: cycle.id,
+			estimate: 3,
+		});
+		expect(issue.cycleId).toBe(cycle.id);
+		expect(await member.client.cycles.burnup({ id: cycle.id })).toEqual({
+			unit: "items",
+			days: [],
+		});
+	});
+
+	test("a private project's burn-up looks missing to people who can't read it", async () => {
+		const cycle = await admin.client.cycles.create(
+			newCycle("Secret burn-up", window(), PRIVATE_PROJECT),
+		);
+		await expectCode(
+			outsider.client.cycles.burnup({ id: cycle.id }),
+			"NOT_FOUND",
+		);
+		await expectCode(
+			outsider.client.cycles.burnup({ id: "never-existed" }),
+			"NOT_FOUND",
+		);
+		expect((await member.client.cycles.burnup({ id: cycle.id })).days).toEqual(
+			[],
+		);
+	});
+
+	test("cycle changes log the cycle ids", async () => {
+		const a = await admin.client.cycles.create(newCycle("Id A"));
+		const b = await admin.client.cycles.create(newCycle("Id B"));
+		const issue = await member.client.issue.create({
+			...newIssue("Tracked"),
+			cycleId: a.id,
+		});
+		await member.client.issue.update({ id: issue.id, cycleId: b.id });
+		await activityOf(issue.id, 2);
+
+		const rows = (await sql`
+			SELECT oldValue, newValue,
+				json_extract(metadata, '$.oldCycleId') AS oldCycleId,
+				json_extract(metadata, '$.newCycleId') AS newCycleId
+			FROM activity_logs
+			WHERE entityId = ${issue.id} AND field = 'cycle'
+			ORDER BY createdAt, rowid
+		`) as Record<string, string | null>[];
+		expect(rows).toEqual([
+			{ oldValue: null, newValue: "Id A", oldCycleId: null, newCycleId: a.id },
+			{
+				oldValue: "Id A",
+				newValue: "Id B",
+				oldCycleId: a.id,
+				newCycleId: b.id,
+			},
+		]);
 	});
 });
 
