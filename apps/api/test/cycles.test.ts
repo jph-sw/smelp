@@ -266,6 +266,66 @@ describe("cycles", () => {
 		expect(results.filter((r) => r.status === "fulfilled").length).toBe(1);
 	});
 
+	test("a goal is set, kept, cleared and limited to 500 characters", async () => {
+		const created = await admin.client.cycles.create({
+			...newCycle("With a goal"),
+			goal: "  Ship the board filters.  ",
+		});
+		expect(created.goal).toBe("Ship the board filters.");
+		const plain = await admin.client.cycles.create(newCycle("No goal"));
+		expect(plain.goal).toBeNull();
+		const blank = await admin.client.cycles.create({
+			...newCycle("Blank goal"),
+			goal: "   ",
+		});
+		expect(blank.goal).toBeNull();
+
+		const set = await admin.client.cycles.update({
+			id: plain.id,
+			goal: "Line one\nLine two",
+		});
+		expect(set.goal).toBe("Line one\nLine two");
+		const renamed = await admin.client.cycles.update({
+			id: plain.id,
+			name: "Renamed",
+		});
+		expect(renamed.goal).toBe("Line one\nLine two");
+
+		const listed = await member.client.cycles.find({ projectId: PROJECT });
+		expect(listed.find((c) => c.id === created.id)?.goal).toBe(
+			"Ship the board filters.",
+		);
+		expect((await member.client.cycles.findOne({ id: plain.id })).goal).toBe(
+			"Line one\nLine two",
+		);
+
+		await admin.client.cycles.update({ id: plain.id, goal: "" });
+		expect(
+			(await member.client.cycles.findOne({ id: plain.id })).goal,
+		).toBeNull();
+		await admin.client.cycles.update({ id: created.id, goal: null });
+		expect(
+			(await member.client.cycles.findOne({ id: created.id })).goal,
+		).toBeNull();
+
+		await expectCode(
+			admin.client.cycles.update({ id: plain.id, goal: "x".repeat(501) }),
+			"BAD_REQUEST",
+		);
+		await expectCode(
+			admin.client.cycles.create({
+				...newCycle("Too long"),
+				goal: "x".repeat(501),
+			}),
+			"BAD_REQUEST",
+		);
+		const longest = await admin.client.cycles.update({
+			id: plain.id,
+			goal: "x".repeat(500),
+		});
+		expect(longest.goal).toHaveLength(500);
+	});
+
 	test("empty ids and unknown cycles are rejected", async () => {
 		await expectCode(
 			admin.client.cycles.update({ id: "", name: "x" }),

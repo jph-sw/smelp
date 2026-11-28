@@ -141,6 +141,11 @@ function RouteComponent() {
 													{formatRange(cycle)}
 												</span>
 											</div>
+											{cycle.status === "current" && cycle.goal && (
+												<p className="line-clamp-2 whitespace-pre-wrap text-sm text-muted-foreground">
+													{cycle.goal}
+												</p>
+											)}
 											<CycleProgress progress={cycle.progress} />
 										</Link>
 									</li>
